@@ -29,12 +29,15 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> replaceFragment(HomeFragment())
                 R.id.nav_search -> replaceFragment(SearchFragment())
-                R.id.nav_upload -> replaceFragment(UploadFragment())
+
                 R.id.nav_reels -> replaceFragment(ReelsFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }
             true
         }
+        binding.bottomNavigation.menu.findItem(R.id.nav_upload).isEnabled = false
+        binding.bottomNavigation.menu.findItem(R.id.nav_upload).isVisible = false
+
     }
 
     private fun replaceFragment(fragment: Fragment) {
