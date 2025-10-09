@@ -35,9 +35,6 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
-        binding.bottomNavigation.menu.findItem(R.id.nav_upload).isEnabled = false
-        binding.bottomNavigation.menu.findItem(R.id.nav_upload).isVisible = false
-
     }
 
     private fun replaceFragment(fragment: Fragment) {

@@ -20,74 +20,109 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <!-- Header -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp">
 
+                <!-- Text App Name -->
                 <TextView
                     android:id="@+id/tvAppName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Social App"
                     android:textStyle="bold"
-                    android:textSize="20sp"
+                    android:textSize="28sp"
                     android:textColor="#E195B3"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.02"
-                    android:layout_alignParentStart="true" />
+                    android:fontFamily="cursive"
+                    android:letterSpacing="0.05"
+                    android:shadowColor="#66E195B3"
+                    android:shadowDx="2"
+                    android:shadowDy="2"
+                    android:shadowRadius="6" />
 
+                <!-- Icon Notification (bên trái Messenger) -->
                 <ImageView
                     android:id="@+id/ivNotification"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_alignParentEnd="true"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_toStartOf="@id/ivMessage"
+                    android:layout_centerVertical="true"
                     android:layout_marginEnd="12dp"
-                    android:contentDescription="Notification" />
+                    android:src="@drawable/ic_notification"
+                    android:background="@drawable/circle_gradient"
+                    android:padding="6dp"
+                    android:contentDescription="Notification"
+                    android:clipToOutline="true"
+                    android:scaleType="centerInside"/>
 
+                <!-- Icon Message (ngoài cùng bên phải) -->
                 <ImageView
                     android:id="@+id/ivMessage"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_toStartOf="@id/ivNotification"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
                     android:layout_marginEnd="12dp"
-                    android:contentDescription="Message" />
+                    android:src="@drawable/ic_messenger"
+                    android:background="@drawable/circle_gradient"
+                    android:padding="6dp"
+                    android:contentDescription="Message"
+                    android:clipToOutline="true"
+                    android:scaleType="centerInside"/>
             </RelativeLayout>
+
+
 
             <!-- Story -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerStory"
                 android:layout_width="match_parent"
-                android:layout_height="160dp"
+                android:layout_height="210dp"
                 android:layout_marginTop="8dp"
-                android:orientation="horizontal"
-                android:clipToPadding="false"/>
+                android:clipToPadding="false"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                tools:listitem="@layout/editor_item_story" />
+
 
             <!-- Greeting -->
-            <LinearLayout
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="8dp"
-                android:gravity="center_vertical">
+                android:background="@drawable/rounded_greeting_bg"
+                android:layout_margin="12dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:elevation="2dp">
 
-                <ImageView
-                    android:id="@+id/iconCamera"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:contentDescription="Camera" />
-
+                <!-- Text Greeting -->
                 <TextView
                     android:id="@+id/tvGreeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Hi @username, how are you today?"
-                    android:textColor="#555555"
+                    android:textColor="#444444"
                     android:textSize="16sp"
-                    android:layout_marginStart="8dp" />
-            </LinearLayout>
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/iconCamera"
+                    android:layout_marginEnd="12dp" />
+
+                <!-- Icon Camera ở góc phải -->
+                <ImageView
+                    android:id="@+id/iconCamera"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_camera"
+
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Camera" />
+            </RelativeLayout>
+
 
         </LinearLayout>
     </ScrollView>
