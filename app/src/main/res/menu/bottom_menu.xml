@@ -5,30 +5,45 @@
         android:id="@+id/nav_home"
         android:icon="@drawable/baseline_home_24"
         android:title="Home"
+        android:iconTint="@color/white"
+        android:background="@drawable/bottom_nav_item_bg"
+
         />
 
     <item
         android:id="@+id/nav_search"
         android:icon="@drawable/baseline_search_24"
         android:title="Search"
-                 />
+        android:iconTint="@color/white"
+        android:background="@drawable/bottom_nav_item_bg"
+
+        />
 
     <item
         android:id="@+id/nav_upload"
-        android:icon="@drawable/baseline_home_24"
-        android:title="Upload"
-       />
+        android:icon="@drawable/baseline_add_24"
+        android:title="New"
+        android:iconTint="@color/white"
+        android:background="@drawable/bottom_nav_item_bg"
+
+        />
 
     <item
         android:id="@+id/nav_reels"
         android:icon="@drawable/clapper"
         android:title="Reels"
-       />
+        android:iconTint="@color/white"
+        android:background="@drawable/bottom_nav_item_bg"
+
+        />
 
     <item
         android:id="@+id/nav_profile"
         android:icon="@drawable/baseline_person_24"
         android:title="Profile"
+        android:iconTint="@color/white"
+        android:background="@drawable/bottom_nav_item_bg"
+
         />
 
 </menu>

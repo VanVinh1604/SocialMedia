@@ -9,37 +9,34 @@
         android:id="@+id/frameContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintBottom_toBottomOf="@+id/cardView"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- BottomNavigationView -->
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
+    <!-- MaterialCardView bao bọc BottomNavigationView -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardView"
         android:layout_width="0dp"
         android:layout_height="85dp"
-        android:background="@drawable/bottom_menu_nav"
-        app:itemIconTint="@android:color/white"
-        app:itemTextColor="@android:color/white"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_menu"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- FloatingActionButton ở giữa -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:backgroundTint="#FFFFFF"
-        android:src="@drawable/baseline_add_24"
-        app:tint="#BA77E0"
-        app:elevation="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:translationY="-60dp"/> <!-- dịch lên để che BottomNavigation -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bottom_menu_nav"
+            app:itemBackground="@drawable/item_transparent_background_bottom_nav"
+            app:itemRippleColor="@android:color/transparent"
+            app:itemIconTint="@android:color/white"
+            app:itemTextColor="@android:color/white"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_menu"/>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

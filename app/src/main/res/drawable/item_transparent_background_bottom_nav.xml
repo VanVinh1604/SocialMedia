@@ -1,0 +1,11 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Khi được chọn -->
+    <item android:state_checked="true">
+        <color android:color="@android:color/transparent" />
+    </item>
+
+    <!-- Khi không được chọn -->
+    <item>
+        <color android:color="@android:color/transparent" />
+    </item>
+</selector>

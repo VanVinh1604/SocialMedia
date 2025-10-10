@@ -19,14 +19,5 @@ class LoginViewModel: ViewModel() {
         }
     }
 
-    fun register(email: String, password: String) = liveData(Dispatchers.IO) {
-        emit(Resource.Loading())
-        try {
-            val user = repository.register(email, password)
-            if (user != null) emit(Resource.Success(user))
-            else emit(Resource.Error("Register failed"))
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message ?: "Unknown Error"))
-        }
-    }
+
 }

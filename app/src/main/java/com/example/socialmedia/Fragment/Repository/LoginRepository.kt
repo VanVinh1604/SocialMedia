@@ -36,27 +36,4 @@ class LoginRepository {
         }
     }
 
-    suspend fun register(email: String, password: String): UserModel? {
-        return try {
-//            val result = auth.createUserWithEmailAndPassword(email, password).await()
-//            result.user
-            return UserModel(
-                userId = "U00" + (100..999).random().toString(), // random id cho vui
-                email = email,
-                password = password,
-                firstName = "New",
-                lastName = "User",
-                fullName = "New User",
-                phoneNumber = "0987654321",
-                dateOfBirth = null,
-                gender = "other",
-                profilePicture = "https://example.com/default_avatar.png",
-                bio = "This is a newly registered account",
-                createdAt = System.currentTimeMillis())
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
 }

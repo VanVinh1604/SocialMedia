@@ -8,9 +8,9 @@ data class UserModel(
     val firstName: String = "",
     val lastName: String = "",
     val fullName: String = "$firstName $lastName",
-    val phoneNumber: String? = null,
+    val phoneNumber: String = "",
     val dateOfBirth: Long? = null,  // lưu timestamp
-    val gender: String? = null,     // male, female, other
+    val gender: String? = null,     // male, female,
     val profilePicture: String? = null,
     val bio: String? = null,
     val createdAt: Long = System.currentTimeMillis()
