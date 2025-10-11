@@ -2,6 +2,7 @@ package com.example.socialmedia
 
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -12,6 +13,10 @@ import com.example.socialmedia.project.Fragment.ReelsFragment
 import com.example.socialmedia.project.Fragment.SearchFragment
 import com.example.socialmedia.project.Fragment.UploadFragment
 import com.example.socialmedia.databinding.ActivityMainBinding
+import com.example.socialmedia.project.Domain.UserModel
+import com.example.socialmedia.project.Fragment.LoginFragment
+import com.example.socialmedia.project.UserManagementActivity
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,6 +28,17 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            val sharedPref = getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+            with(sharedPref.edit()) {
+                putBoolean("is_logged_in", true)
+                putString("user_id", currentUser.uid)
+                putString("email", currentUser.email)
+                putString("full_name", currentUser.displayName ?: "User")
+                apply()
+            }
+        }
         // ✅ Mặc định hiển thị HomeFragment
         replaceFragment(HomeFragment())
         binding.bottomNavigation.selectedItemId = R.id.nav_home

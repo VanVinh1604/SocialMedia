@@ -15,6 +15,7 @@ import com.example.socialmedia.project.ViewModel.LoginViewModel
 import com.example.socialmedia.MainActivity
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentLoginBinding
+import kotlin.apply
 
 
 class LoginFragment : Fragment() {
@@ -65,6 +66,16 @@ class LoginFragment : Fragment() {
                         binding.btnLogin.text = "Đăng nhập"
                         Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
 
+                        val user = resource.data!!
+                        val sharedPref = requireContext().getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                        with(sharedPref.edit()) {
+                            putBoolean("is_logged_in", true)
+                            putString("user_id", resource.data.userId)
+                            putString("email", resource.data.email)
+                            putString("full_name", resource.data.fullName)
+                            apply()
+                        }
+
                         val intent = Intent(requireContext(), MainActivity::class.java)
                         startActivity(intent)
                         requireActivity().finish()
@@ -98,6 +109,7 @@ class LoginFragment : Fragment() {
             // Giữ nguyên vị trí con trỏ
             binding.etPassword.setSelection(binding.etPassword.text.length)
         }
+
 
         binding.btnRegister.setOnClickListener {
             val registerFragment = RegisterFragment()
