@@ -6,11 +6,11 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import com.example.socialmedia.Fragment.Fragment.HomeFragment
-import com.example.socialmedia.Fragment.Fragment.ProfileFragment
-import com.example.socialmedia.Fragment.Fragment.ReelsFragment
-import com.example.socialmedia.Fragment.Fragment.SearchFragment
-import com.example.socialmedia.Fragment.Fragment.UploadFragment
+import com.example.socialmedia.project.Fragment.HomeFragment
+import com.example.socialmedia.project.Fragment.ProfileFragment
+import com.example.socialmedia.project.Fragment.ReelsFragment
+import com.example.socialmedia.project.Fragment.SearchFragment
+import com.example.socialmedia.project.Fragment.UploadFragment
 import com.example.socialmedia.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> replaceFragment(HomeFragment())
                 R.id.nav_search -> replaceFragment(SearchFragment())
-                R.id.nav_upload -> replaceFragment(UploadFragment())
+//                R.id.nav_upload -> replaceFragment(UploadFragment())
                 R.id.nav_reels -> replaceFragment(ReelsFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }

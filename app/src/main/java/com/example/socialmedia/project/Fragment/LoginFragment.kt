@@ -1,4 +1,4 @@
-package com.example.socialmedia.Fragment.Fragment
+package com.example.socialmedia.project.Fragment
 
 import android.content.Intent
 import android.graphics.LinearGradient
@@ -10,9 +10,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.viewModels
-import com.example.socialmedia.Fragment.Fragment.State.Resource
-import com.example.socialmedia.Fragment.Repository.LoginRepository
-import com.example.socialmedia.Fragment.ViewModel.LoginViewModel
+import com.example.socialmedia.project.Fragment.State.Resource
+import com.example.socialmedia.project.ViewModel.LoginViewModel
 import com.example.socialmedia.MainActivity
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentLoginBinding
@@ -49,23 +48,37 @@ class LoginFragment : Fragment() {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
 
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(requireContext(), "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             loginViewModel.login(email, password).observe(viewLifecycleOwner) { resource ->
-                when(resource) {
-                    is Resource.Loading -> { /* show loading */ }
-                    is Resource.Success -> { Toast.makeText(requireContext(),"Thanh Cong" , Toast.LENGTH_SHORT).show()
+                when (resource) {
+                    is Resource.Loading -> {
+                        binding.btnLogin.isEnabled = false
+                        binding.btnLogin.text = "Đang đăng nhập..."
+                    }
+
+                    is Resource.Success -> {
+                        binding.btnLogin.isEnabled = true
+                        binding.btnLogin.text = "Đăng nhập"
+                        Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
+
                         val intent = Intent(requireContext(), MainActivity::class.java)
                         startActivity(intent)
-
-                        // Nếu bạn muốn đóng fragment hiện tại hoặc activity hiện tại (ví dụ login/signup):
                         requireActivity().finish()
-
                     }
+
                     is Resource.Error -> {
+                        binding.btnLogin.isEnabled = true
+                        binding.btnLogin.text = "Đăng nhập"
                         Toast.makeText(requireContext(), resource.message, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
+
         var isPasswordVisible = false
 
         binding.ivTogglePassword.setOnClickListener {

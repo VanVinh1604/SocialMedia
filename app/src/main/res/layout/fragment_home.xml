@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/white"
-    tools:context=".Fragment.Fragment.HomeFragment">
+    tools:context=".project.Fragment.HomeFragment">
 
     <!-- Toàn bộ phần header + story + greeting đặt trong ScrollView -->
     <ScrollView

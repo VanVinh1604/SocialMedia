@@ -1,4 +1,4 @@
-package com.example.socialmedia.Fragment.Helper
+package com.example.socialmedia.project.Helper
 
 import android.graphics.Color
 import android.graphics.LinearGradient

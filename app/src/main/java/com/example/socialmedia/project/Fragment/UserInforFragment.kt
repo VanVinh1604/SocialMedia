@@ -1,6 +1,5 @@
-package com.example.socialmedia.Fragment.Fragment
+package com.example.socialmedia.project.Fragment
 
-import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,9 +7,12 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.example.socialmedia.Fragment.ViewModel.RegisterViewModel
-import com.example.socialmedia.Fragment.Fragment.State.Resource
+import com.example.socialmedia.project.ViewModel.RegisterViewModel
+import com.example.socialmedia.project.Fragment.State.Resource
+import com.example.socialmedia.project.Helper.TextGradientUtils
 import com.example.socialmedia.R
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.MaterialDatePicker
 import java.util.*
 
 class UserInforFragment : Fragment() {
@@ -34,38 +36,59 @@ class UserInforFragment : Fragment() {
         val rbFemale = view.findViewById<RadioButton>(R.id.rbFemale)
         val etPhone = view.findViewById<EditText>(R.id.etPhoneNumber)
         val btnNext = view.findViewById<Button>(R.id.btnNext)
-        // optional nếu có ProgressBar trong layout
+        val ivBack = view.findViewById<LinearLayout>(R.id.btnBack)
+        val tvTitle = view.findViewById<TextView>(R.id.tvUserInfoTitle)
+        val genderGroup = view.findViewById<RadioGroup>(R.id.genderGroup)
 
-        // Chọn ngày sinh
-        etDOB.setOnClickListener {
-            val c = Calendar.getInstance()
-            DatePickerDialog(requireContext(),
-                { _, year, month, day ->
-                    etDOB.setText(String.format("%02d/%02d/%04d", day, month + 1, year))
-                },
-                c.get(Calendar.YEAR),
-                c.get(Calendar.MONTH),
-                c.get(Calendar.DAY_OF_MONTH)
-            ).show()
+        // Áp dụng gradient giống Social App
+        TextGradientUtils.applyGradient(tvTitle, "#FF6FB1", "#9B59B6")
+
+        // Nút back
+        ivBack.setOnClickListener {
+            parentFragmentManager.popBackStack() // quay lại fragment trước đó
         }
 
-        // Quan sát LiveData registerResult
+        etDOB.setOnClickListener {
+            val builder = MaterialDatePicker.Builder.datePicker()
+            builder.setTitleText("Select your birth date")
+
+            // Giới hạn ngày lớn nhất là hôm nay (không cho chọn tương lai)
+            val constraintsBuilder = CalendarConstraints.Builder()
+                .setEnd(MaterialDatePicker.todayInUtcMilliseconds()) // max = hôm nay
+                .build()
+            builder.setCalendarConstraints(constraintsBuilder)
+
+            val picker = builder.build()
+
+            picker.addOnPositiveButtonClickListener { selection ->
+                val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                calendar.timeInMillis = selection
+
+                etDOB.setText(
+                    String.format(
+                        "%02d/%02d/%04d",
+                        calendar.get(Calendar.DAY_OF_MONTH),
+                        calendar.get(Calendar.MONTH) + 1,
+                        calendar.get(Calendar.YEAR)
+                    )
+                )
+            }
+
+            picker.show(parentFragmentManager, "DATE_PICKER")
+        }
+
+
         registerViewModel.registerResult.observe(viewLifecycleOwner) { resource ->
             when (resource) {
-                is Resource.Loading -> {
-
-                    btnNext.isEnabled = false
-                }
+                is Resource.Loading -> btnNext.isEnabled = false
                 is Resource.Success -> {
-
                     btnNext.isEnabled = true
-                    Toast.makeText(requireContext(), "Register success! ID: ${resource.data?.userId}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Register success!", Toast.LENGTH_SHORT).show()
                     parentFragmentManager.beginTransaction()
                         .replace(R.id.fragmentContainer, LoginFragment())
-                        .commit()
+                        .commitAllowingStateLoss()
                 }
                 is Resource.Error -> {
-
                     btnNext.isEnabled = true
                     Toast.makeText(requireContext(), resource.message, Toast.LENGTH_SHORT).show()
                 }
@@ -76,9 +99,9 @@ class UserInforFragment : Fragment() {
             val firstName = etFirstName.text.toString().trim()
             val lastName = etLastName.text.toString().trim()
             val dobStr = etDOB.text.toString().trim()
-            val gender = when {
-                rbMale.isChecked -> "male"
-                rbFemale.isChecked -> "female"
+            val gender = when (genderGroup.checkedRadioButtonId) {
+                R.id.rbMale -> "male"
+                R.id.rbFemale -> "female"
                 else -> ""
             }
             val phone = etPhone.text.toString().trim()
@@ -94,11 +117,7 @@ class UserInforFragment : Fragment() {
             }
             val dobTimestamp = calendar.timeInMillis
 
-            // Lưu vào ViewModel
-            registerViewModel.setPersonalInfo(firstName, lastName, gender, dobTimestamp)
-            registerViewModel.setPhoneNumber(phone)
-
-            // Gọi async đăng ký
+            registerViewModel.setPersonalInfo(firstName, lastName, gender, dobTimestamp, phone)
             registerViewModel.registerUser()
         }
     }

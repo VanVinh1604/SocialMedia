@@ -1,8 +1,8 @@
-package com.example.socialmedia.Fragment
+package com.example.socialmedia.project
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.example.socialmedia.Fragment.Fragment.LoginFragment
+import com.example.socialmedia.project.Fragment.LoginFragment
 import com.example.socialmedia.R
 
 class UserManagementActivity : AppCompatActivity() {

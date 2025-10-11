@@ -31,6 +31,7 @@
                 android:tint="#333333"/>
 
             <TextView
+                android:id="@+id/tvUserInfoTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="User Info"
@@ -134,21 +135,30 @@
             android:gravity="center"
             android:layout_marginBottom="24dp">
 
-            <RadioButton
-                android:id="@+id/rbMale"
-                android:layout_width="0dp"
+            <RadioGroup
+                android:id="@+id/genderGroup"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Male"
-                android:gravity="center"/>
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
 
-            <RadioButton
-                android:id="@+id/rbFemale"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Female"
-                android:gravity="center"/>
+                <RadioButton
+                    android:id="@+id/rbMale"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Male"
+                    android:padding="8dp"/>
+
+                <RadioButton
+                    android:id="@+id/rbFemale"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Female"
+                    android:padding="8dp"
+                    android:layout_marginStart="16dp"/>
+            </RadioGroup>
+
         </LinearLayout>
 
         <!-- Phone Number -->

@@ -1,4 +1,4 @@
-package com.example.socialmedia.Fragment.Domain
+package com.example.socialmedia.project.Domain
 
 data class FriendModel(
     val friendshipId: String = "",

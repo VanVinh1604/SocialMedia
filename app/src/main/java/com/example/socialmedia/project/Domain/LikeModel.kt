@@ -1,8 +1,9 @@
-package com.example.socialmedia.Fragment.Domain
+package com.example.socialmedia.project.Domain
 
-data class ShareModel(
-    val shareId: String = "",
+data class LikeModel(
+    val likeId: String = "",
     val postId: String = "",
     val userId: String = "",
     val createdAt: Long = System.currentTimeMillis()
+
 )

@@ -1,4 +1,4 @@
-package com.example.socialmedia.Fragment.Domain
+package com.example.socialmedia.project.Domain
 
 // User entity mở rộng cho đăng ký/đăng nhập
 data class UserModel(

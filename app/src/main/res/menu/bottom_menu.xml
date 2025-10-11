@@ -4,46 +4,27 @@
     <item
         android:id="@+id/nav_home"
         android:icon="@drawable/baseline_home_24"
-        android:title="Home"
-        android:iconTint="@color/white"
-        android:background="@drawable/bottom_nav_item_bg"
-
-        />
+        android:title="Home" />
 
     <item
         android:id="@+id/nav_search"
         android:icon="@drawable/baseline_search_24"
-        android:title="Search"
-        android:iconTint="@color/white"
-        android:background="@drawable/bottom_nav_item_bg"
+        android:title="Search" />
 
-        />
-
+    <!-- Item placeholder để tạo khoảng trống cho FAB -->
     <item
-        android:id="@+id/nav_upload"
-        android:icon="@drawable/baseline_add_24"
-        android:title="New"
-        android:iconTint="@color/white"
-        android:background="@drawable/bottom_nav_item_bg"
-
-        />
+        android:id="@+id/nav_placeholder"
+        android:enabled="false"
+        android:title="New" />
 
     <item
         android:id="@+id/nav_reels"
         android:icon="@drawable/clapper"
-        android:title="Reels"
-        android:iconTint="@color/white"
-        android:background="@drawable/bottom_nav_item_bg"
-
-        />
+        android:title="Reels" />
 
     <item
         android:id="@+id/nav_profile"
         android:icon="@drawable/baseline_person_24"
-        android:title="Profile"
-        android:iconTint="@color/white"
-        android:background="@drawable/bottom_nav_item_bg"
-
-        />
+        android:title="Profile" />
 
 </menu>

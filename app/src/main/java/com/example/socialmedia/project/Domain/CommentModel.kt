@@ -1,4 +1,4 @@
-package com.example.socialmedia.Fragment.Domain
+package com.example.socialmedia.project.Domain
 
 data class CommentModel(
     val commentId: String = "",
