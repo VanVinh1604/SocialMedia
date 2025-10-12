@@ -55,6 +55,21 @@ class MainActivity : AppCompatActivity() {
 
         currentItemId = R.id.nav_home
 
+        binding.btnUpload.setOnClickListener {
+            // Chuyển sang UploadFragment
+            replaceFragment(UploadFragment())
+
+            // Xóa highlight trên icon bottom navigation hiện tại
+            currentItemId?.let { prevId ->
+                val prevView = binding.bottomNavigation.findViewById<View>(prevId)
+                prevView.isSelected = false // reset trạng thái chọn
+                // Nếu vẫn còn overlay màu, xóa bằng cách refresh drawable
+                prevView.invalidate()
+            }
+
+            currentItemId = null
+        }
+
         // ✅ Xử lý chọn các item khác
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             val view = binding.bottomNavigation.findViewById<View>(item.itemId)
@@ -92,7 +107,7 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> replaceFragment(HomeFragment())
                 R.id.nav_search -> replaceFragment(SearchFragment())
-//                R.id.nav_upload -> replaceFragment(UploadFragment())
+//                R.id.btnUpload -> replaceFragment(UploadFragment())
                 R.id.nav_reels -> replaceFragment(ReelsFragment())
                 R.id.nav_profile -> replaceFragment(ProfileFragment())
             }

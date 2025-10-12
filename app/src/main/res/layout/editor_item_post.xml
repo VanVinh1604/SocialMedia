@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -72,15 +73,15 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="6dp" />
 
-    <ImageView
+    <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/imgPost"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:scaleType="centerCrop"
         android:src="@drawable/image_backgroud"
-        android:background="@drawable/rounded_backgroun"
-        android:clipToOutline="true"
-        android:layout_marginBottom="8dp" />
+        app:shapeAppearanceOverlay="@style/roundedCorner16dp"
+        android:layout_marginBottom="8dp"/>
+
 
     <!-- 🔹 Nếu bạn bè cũng thích bài viết -->
     <TextView

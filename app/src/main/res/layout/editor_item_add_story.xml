@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="120dp"
+    android:layout_height="200dp"
+    android:layout_marginEnd="10dp"
+    android:background="@drawable/bg_story_rounded"
+    android:clipToOutline="true"
+    android:clipChildren="true"
+    android:elevation="5dp">
+
+    <!-- Nửa trên: ảnh nền -->
+    <FrameLayout
+        android:id="@+id/frameTop"
+        android:layout_width="match_parent"
+        android:layout_height="130dp"
+        android:clipToOutline="true">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgAvatarBg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/image_avata_user"
+            android:contentDescription="User background"
+            app:shapeAppearanceOverlay="@style/roundedCornerTop" />
+     />
+    </FrameLayout>
+
+    <!-- Avatar tròn “ăn” vào giữa -->
+    <FrameLayout
+        android:id="@+id/avatarCircle"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        app:layout_anchor="@id/frameTop"
+        app:layout_anchorGravity="bottom|center"
+        android:layout_gravity="center"
+        android:elevation="8dp"
+     >
+
+        <ImageView
+            android:id="@+id/btnStory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:background="@drawable/circle_gradient"
+            android:padding="50dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/baseline_add_24"
+            android:tint="@android:color/white"
+            android:contentDescription="Tạo tin" />
+    </FrameLayout>
+
+    <!-- Nửa dưới: nền tối + text -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="130dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:textColor="#F9F9F9"
+        android:background="@drawable/bg_story_card"
+
+        android:paddingTop="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tạo tin"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
