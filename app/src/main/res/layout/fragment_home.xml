@@ -84,7 +84,7 @@
                 android:clipToPadding="false"
                 android:paddingStart="20dp"
                 android:paddingEnd="20dp"
-                tools:listitem="@layout/editor_item_story" />
+                tools:listitem="@layout/item_story" />
 
 
             <!-- Greeting -->
@@ -135,6 +135,6 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:clipToPadding="false"
-        tools:listitem="@layout/editor_item_post" />
+        tools:listitem="@layout/item_post" />
 
 </LinearLayout>

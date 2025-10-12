@@ -26,7 +26,7 @@ class PostAdapter(private val posts: List<PostModel>) :
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.editor_item_post, parent, false)
+            .inflate(R.layout.item_post, parent, false)
         return PostViewHolder(view)
     }
 

@@ -19,7 +19,7 @@ class UserOnlineAdapter(private val users: List<UserTestMess>) : RecyclerView.Ad
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.editor_item_user_online, parent, false)
+            .inflate(R.layout.item_user_online, parent, false)
         return UserViewHolder(view)
     }
 

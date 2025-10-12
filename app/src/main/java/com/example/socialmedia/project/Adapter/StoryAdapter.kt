@@ -25,9 +25,9 @@ class StoryAdapter(private val stories: List<StoryTest>) :
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StoryViewHolder {
         val layout = if (viewType == 0)
-            R.layout.editor_item_add_story      // layout cho "Tạo tin"
+            R.layout.item_add_story      // layout cho "Tạo tin"
         else
-            R.layout.editor_item_story   // layout cho story bình thường
+            R.layout.item_story   // layout cho story bình thường
 
         val view = LayoutInflater.from(parent.context).inflate(layout, parent, false)
         return StoryViewHolder(view)

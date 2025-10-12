@@ -23,91 +23,33 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Save Firebase user info
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        if (currentUser != null) {
-            val sharedPref = getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+        FirebaseAuth.getInstance().currentUser?.let { user ->
+            val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
             with(sharedPref.edit()) {
                 putBoolean("is_logged_in", true)
-                putString("user_id", currentUser.uid)
-                putString("email", currentUser.email)
-                putString("full_name", currentUser.displayName ?: "User")
+                putString("user_id", user.uid)
+                putString("email", user.email)
+                putString("full_name", user.displayName ?: "User")
                 apply()
             }
         }
 
-        // Setup Navigation
         setupNavigation()
 
-        // Mặc định hiển thị HomeFragment
+        // Mặc định hiển thị HomeFragment và phóng to icon
         binding.bottomNavigation.selectedItemId = R.id.nav_home
-
-        // Hiệu ứng phóng to icon Home ban đầu
-        val homeView = binding.bottomNavigation.findViewById<View>(R.id.nav_home)
-        val scaleUp = ObjectAnimator.ofPropertyValuesHolder(
-            homeView,
-            PropertyValuesHolder.ofFloat(View.SCALE_X, 1.2f),
-            PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.2f)
-        )
-        scaleUp.duration = 150
-        scaleUp.start()
+        animateIcon(R.id.nav_home)
         currentItemId = R.id.nav_home
 
-        // Upload Button
+        // Upload FAB
         binding.btnUpload.setOnClickListener {
-            // Navigate to Upload Fragment
             navController.navigate(R.id.uploadFragment)
-
-            // Thu nhỏ icon bottom nav hiện tại
-            currentItemId?.let { prevId ->
-                val prevView = binding.bottomNavigation.findViewById<View>(prevId)
-                ObjectAnimator.ofPropertyValuesHolder(
-                    prevView,
-                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
-                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
-                ).apply { duration = 150 }.start()
-
-                prevView.isSelected = false
-                prevView.invalidate()
-            }
-
-            // Bỏ chọn tất cả items trong bottom nav
-            binding.bottomNavigation.menu.setGroupCheckable(0, false, false)
-            for (i in 0 until binding.bottomNavigation.menu.size()) {
-                binding.bottomNavigation.menu.getItem(i).isChecked = false
-            }
-            binding.bottomNavigation.menu.setGroupCheckable(0, true, false)
-
+            resetPreviousIcon()
             currentItemId = null
         }
 
-        // Bottom Navigation Selection
+        // BottomNavigation selection
         binding.bottomNavigation.setOnItemSelectedListener { item ->
-            val view = binding.bottomNavigation.findViewById<View>(item.itemId)
-
-            // Thu nhỏ icon trước đó
-            currentItemId?.let { prevId ->
-                if (prevId != item.itemId) {
-                    val prevView = binding.bottomNavigation.findViewById<View>(prevId)
-                    ObjectAnimator.ofPropertyValuesHolder(
-                        prevView,
-                        PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
-                        PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
-                    ).apply { duration = 150 }.start()
-                }
-            }
-
-            // Phóng to icon mới
-            val scaleUp = ObjectAnimator.ofPropertyValuesHolder(
-                view,
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 1.2f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.2f)
-            )
-            scaleUp.duration = 150
-            scaleUp.start()
-
-            currentItemId = item.itemId
-
-            // Navigate với Navigation Component
             val fragmentId = when (item.itemId) {
                 R.id.nav_home -> R.id.homeFragment
                 R.id.nav_search -> R.id.searchFragment
@@ -117,33 +59,89 @@ class MainActivity : AppCompatActivity() {
             }
 
             fragmentId?.let {
-                // Chỉ navigate nếu không phải fragment hiện tại
                 if (navController.currentDestination?.id != it) {
                     navController.navigate(it)
                 }
             }
 
+            // Animation icon
+            animateIcon(item.itemId)
+            currentItemId = item.itemId
             true
+        }
+
+        // Listener để ẩn BottomNavigation + FAB trên các fragment full screen
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.messageFragment) {
+                // Ẩn BottomNavigation + FAB
+                binding.container.visibility = View.GONE
+                binding.navHostFragment.setPadding(0, 0, 0, 0)
+            } else {
+                // Hiện lại BottomNavigation + FAB
+                binding.container.visibility = View.VISIBLE
+                binding.navHostFragment.setPadding(0, 0, 0, dpToPx(80))
+            }
         }
     }
 
-
     private fun setupNavigation() {
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.navHostFragment) as NavHostFragment
+        val navHostFragment =
+            supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHostFragment.navController
 
-        // Setup OnBackPressedDispatcher (thay thế onBackPressed)
+        // Back press dispatcher
         onBackPressedDispatcher.addCallback(this) {
-            // Nếu đang ở fragment khác, back về Home
             if (navController.currentDestination?.id != R.id.homeFragment) {
                 navController.navigate(R.id.homeFragment)
                 binding.bottomNavigation.selectedItemId = R.id.nav_home
             } else {
-                // Nếu đang ở Home, thoát app
                 finish()
             }
         }
+    }
+
+    private fun animateIcon(itemId: Int) {
+        currentItemId?.let { prevId ->
+            if (prevId != itemId) {
+                val prevView = binding.bottomNavigation.findViewById<View>(prevId)
+                ObjectAnimator.ofPropertyValuesHolder(
+                    prevView,
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
+                ).apply { duration = 150 }.start()
+            }
+        }
+
+        val view = binding.bottomNavigation.findViewById<View>(itemId)
+        ObjectAnimator.ofPropertyValuesHolder(
+            view,
+            PropertyValuesHolder.ofFloat(View.SCALE_X, 1.2f),
+            PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.2f)
+        ).apply { duration = 150 }.start()
+    }
+
+    private fun resetPreviousIcon() {
+        currentItemId?.let { prevId ->
+            val prevView = binding.bottomNavigation.findViewById<View>(prevId)
+            ObjectAnimator.ofPropertyValuesHolder(
+                prevView,
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f)
+            ).apply { duration = 150 }.start()
+            prevView.isSelected = false
+            prevView.invalidate()
+        }
+
+        // Bỏ chọn tất cả
+        binding.bottomNavigation.menu.setGroupCheckable(0, false, false)
+        for (i in 0 until binding.bottomNavigation.menu.size()) {
+            binding.bottomNavigation.menu.getItem(i).isChecked = false
+        }
+        binding.bottomNavigation.menu.setGroupCheckable(0, true, false)
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 
     override fun onSupportNavigateUp(): Boolean {
