@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -5,16 +6,19 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- Fragment container full màn hình -->
-    <FrameLayout
-        android:id="@+id/frameContainer"
+    <!-- NavHostFragment thay thế FrameLayout -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/navHostFragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:paddingBottom="80dp"
+        app:defaultNavHost="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:paddingBottom="80dp"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:navGraph="@navigation/nav_graph" />
 
     <!-- Bottom container -->
     <androidx.constraintlayout.widget.ConstraintLayout

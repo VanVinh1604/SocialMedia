@@ -44,6 +44,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
 
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.5")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.5")
+
     // Firebase BOM quản lý version
     // Thử cách này - version cụ thể, KHÔNG dùng BOM
     implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
