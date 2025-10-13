@@ -6,6 +6,8 @@ import java.util.UUID
 data class StoryModel(
     val storyId: String = UUID.randomUUID().toString(),
     val userId: String = "",
+    val userName: String = "",                // 🔹 tên người đăng
+    val userProfileImage: String = "",
     val mediaType: MediaType = MediaType.IMAGE,
     val mediaUrl: String = "",
     val thumbnailUrl: String? = null,
@@ -19,5 +21,11 @@ data class StoryModel(
     val allowsSharing: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = System.currentTimeMillis() + 86400000,
-    val viewCount: Int = 0
+    val viewCount: Int = 0,
+    val isViewed: Boolean = false,
+
+    var isFollowing: Boolean = false,
+
+    val isAddStory: Boolean = false,          // ✅ thêm flag này
+    val isSuggestFriend: Boolean = false      // ✅ thêm flag này
 )

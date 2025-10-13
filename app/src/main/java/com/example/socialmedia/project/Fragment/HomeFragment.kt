@@ -5,19 +5,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentHomeBinding
-import com.example.socialmedia.project.Adapter.PostAdapter
 import com.example.socialmedia.project.Adapter.StoryAdapter
-import com.example.socialmedia.project.Domain.PostModel
-import com.example.socialmedia.project.Domain.StoryTest
+import com.example.socialmedia.project.ViewModel.StoryViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    private val storyViewModel: StoryViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -29,51 +31,33 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupRecycler()
+        setupObservers()
+        setupClicks()
 
-        setupStoryRecyclerView()
-        setupPostRecyclerView()
-        setupClickListeners()
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        storyViewModel.loadStories(currentUserId)
     }
 
-    private fun setupStoryRecyclerView() {
-        val storyList = listOf(
-            StoryTest(0, R.drawable.baseline_add_24, R.drawable.bg_story_rounded, true),
-            StoryTest(1, R.drawable.image_backgroud, R.drawable.image_person),
-            StoryTest(2, R.drawable.image_avata_user, R.drawable.image_backgroud),
-            StoryTest(3, R.drawable.image_person, R.drawable.image_avata_user),
-            StoryTest(4, R.drawable.image_backgroud, R.drawable.image_backgroud)
-        )
+    private fun setupRecycler() {
+        binding.recyclerStory.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+    }
 
-        binding.recyclerStory.apply {
-            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-            adapter = StoryAdapter(storyList)
+    private fun setupObservers() {
+        storyViewModel.stories.observe(viewLifecycleOwner) { storyList ->
+            binding.recyclerStory.adapter = StoryAdapter(storyList)
+        }
+
+        storyViewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let { println("⚠️ Firebase error: $it") }
         }
     }
 
-    private fun setupPostRecyclerView() {
-        val samplePosts = List(5) {
-            PostModel(
-                postId = "$it",
-                userId = "User$it",
-                content = "This is a sample post #$it",
-                likeCount = 10 + it,
-                shareCount = 2 + it
-            )
-        }
-
-        binding.recyclerPost.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = PostAdapter(samplePosts)
-        }
-    }
-
-    private fun setupClickListeners() {
-        // Navigate to MessageFragment bằng Navigation Component
+    private fun setupClicks() {
         binding.ivMessage.setOnClickListener {
-            // DÙNG action để animation hoạt động
             findNavController().navigate(R.id.action_homeFragment_to_messageFragment)
         }
-
     }
 
     override fun onDestroyView() {
