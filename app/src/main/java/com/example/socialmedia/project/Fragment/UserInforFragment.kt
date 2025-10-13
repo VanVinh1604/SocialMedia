@@ -11,6 +11,7 @@ import com.example.socialmedia.project.ViewModel.RegisterViewModel
 import com.example.socialmedia.project.Fragment.State.Resource
 import com.example.socialmedia.project.Helper.TextGradientUtils
 import com.example.socialmedia.R
+import com.example.socialmedia.project.Domain.Enum.Gender
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.MaterialDatePicker
 import java.util.*
@@ -88,6 +89,7 @@ class UserInforFragment : Fragment() {
                         .replace(R.id.fragmentContainer, LoginFragment())
                         .commitAllowingStateLoss()
                 }
+
                 is Resource.Error -> {
                     btnNext.isEnabled = true
                     Toast.makeText(requireContext(), resource.message, Toast.LENGTH_SHORT).show()
@@ -100,14 +102,15 @@ class UserInforFragment : Fragment() {
             val lastName = etLastName.text.toString().trim()
             val dobStr = etDOB.text.toString().trim()
             val gender = when (genderGroup.checkedRadioButtonId) {
-                R.id.rbMale -> "male"
-                R.id.rbFemale -> "female"
-                else -> ""
+                R.id.rbMale -> Gender.MALE
+                R.id.rbFemale -> Gender.FEMALE
+                else -> Gender.OTHER
             }
             val phone = etPhone.text.toString().trim()
 
-            if (firstName.isEmpty() || lastName.isEmpty() || dobStr.isEmpty() || gender.isEmpty() || phone.isEmpty()) {
-                Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT).show()
+            if (firstName.isEmpty() || lastName.isEmpty() || dobStr.isEmpty() || phone.isEmpty()) {
+                Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT)
+                    .show()
                 return@setOnClickListener
             }
 

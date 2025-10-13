@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -67,6 +68,8 @@ class LoginFragment : Fragment() {
                         Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
 
                         val user = resource.data!!
+                        Log.d("LoginSuccess", "User loaded: ${user.fullName}, Gender=${user.gender}")
+
                         val sharedPref = requireContext().getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
                         with(sharedPref.edit()) {
                             putBoolean("is_logged_in", true)

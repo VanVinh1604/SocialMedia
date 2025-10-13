@@ -1,7 +1,7 @@
 package com.example.socialmedia.project.Repository
 
 import android.util.Log
-import com.example.socialmedia.project.Domain.UserModel
+import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.Fragment.State.Resource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase

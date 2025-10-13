@@ -159,7 +159,15 @@ class RegisterFragment : Fragment() {
             Toast.makeText(requireContext(), "Email & password are valid", Toast.LENGTH_SHORT)
                 .show()
 
-            registerViewModel.registerUser()
+            // Không gọi registerUser ở đây
+// Chỉ lưu email và password vào ViewModel và chuyển sang UserInforFragment
+            registerViewModel.setEmailAndPassword(email, password)
+
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, UserInforFragment())
+                .addToBackStack(null)
+                .commit()
+
 
             registerViewModel.registerResult.observe(viewLifecycleOwner) { result ->
                 when (result) {

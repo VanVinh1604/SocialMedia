@@ -1,7 +1,9 @@
 package com.example.socialmedia.project.ViewModel
 
 import androidx.lifecycle.*
-import com.example.socialmedia.project.Domain.UserModel
+import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Domain.Enum.Gender
+import com.example.socialmedia.project.Domain.Enum.ThemePreference
 import com.example.socialmedia.project.Fragment.State.Resource
 import com.example.socialmedia.project.Repository.RegisterRepository
 import kotlinx.coroutines.launch
@@ -24,15 +26,23 @@ class RegisterViewModel(
         tempPassword = password
     }
 
-    fun setPersonalInfo(firstName: String, lastName: String, gender: String, dateOfBirth: Long, phone: String) {
+    fun setPersonalInfo(
+        firstName: String,
+        lastName: String,
+        gender: Gender,
+        dateOfBirth: Long?,
+        phone: String?
+    ) {
         _userTemp.value = UserModel(
             email = tempEmail,
+            password = tempPassword,
             firstName = firstName,
             lastName = lastName,
-            fullName = "$firstName $lastName",
+            phoneNumber = phone,
             gender = gender,
             dateOfBirth = dateOfBirth,
-            phoneNumber = phone
+            fullName = "$firstName $lastName",
+            themePreference = ThemePreference.AUTO
         )
     }
 
