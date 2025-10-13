@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+
     <color name="lavender">#8692f7</color>
     <color name="story_unseen_border">#1778F2</color> <!-- xanh Facebook -->
     <color name="story_seen_border">#D9D9D9</color>   <!-- xám nhạt -->
@@ -13,4 +13,14 @@
     <color name="colorSecondary">#BA77E0</color>
     <color name="colorAccent">#D075D1</color>
     <color name="colorBackground">#AFB2D3</color>
+
+    <color name="white">#FFFFFFFF</color><color name="primary_blue">#0095F6</color>
+    <color name="dark_gray">#262626</color>
+    <color name="light_gray">#FAFAFA</color>
+    <color name="border_gray">#DBDBDB</color>
+    <color name="text_gray">#8E8E8E</color>
+    <color name="gradient_start">#405DE6</color>
+    <color name="gradient_middle">#E1306C</color>
+    <color name="gradient_end">#FD1D1D</color>
+
 </resources>

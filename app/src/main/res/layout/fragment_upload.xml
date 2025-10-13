@@ -1,19 +1,529 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".project.Fragment.UploadFragment">
+    android:padding="0dp"
+    android:fitsSystemWindows="true">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Upload fragment"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#000000"
-        android:layout_gravity="center"
-        android:gravity="center" />
 
-</FrameLayout>
+    <!-- Hình ảnh chính với indicator số ảnh -->
+    <RelativeLayout
+        android:id="@+id/imageContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintHeight_percent="0.5"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/previewImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/img_1"
+            android:contentDescription="Selected image"
+            android:scaleType="centerCrop"
+            android:layout_margin="0dp"
+            android:padding="0dp" />
+
+        <!-- Top Bar với các nút điều khiển -->
+
+        <!-- Image counter indicator -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/gradient_top_overlay"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <!-- Nút Edit/Filter -->
+            <ImageButton
+                android:id="@+id/btnFilter"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/circle_button_bg"
+                android:contentDescription="Filter"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_filter" />
+
+            <!-- Nút Crop -->
+            <ImageButton
+                android:id="@+id/btnCrop"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/circle_button_bg"
+                android:contentDescription="Crop"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_crop" />
+
+            <!-- Nút Thêm nhiều ảnh -->
+            <ImageButton
+                android:id="@+id/btnAddMore"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/circle_button_bg"
+                android:contentDescription="Add more photos"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_add_photo" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/imageCounter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/rounded_dark_bg"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="1/10"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <!-- Thumbnails ScrollView -->
+        <HorizontalScrollView
+            android:id="@+id/thumbnailScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:visibility="gone"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/thumbnailContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
+    </RelativeLayout>
+
+    <!-- Container cho phần nhập liệu -->
+    <ScrollView
+        android:id="@+id/scrollContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/imageContainer"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/rounded_top_corners"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="20dp"
+            android:paddingBottom="20dp"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:topLeftRadius="20dp"
+            android:topRightRadius="20dp"
+
+           >
+
+            <!-- Trường nhập caption với emoji picker -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:id="@+id/editCaption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:gravity="start|top"
+                    android:hint="Thêm mô tả ..."
+                    android:minLines="3"
+                    android:maxLines="8"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black"
+                    android:textColorHint="#888888"
+                    android:paddingEnd="40dp" />
+
+                <ImageButton
+                    android:id="@+id/btnEmoji"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentTop="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_emoji"
+                    android:contentDescription="Add emoji"
+                    android:padding="4dp" />
+
+                <TextView
+                    android:id="@+id/characterCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/editCaption"
+                    android:layout_alignParentEnd="true"
+                    android:layout_marginTop="4dp"
+                    android:text="0/2200"
+                    android:textSize="12sp"
+                    android:textColor="#888888" />
+            </RelativeLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#EEEEEE" />
+
+            <!-- Trường nhập hashtag với suggest -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <EditText
+                    android:id="@+id/editHashtag"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:gravity="start"
+                    android:hint="# Hashtag"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black"
+                    android:textColorHint="#888888" />
+
+                <TextView
+                    android:id="@+id/btnSuggestHashtag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gợi ý"
+                    android:textSize="14sp"
+                    android:textColor="#0095F6"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:background="#EEEEEE" />
+
+            <!-- Trường nhập nhạc -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp">
+
+                <ImageView
+                    android:id="@+id/musicIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_music"
+                    android:contentDescription="Music icon" />
+
+                <TextView
+                    android:id="@+id/editMusic"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Thêm nhạc"
+                    android:textSize="16sp"
+                    android:textColor="#888888" />
+
+                <ImageView
+                    android:id="@+id/arrowIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/arrow"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="#EEEEEE" />
+
+            <!-- Tag người -->
+            <LinearLayout
+                android:id="@+id/btnTagPeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_tag_people"
+                    android:contentDescription="Tag people" />
+
+                <TextView
+                    android:id="@+id/txtTagPeople"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Gắn thẻ người khác"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/arrow"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="#EEEEEE" />
+
+            <!-- Thêm vị trí -->
+            <LinearLayout
+                android:id="@+id/btnAddLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_location"
+                    android:contentDescription="Add location" />
+
+                <TextView
+                    android:id="@+id/txtLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Thêm vị trí"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/arrow"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="#EEEEEE" />
+
+            <!-- Cài đặt nâng cao -->
+            <LinearLayout
+                android:id="@+id/btnAdvancedSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_settings"
+                    android:contentDescription="Advanced settings" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Cài đặt nâng cao"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/arrow"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="#EEEEEE" />
+
+            <!-- Privacy settings -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Quyền riêng tư"
+                    android:textSize="14sp"
+                    android:textColor="#888888"
+                    android:textStyle="bold" />
+
+                <!-- Toggle tắt bình luận -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Tắt bình luận"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchDisableComments"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+                </LinearLayout>
+
+                <!-- Toggle ẩn số lượt thích -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Ẩn số lượt thích"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchHideLikes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+                </LinearLayout>
+
+                <!-- Dropdown chọn đối tượng xem -->
+                <LinearLayout
+                    android:id="@+id/btnAudienceSelector"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_public"
+                        android:contentDescription="Audience" />
+
+                    <TextView
+                        android:id="@+id/txtAudience"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="Công khai"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+
+                        android:contentDescription="Dropdown" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Nút Post -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPost"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/button_gradient_selector"
+                android:elevation="4dp"
+                android:text="Đăng bài"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Nút Lưu nháp -->
+            <TextView
+                android:id="@+id/btnSaveDraft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="Lưu nháp"
+                android:textSize="14sp"
+                android:textColor="#0095F6"
+                android:padding="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
