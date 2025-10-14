@@ -7,7 +7,7 @@ import java.util.UUID
 
 data class UserModel(
     val userId: String = UUID.randomUUID().toString(),
-    val username: String = "",
+
     val email: String = "",
     val phoneNumber: String? = null,
     val password: String = "",

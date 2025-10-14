@@ -4,17 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-<<<<<<< HEAD
         <DropdownSelection timestamp="2025-10-11T06:19:21.904725Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/Users/vitconlauca/.android/avd/Pixel_3a.avd" />
-=======
-        <DropdownSelection timestamp="2025-10-12T12:43:47.338904Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\ASUS\.android\avd\Pixel_6.avd" />
->>>>>>> Design-Upload
             </handle>
           </Target>
         </DropdownSelection>
