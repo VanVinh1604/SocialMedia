@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.socialmedia.project.Domain.Enum.AudienceType
 import com.example.socialmedia.project.Domain.Enum.MediaType
 import com.example.socialmedia.project.Domain.Enum.PostType
 import com.example.socialmedia.project.Domain.Model.MusicModel
@@ -57,10 +58,10 @@ class UploadViewModel : ViewModel() {
         imageUris: List<Uri>,
         caption: String,
         hashtags: String,
-        selectedMusic: MusicModel?, // Cập nhật từ String? thành MusicModel?
+        selectedMusic: MusicModel?,
         taggedPeople: List<String>,
         location: String?,
-        audienceType: String,
+        audienceType: AudienceType, // Cập nhật từ String thành AudienceType
         disableComments: Boolean,
         hideLikes: Boolean
     ) {
@@ -69,10 +70,8 @@ class UploadViewModel : ViewModel() {
                 _uploadProgress.value = UploadProgress.GettingUserInfo
                 val userId = auth.currentUser?.uid ?: throw Exception("Người dùng chưa đăng nhập")
 
-                // Parse hashtags
                 val hashtagList = parseHashtags(hashtags)
 
-                // Tạo PostModel
                 val postId = UUID.randomUUID().toString()
                 val postModel = PostModel(
                     postId = postId,
@@ -80,19 +79,17 @@ class UploadViewModel : ViewModel() {
                     caption = caption.takeIf { it.isNotBlank() },
                     hashtags = hashtagList,
                     locationName = location,
-                    musicId = selectedMusic?.musicId, // Lưu musicId thay vì toàn bộ MusicModel
+                    musicId = selectedMusic?.musicId,
                     taggedUserIds = taggedPeople,
-                    audienceType = audienceType,
+                    audienceType = audienceType.name, // Lưu tên của AudienceType
                     postType = PostType.PHOTO,
                     allowsComments = !disableComments,
                     allowsLikesVisible = !hideLikes,
                     isDraft = false
                 )
 
-                // Upload images lên Cloudinary
                 val mediaModels = uploadImagesToCloudinary(context, postId, imageUris)
 
-                // Lưu vào Realtime Database
                 _uploadProgress.value = UploadProgress.SavingPost
                 savePostToDatabase(postModel, mediaModels)
 
@@ -111,10 +108,10 @@ class UploadViewModel : ViewModel() {
         imageUris: List<Uri>,
         caption: String,
         hashtags: String,
-        selectedMusic: MusicModel?, // Cập nhật từ String? thành MusicModel?
+        selectedMusic: MusicModel?,
         taggedPeople: List<String>,
         location: String?,
-        audienceType: String,
+        audienceType: AudienceType, // Cập nhật từ String thành AudienceType
         disableComments: Boolean,
         hideLikes: Boolean
     ) {
@@ -132,16 +129,15 @@ class UploadViewModel : ViewModel() {
                     caption = caption.takeIf { it.isNotBlank() },
                     hashtags = hashtagList,
                     locationName = location,
-                    musicId = selectedMusic?.musicId, // Lưu musicId thay vì toàn bộ MusicModel
+                    musicId = selectedMusic?.musicId,
                     taggedUserIds = taggedPeople,
-                    audienceType = audienceType,
+                    audienceType = audienceType.name, // Lưu tên của AudienceType
                     postType = PostType.PHOTO,
                     allowsComments = !disableComments,
                     allowsLikesVisible = !hideLikes,
                     isDraft = true
                 )
 
-                // Upload images nếu có
                 val mediaModels = if (imageUris.isNotEmpty()) {
                     uploadImagesToCloudinary(context, postId, imageUris)
                 } else {
@@ -177,19 +173,17 @@ class UploadViewModel : ViewModel() {
             )
 
             try {
-                // Upload lên Cloudinary sử dụng CloudinaryHelper
                 val imageUrl = CloudinaryHelper.uploadImage(context, uri)
 
-                // Tạo PostMediaModel
                 val mediaModel = PostMediaModel(
                     mediaId = UUID.randomUUID().toString(),
                     postId = postId,
                     mediaType = MediaType.IMAGE,
                     mediaUrl = imageUrl,
                     mediaOrder = index,
-                    width = 1080, // Có thể lấy từ metadata nếu cần
+                    width = 1080,
                     height = 1080,
-                    fileSize = 0 // Có thể lấy từ Uri nếu cần
+                    fileSize = 0
                 )
 
                 mediaModels.add(mediaModel)
@@ -208,13 +202,11 @@ class UploadViewModel : ViewModel() {
     ) {
         val databaseRef = database.reference
 
-        // Lưu PostModel vào "posts/{postId}"
         databaseRef.child("posts")
             .child(postModel.postId)
             .setValue(postModel)
             .await()
 
-        // Lưu PostMediaModel vào "postMedia/{mediaId}"
         mediaModels.forEach { media ->
             databaseRef.child("postMedia")
                 .child(media.mediaId)

@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:padding="0dp">
 
-    <!-- Hình ảnh chính - Nằm dưới cùng -->
+    <!-- Main Image - at the top -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/imageContainer"
         android:layout_width="match_parent"
@@ -14,22 +14,22 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/scrollContainer">
 
-        <!-- Nút quay lại -->
+        <!-- Back Button -->
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Quay lại"
+            android:contentDescription="Back"
             android:padding="12dp"
             android:src="@drawable/arrrowleft"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="30dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="30dp"
             android:elevation="20dp"/>
 
-        <!-- ẢNH CHÍNH - CHIẾM TOÀN BỘ -->
+        <!-- MAIN IMAGE -->
         <ImageView
             android:id="@+id/previewImage"
             android:layout_width="0dp"
@@ -43,7 +43,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- COUNTER - TRÊN THUMBNAIL -->
+        <!-- IMAGE COUNTER -->
         <TextView
             android:id="@+id/imageCounter"
             android:layout_width="wrap_content"
@@ -62,7 +62,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- THUMBNAIL - OVERLAY LÊN ẢNH -->
+        <!-- THUMBNAIL OVERLAY -->
         <HorizontalScrollView
             android:id="@+id/thumbnailScrollView"
             android:layout_width="match_parent"
@@ -85,7 +85,7 @@
         </HorizontalScrollView>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- ScrollView với LinearLayout bo tròn - Nằm trên ảnh -->
+    <!-- ScrollView with rounded top container -->
     <ScrollView
         android:id="@+id/scrollContainer"
         android:layout_width="match_parent"
@@ -110,7 +110,7 @@
             android:background="@drawable/rounded_top_30dp_bg"
             android:elevation="8dp">
 
-            <!-- Trường nhập caption với emoji picker -->
+            <!-- Caption input with emoji picker -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -131,7 +131,7 @@
                     android:layout_marginEnd="0dp"
                     android:background="@null"
                     android:gravity="start|top"
-                    android:hint="Thêm mô tả ..."
+                    android:hint="Add a description..."
                     android:maxLines="8"
                     android:minLines="3"
                     android:paddingEnd="40dp"
@@ -169,7 +169,7 @@
                 android:layout_marginTop="16dp"
                 android:background="#EEEEEE" />
 
-            <!-- Trường nhập hashtag với suggest -->
+            <!-- Hashtag input with suggestion -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -193,7 +193,7 @@
                     android:id="@+id/btnSuggestHashtag"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Gợi ý"
+                    android:text="Suggest"
                     android:textSize="14sp"
                     android:textColor="#0095F6"
                     android:padding="8dp"
@@ -209,7 +209,7 @@
                 android:layout_marginTop="16dp"
                 android:background="#EEEEEE" />
 
-            <!-- Trường nhập nhạc -->
+            <!-- Add music -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -237,7 +237,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:layout_gravity="center_vertical"
-                    android:text="Thêm nhạc"
+                    android:text="Add music"
                     android:textSize="16sp"
                     android:textColor="#888888" />
 
@@ -251,7 +251,7 @@
                     android:contentDescription="Arrow icon" />
             </LinearLayout>
 
-            <!-- Tag người -->
+            <!-- Tag people -->
             <LinearLayout
                 android:id="@+id/btnTagPeople"
                 android:layout_width="match_parent"
@@ -279,7 +279,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:layout_gravity="center_vertical"
-                    android:text="Gắn thẻ người khác"
+                    android:text="Tag others"
                     android:textSize="16sp"
                     android:textColor="@android:color/black" />
 
@@ -299,7 +299,7 @@
                 android:layout_marginTop="8dp"
                 android:background="#EEEEEE" />
 
-            <!-- Thêm vị trí -->
+            <!-- Add location -->
             <LinearLayout
                 android:id="@+id/btnAddLocation"
                 android:layout_width="match_parent"
@@ -327,7 +327,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:layout_gravity="center_vertical"
-                    android:text="Thêm vị trí"
+                    android:text="Add location"
                     android:textSize="16sp"
                     android:textColor="@android:color/black" />
 
@@ -347,7 +347,7 @@
                 android:layout_marginTop="8dp"
                 android:background="#EEEEEE" />
 
-            <!-- Cài đặt nâng cao -->
+            <!-- Advanced settings -->
             <LinearLayout
                 android:id="@+id/btnAdvancedSettings"
                 android:layout_width="match_parent"
@@ -374,7 +374,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
                     android:layout_gravity="center_vertical"
-                    android:text="Cài đặt nâng cao"
+                    android:text="Advanced settings"
                     android:textSize="16sp"
                     android:textColor="@android:color/black" />
 
@@ -404,12 +404,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Quyền riêng tư"
+                    android:text="Privacy"
                     android:textSize="14sp"
                     android:textColor="#888888"
                     android:textStyle="bold" />
 
-                <!-- Toggle tắt bình luận -->
+                <!-- Toggle: Disable comments -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -423,7 +423,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_gravity="center_vertical"
-                        android:text="Tắt bình luận"
+                        android:text="Disable comments"
                         android:textSize="16sp"
                         android:textColor="@android:color/black" />
 
@@ -435,7 +435,7 @@
                         android:checked="false" />
                 </LinearLayout>
 
-                <!-- Toggle ẩn số lượt thích -->
+                <!-- Toggle: Hide like count -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -449,7 +449,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_gravity="center_vertical"
-                        android:text="Ẩn số lượt thích"
+                        android:text="Hide like count"
                         android:textSize="16sp"
                         android:textColor="@android:color/black" />
 
@@ -461,7 +461,7 @@
                         android:checked="false" />
                 </LinearLayout>
 
-                <!-- Dropdown chọn đối tượng xem -->
+                <!-- Audience selector -->
                 <LinearLayout
                     android:id="@+id/btnAudienceSelector"
                     android:layout_width="match_parent"
@@ -489,7 +489,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:layout_gravity="center_vertical"
-                        android:text="Công khai"
+                        android:text="Public"
                         android:textSize="16sp"
                         android:textColor="@android:color/black" />
 
@@ -530,7 +530,7 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="16dp"
-                android:text="Lưu nháp"
+                android:text="Save Draft"
                 android:textSize="14sp"
                 android:textColor="#0095F6"
                 android:padding="12dp"

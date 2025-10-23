@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -27,6 +28,7 @@ import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentUploadBinding
 import com.example.socialmedia.MainActivity
 import com.example.socialmedia.project.Domain.Model.MusicModel
+import com.example.socialmedia.project.Domain.Enum.AudienceType
 import com.example.socialmedia.project.ViewModel.UploadProgress
 import com.example.socialmedia.project.ViewModel.UploadResult
 import com.example.socialmedia.project.ViewModel.UploadViewModel
@@ -44,7 +46,7 @@ class UploadFragment : Fragment() {
     private var selectedMusic: MusicModel? = null
     private val taggedPeople = mutableListOf<String>()
     private var selectedLocation: String? = null
-    private var audienceType = "Công khai"
+    private var audienceType = AudienceType.PUBLIC // Cập nhật từ String thành AudienceType
     private val TAG = "UploadFragment"
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -104,7 +106,6 @@ class UploadFragment : Fragment() {
             updateUIWithImages()
         }
 
-        // Quan sát danh sách nhạc từ ViewModel
         viewModel.musicList.observe(viewLifecycleOwner) {
             // Không cần làm gì thêm vì danh sách đã được tải
         }
@@ -341,13 +342,19 @@ class UploadFragment : Fragment() {
     }
 
     private fun showAudienceSelector() {
-        val audiences = arrayOf("Công khai", "Bạn bè", "Chỉ mình tôi", "Bạn bè ngoại trừ...", "Bạn bè cụ thể")
-        val currentSelection = audiences.indexOf(audienceType)
+        // 💡 SỬA: Lấy danh sách tên hiển thị (displayName) thay vì tên hằng số (name)
+        val audiences = AudienceType.values().map { it.displayName }
+        val currentSelection = audienceType.ordinal // Sử dụng ordinal để xác định vị trí hiện tại
+
         AlertDialog.Builder(requireContext()).setTitle("Ai có thể xem bài viết này?")
-            .setSingleChoiceItems(audiences, currentSelection) { dialog, which ->
-                audienceType = audiences[which]
-                binding.txtAudience.text = audienceType
-                Toast.makeText(context, "Đã chọn: $audienceType", Toast.LENGTH_SHORT).show()
+            .setSingleChoiceItems(audiences.toTypedArray(), currentSelection) { dialog, which ->
+                audienceType = AudienceType.values()[which] // Cập nhật audienceType
+
+                // 💡 SỬA: Hiển thị displayName
+                binding.txtAudience.text = audienceType.displayName
+
+                // 💡 SỬA: Hiển thị displayName trong Toast
+                Toast.makeText(context, "Đã chọn: ${audienceType.displayName}", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }.setNegativeButton("Hủy", null).show()
     }
@@ -384,7 +391,7 @@ class UploadFragment : Fragment() {
             selectedMusic, // MusicModel?
             taggedPeople, // List<String>
             selectedLocation, // String?
-            audienceType, // String
+            audienceType,// Sử dụng tên của AudienceType thay vì String trực tiếp
             binding.switchDisableComments.isChecked, // Boolean
             binding.switchHideLikes.isChecked // Boolean
         )
@@ -407,7 +414,7 @@ class UploadFragment : Fragment() {
                     selectedMusic, // MusicModel?
                     taggedPeople, // List<String>
                     selectedLocation, // String?
-                    audienceType, // String
+                    audienceType, // Sử dụng tên của AudienceType thay vì String trực tiếp
                     binding.switchDisableComments.isChecked, // Boolean
                     binding.switchHideLikes.isChecked // Boolean
                 )
@@ -433,8 +440,9 @@ class UploadFragment : Fragment() {
         binding.txtLocation.text = "Thêm vị trí"
         binding.switchDisableComments.isChecked = false
         binding.switchHideLikes.isChecked = false
-        audienceType = "Công khai"
-        binding.txtAudience.text = audienceType
+        audienceType = AudienceType.PUBLIC // Reset về giá trị mặc định
+        // 💡 SỬA: Hiển thị displayName khi reset
+        binding.txtAudience.text = audienceType.displayName
     }
 
     private fun observeViewModel() {
