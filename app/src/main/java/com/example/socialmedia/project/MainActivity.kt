@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_home -> R.id.homeFragment
                 R.id.nav_search -> R.id.searchFragment
                 R.id.nav_reels -> R.id.reelsFragment
-                R.id.nav_profile -> R.id.profileFragment
+                R.id.nav_profile -> R.id.personalProfileFragment
                 else -> null
             }
 

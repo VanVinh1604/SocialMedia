@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#FAFAFA"
     android:fillViewport="true"
-    tools:context=".project.Fragment.ProfileFragment">
+    tools:context=".project.Fragment.PersonalProfileFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -226,52 +226,49 @@
                         android:lineSpacingExtra="2dp" />
                 </LinearLayout>
 
-                <!-- Action Buttons -->
+                <!-- Action Buttons (CIRCLE GRADIENT) -->
                 <LinearLayout
                     android:id="@+id/llActionButtons"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_below="@id/llUserInfo"
                     android:layout_marginTop="20dp"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnFollow"
-                        android:layout_width="0dp"
+                        android:id="@+id/btnEditProfile"
+                        android:layout_width="120dp"
                         android:layout_height="48dp"
-                        android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:text="Follow"
+                        android:text="Edit profile"
                         android:textColor="#FFFFFF"
-                        android:textSize="15sp"
+                        android:textSize="14sp"
                         android:textAllCaps="false"
                         android:fontFamily="sans-serif-medium"
-                        app:cornerRadius="12dp"
-                        app:backgroundTint="#B084CC"
-                        app:elevation="2dp"
-                        app:icon="@drawable/ic_add"
+                        app:cornerRadius="24dp"
+                        android:background="@drawable/btn_gradient"
+                        app:icon="@drawable/ic_edit"
                         app:iconGravity="textStart"
                         app:iconTint="#FFFFFF"
-                        app:iconSize="20dp" />
+                        app:iconSize="18dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnShareProfile"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="Share"
-                        android:textColor="#B084CC"
-                        android:textSize="15sp"
-                        android:textAllCaps="false"
+                        android:layout_marginEnd="8dp"
                         android:fontFamily="sans-serif-medium"
-                        app:cornerRadius="12dp"
-                        app:strokeColor="#B084CC"
-                        app:strokeWidth="2dp"
-                        app:backgroundTint="@android:color/transparent"
-                        app:icon="@drawable/ic_share"
+                        android:text="Share profile"
+                        android:textAllCaps="false"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:background="@drawable/btn_gradient"
+                        app:cornerRadius="24dp"
+                        app:icon="@drawable/ic_edit"
                         app:iconGravity="textStart"
-                        app:iconTint="#B084CC"
-                        app:iconSize="20dp" />
+                        app:iconSize="18dp"
+                        app:iconTint="#FFFFFF" />
                 </LinearLayout>
             </RelativeLayout>
         </androidx.cardview.widget.CardView>
@@ -306,8 +303,9 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <!-- New Collection -->
+                    <!-- New Collection (Đã thêm ID) -->
                     <LinearLayout
+                        android:id="@+id/btnNewCollection"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
