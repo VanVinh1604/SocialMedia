@@ -43,19 +43,39 @@
                     android:shadowRadius="6" />
 
                 <!-- Icon Notification (bên trái Messenger) -->
-                <ImageView
-                    android:id="@+id/ivNotification"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                <FrameLayout
+                    android:id="@+id/notificationContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:layout_toStartOf="@id/ivMessage"
                     android:layout_centerVertical="true"
-                    android:layout_marginEnd="12dp"
-                    android:src="@drawable/ic_notification"
-                    android:background="@drawable/circle_gradient"
-                    android:padding="6dp"
-                    android:contentDescription="Notification"
-                    android:clipToOutline="true"
-                    android:scaleType="centerInside"/>
+                    android:layout_marginEnd="12dp">
+
+                    <!-- Icon Notification -->
+                    <ImageView
+                        android:id="@+id/ivNotification"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_notification"
+                        android:background="@drawable/circle_gradient"
+                        android:padding="6dp"
+                        android:tint="@android:color/white"
+                        android:contentDescription="Notification"
+                        android:clipToOutline="true"
+                        android:scaleType="centerInside"/>
+
+                    <!-- Chấm đỏ hiển thị khi có thông báo mới -->
+                    <View
+                        android:id="@+id/badgeNotification"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/red_circle"
+                        android:visibility="gone"/>
+                </FrameLayout>
+
 
                 <!-- Icon Message (ngoài cùng bên phải) -->
                 <ImageView
@@ -65,6 +85,7 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:layout_marginEnd="12dp"
+                    android:tint="@android:color/white"
                     android:src="@drawable/ic_messenger"
                     android:background="@drawable/circle_gradient"
                     android:padding="6dp"

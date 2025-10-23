@@ -72,7 +72,8 @@ class MainActivity : AppCompatActivity() {
 
         // Listener để ẩn BottomNavigation + FAB trên các fragment full screen
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.id == R.id.messageFragment) {
+            if (destination.id == R.id.messageFragment ||
+                destination.id == R.id.notificationFragment) {
                 // Ẩn BottomNavigation + FAB
                 binding.container.visibility = View.GONE
                 binding.navHostFragment.setPadding(0, 0, 0, 0)

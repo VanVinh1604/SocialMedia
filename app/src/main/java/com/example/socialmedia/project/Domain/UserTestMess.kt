@@ -7,3 +7,4 @@ data class UserTestMess(
     val avatarRes: Int = R.drawable.baseline_person_24,
     val isOnline: Boolean
 )
+

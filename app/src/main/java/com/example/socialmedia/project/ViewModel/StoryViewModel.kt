@@ -39,7 +39,8 @@ class StoryViewModel(
 
                         // Suggest Friend nếu chưa follow ai
                         val followingList = storyList.map { it.userId }
-                        val notFollowedUsers = users.filter { it.userId !in followingList && it.userId != currentUserId }
+                        val notFollowedUsers =
+                            users.filter { it.userId !in followingList && it.userId != currentUserId }
                         notFollowedUsers.forEach { user ->
                             finalList.add(
                                 StoryModel(
