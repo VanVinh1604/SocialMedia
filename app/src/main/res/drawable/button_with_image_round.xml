@@ -1,0 +1,16 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ảnh nền -->
+    <item>
+        <bitmap
+            android:src="@drawable/btn_background"
+            android:gravity="fill" />
+    </item>
+
+    <!-- Bo góc 30dp và overlay màu khi nhấn -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="50dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</layer-list>
