@@ -15,14 +15,19 @@ class UserManagementActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_user_management)
+//        setContentView(R.layout.activity_user_management)
+        binding = ActivityUserManagementBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        val auth = FirebaseAuth.getInstance()
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
             // Đã đăng nhập -> chuyển thẳng vào MainActivity
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-            return
+//            startActivity(Intent(this, MainActivity::class.java))
+//            finish()
+//            return
+
+            auth.signOut()
         }
 
         // Chưa đăng nhập -> hiển thị màn hình login
@@ -37,8 +42,8 @@ class UserManagementActivity : AppCompatActivity() {
         }
 
         // Load LoginFragment đầu tiên
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, LoginFragment())
-            .commit()
+//        supportFragmentManager.beginTransaction()
+//            .replace(R.id.fragmentContainer, LoginFragment())
+//            .commit()
     }
 }

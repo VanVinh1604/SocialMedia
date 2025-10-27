@@ -8,10 +8,10 @@
     android:background="@color/white"
     tools:context=".project.Fragment.HomeFragment">
 
-    <!-- Toàn bộ phần header + story + greeting đặt trong ScrollView -->
-    <ScrollView
+    <!-- Dùng NestedScrollView thay vì ScrollView -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
@@ -20,13 +20,13 @@
             android:orientation="vertical"
             android:padding="8dp">
 
+            <!-- Header -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp">
 
-                <!-- Text App Name -->
                 <TextView
                     android:id="@+id/tvAppName"
                     android:layout_width="wrap_content"
@@ -42,7 +42,6 @@
                     android:shadowDy="2"
                     android:shadowRadius="6" />
 
-                <!-- Icon Notification (bên trái Messenger) -->
                 <FrameLayout
                     android:id="@+id/notificationContainer"
                     android:layout_width="wrap_content"
@@ -51,7 +50,6 @@
                     android:layout_centerVertical="true"
                     android:layout_marginEnd="12dp">
 
-                    <!-- Icon Notification -->
                     <ImageView
                         android:id="@+id/ivNotification"
                         android:layout_width="40dp"
@@ -64,7 +62,6 @@
                         android:clipToOutline="true"
                         android:scaleType="centerInside"/>
 
-                    <!-- Chấm đỏ hiển thị khi có thông báo mới -->
                     <View
                         android:id="@+id/badgeNotification"
                         android:layout_width="10dp"
@@ -76,8 +73,6 @@
                         android:visibility="gone"/>
                 </FrameLayout>
 
-
-                <!-- Icon Message (ngoài cùng bên phải) -->
                 <ImageView
                     android:id="@+id/ivMessage"
                     android:layout_width="40dp"
@@ -94,8 +89,6 @@
                     android:scaleType="centerInside"/>
             </RelativeLayout>
 
-
-
             <!-- Story -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerStory"
@@ -107,7 +100,6 @@
                 android:paddingEnd="20dp"
                 tools:listitem="@layout/item_story" />
 
-
             <!-- Greeting -->
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -118,7 +110,6 @@
                 android:paddingVertical="10dp"
                 android:elevation="2dp">
 
-                <!-- Text Greeting -->
                 <TextView
                     android:id="@+id/tvGreeting"
                     android:layout_width="wrap_content"
@@ -131,7 +122,6 @@
                     android:layout_toStartOf="@id/iconCamera"
                     android:layout_marginEnd="12dp" />
 
-                <!-- Icon Camera ở góc phải -->
                 <ImageView
                     android:id="@+id/iconCamera"
                     android:layout_width="32dp"
@@ -139,23 +129,20 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:src="@drawable/ic_camera"
-
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Camera" />
             </RelativeLayout>
 
+            <!-- Post -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerPost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:orientation="vertical"
+                tools:listitem="@layout/item_post" />
 
         </LinearLayout>
-    </ScrollView>
-
-    <!-- RecyclerView hiển thị post (cuộn độc lập) -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerPost"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:clipToPadding="false"
-        tools:listitem="@layout/item_post" />
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

@@ -32,7 +32,7 @@ fun UserModel.getAvatarUrl(): String {
  * Kiểm tra xem user có được verify và active không
  */
 fun UserModel.isVerifiedUser(): Boolean {
-    return isVerified && isActive
+    return Verified && Active
 }
 
 /**

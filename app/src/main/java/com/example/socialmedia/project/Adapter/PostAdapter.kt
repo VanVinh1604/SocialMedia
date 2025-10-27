@@ -3,48 +3,176 @@ package com.example.socialmedia.project.Adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.socialmedia.R
-import com.example.socialmedia.project.Domain.PostModel
-import de.hdodenhof.circleimageview.CircleImageView
+import com.example.socialmedia.databinding.ItemPostBinding
+import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Helper.TimeUtils
+import com.google.firebase.database.*
 
-class PostAdapter(private val posts: List<PostModel>) :
-    RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
+class PostAdapter(
+    private var postList: List<PostModel>,
+    private val currentUserId: String,
+    var onLikesClickListener: ((postId: String) -> Unit)? = null,
+    var onCommentClickListener: ((postId: String, postAuthorId: String) -> Unit)? = null
+) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
-    inner class PostViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val imgProfile: CircleImageView = view.findViewById(R.id.imgProfile)
-        val txtUsername: TextView = view.findViewById(R.id.txtUsername)
-        val tvTime: TextView = view.findViewById(R.id.tvTime)
-        val tvContent: TextView = view.findViewById(R.id.tvContent)
-        val imgPost: ImageView = view.findViewById(R.id.imgPost)
-        val tvLikesCount: TextView = view.findViewById(R.id.tvLikesCount)
-        val tvCommentCount: TextView = view.findViewById(R.id.tvCommentCount)
-        val tvShareCount: TextView = view.findViewById(R.id.tvShareCount)
-    }
+    fun getPosts(): List<PostModel> = postList
+
+
+    inner class PostViewHolder(val binding: ItemPostBinding) :
+        RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_post, parent, false)
-        return PostViewHolder(view)
+        val binding = ItemPostBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return PostViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
-        val post = posts[position]
+        val post = postList[position]
+        val b = holder.binding
 
-        // Dữ liệu mẫu để hiển thị thiết kế
-        holder.txtUsername.text = "User ${post.userId}"
-        holder.tvTime.text = "2h ago"
-        holder.tvContent.text = post.content
-        holder.tvLikesCount.text = "${post.likeCount}"
-        holder.tvCommentCount.text = "${post.shareCount}"  // nếu chưa có comment count riêng
-        holder.tvShareCount.text = "${post.shareCount}"
+        // Nội dung bài viết
+        b.tvContent.text = post.caption ?: ""
+        b.tvLikesCount.text = "${post.likeCount} likes"
+        b.tvTime.text = TimeUtils.getTimeAgo(post.createdAt)
 
-        // Ảnh post & profile test
-        holder.imgProfile.setImageResource(R.drawable.image_person)
-        holder.imgPost.setImageResource(R.drawable.image_backgroud)
+        b.tvLikesCount.setOnClickListener {
+            onLikesClickListener?.invoke(post.postId)
+        }
+
+        b.layoutComment.setOnClickListener {
+            val authorId = post.userId ?: return@setOnClickListener
+            onCommentClickListener?.invoke(post.postId, authorId)
+        }
+
+        val commentsRef = FirebaseDatabase.getInstance().getReference("comments").child(post.postId)
+        commentsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                post.commentCount = snapshot.childrenCount.toInt()
+                b.tvCommentCount.text = "${post.commentCount} comments"
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+
+        // Hiển thị media
+        if (post.mediaList.isNotEmpty()) {
+            b.rvMediaList.visibility = View.VISIBLE
+
+            if (b.rvMediaList.adapter == null) {
+                val layoutManager = LinearLayoutManager(
+                    b.root.context,
+                    LinearLayoutManager.HORIZONTAL,
+                    false
+                )
+                b.rvMediaList.layoutManager = layoutManager
+                b.rvMediaList.adapter = MediaAdapter(post.mediaList)
+
+                // PagerSnapHelper để snap từng ảnh như ViewPager
+                val snapHelper = PagerSnapHelper()
+                snapHelper.attachToRecyclerView(b.rvMediaList)
+
+                // Custom dot indicator
+                val tvDots = TextView(b.root.context)
+                tvDots.textSize = 12f
+                tvDots.text = "1/${post.mediaList.size}"
+                b.root.addView(tvDots)
+
+                b.rvMediaList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                        val snapView = snapHelper.findSnapView(layoutManager)
+                        val currentPos = snapView?.let { layoutManager.getPosition(it) } ?: 0
+                        tvDots.text = "${currentPos + 1}/${post.mediaList.size}"
+                    }
+                })
+            } else {
+                (b.rvMediaList.adapter as MediaAdapter).updateMedia(post.mediaList)
+            }
+        } else {
+            b.rvMediaList.visibility = View.GONE
+        }
+
+        // Load thông tin user
+        val userId = post.userId ?: return
+        val userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(userId)
+        userRef.keepSynced(true)
+        userRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userName = snapshot.child("fullName").getValue(String::class.java) ?: "Ẩn danh"
+                val profileUrl = snapshot.child("profilePictureUrl").getValue(String::class.java)
+
+                b.txtUsername.text = userName
+
+                Glide.with(b.root.context)
+                    .load(profileUrl ?: R.drawable.image_avata_user)
+                    .placeholder(R.drawable.image_avata_user)
+                    .error(R.drawable.image_avata_user)
+                    .circleCrop()
+                    .into(b.imgProfile)
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+
+        // Realtime like count
+        val postRef = FirebaseDatabase.getInstance().getReference("Posts").child(post.postId)
+        postRef.child("likeCount").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                post.likeCount = snapshot.getValue(Int::class.java) ?: 0
+                updateLikeUI(post, b)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+
+        // Kiểm tra like
+        postRef.child("likedUsers").child(currentUserId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    post.isLikedByCurrentUser = snapshot.getValue(Boolean::class.java) ?: false
+                    updateLikeUI(post, b)
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+
+        // Click like/unlike
+        b.ivLike.setOnClickListener {
+            val likedUsersRef = postRef.child("likedUsers").child(currentUserId)
+            likedUsersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val hasLiked = snapshot.getValue(Boolean::class.java) ?: false
+                    if (!hasLiked) {
+                        likedUsersRef.setValue(true)
+                        postRef.child("likeCount").setValue(post.likeCount + 1)
+                        post.isLikedByCurrentUser = true
+                    } else {
+                        likedUsersRef.removeValue()
+                        postRef.child("likeCount").setValue(post.likeCount - 1)
+                        post.isLikedByCurrentUser = false
+                    }
+                    updateLikeUI(post, b)
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+        }
     }
 
-    override fun getItemCount(): Int = posts.size
+    private fun updateLikeUI(post: PostModel, b: ItemPostBinding) {
+        b.ivLike.setImageResource(
+            if (post.isLikedByCurrentUser) R.drawable.ic_favorite_red
+            else R.drawable.ic_favorite
+        )
+        b.tvLikesCount.text = "${post.likeCount} likes"
+    }
+
+    override fun getItemCount(): Int = postList.size
+
+    fun updatePosts(newList: List<PostModel>) {
+        postList = newList
+        notifyDataSetChanged()
+    }
 }

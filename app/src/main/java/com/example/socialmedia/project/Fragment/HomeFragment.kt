@@ -1,5 +1,6 @@
 package com.example.socialmedia.project.Fragment
 
+import LikedUsersBottomSheetFragment
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,8 +11,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentHomeBinding
+import com.example.socialmedia.project.Adapter.PostAdapter
 import com.example.socialmedia.project.Adapter.StoryAdapter
 import com.example.socialmedia.project.Domain.Model.StoryModel
+import com.example.socialmedia.project.ViewModel.PostViewModel
 import com.example.socialmedia.project.ViewModel.StoryViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -25,7 +28,10 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
 
+    private val postViewModel: PostViewModel by viewModels()
+
     private val storyViewModel: StoryViewModel by viewModels()
+    private lateinit var postAdapter: PostAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -41,6 +47,12 @@ class HomeFragment : Fragment() {
         setupObservers()
         setupClicks()
         observeNotificationBadge()
+
+        setupPostRecycler()
+        observePosts()
+
+        postViewModel.loadPosts()
+
 
 
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
@@ -75,6 +87,36 @@ class HomeFragment : Fragment() {
             findNavController().navigate(R.id.action_homeFragment_to_notificationFragment)
         }
     }
+
+    private fun setupPostRecycler() {
+        binding.recyclerPost.layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerPost.isNestedScrollingEnabled = false
+
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        postAdapter = PostAdapter(emptyList(), currentUserId,
+            onLikesClickListener = { postId ->
+                LikedUsersBottomSheetFragment(postId)
+                    .show(parentFragmentManager, "likedUsers")
+            },
+            onCommentClickListener = { postId, postAuthorId ->
+                CommentBottomSheetFragment(postId, currentUserId, postAuthorId)
+                    .show(parentFragmentManager, "comments")
+            }
+        )
+        binding.recyclerPost.adapter = postAdapter
+    }
+
+    private fun observePosts() {
+        postViewModel.posts.observe(viewLifecycleOwner) { posts ->
+            postAdapter.updatePosts(posts)
+        }
+
+        postViewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let { println("⚠️ Post Firebase error: $it") }
+        }
+    }
+
 
     private fun observeNotificationBadge() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
