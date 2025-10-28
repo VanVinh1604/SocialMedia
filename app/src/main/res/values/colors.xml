@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#FF000000</color>
+    <color name="purple_main">#9C27B0</color>
 
     <color name="lavender">#8692f7</color>
     <color name="story_unseen_border">#1778F2</color> <!-- xanh Facebook -->

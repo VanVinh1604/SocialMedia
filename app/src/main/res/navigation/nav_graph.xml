@@ -7,6 +7,21 @@
 
     <!-- HomeFragment -->
     <fragment
+        android:id="@+id/personalProfileFragment"
+        android:name="com.example.socialmedia.project.Fragment.PersonalProfileFragment"
+        android:label="Personal Profile"
+        tools:layout="@layout/fragment_personal_profile">
+
+        <!-- Giữ nguyên action sang reelsFragment nếu bạn cần -->
+        <action
+            android:id="@+id/action_personalProfileFragment_to_reelsFragment"
+            app:destination="@id/reelsFragment"
+            app:enterAnim="@anim/slide_in_left"
+            app:exitAnim="@anim/slide_out_right"
+            app:popEnterAnim="@anim/slide_in_right"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+    <fragment
         android:id="@+id/homeFragment"
         android:name="com.example.socialmedia.project.Fragment.HomeFragment"
         android:label="Home"
