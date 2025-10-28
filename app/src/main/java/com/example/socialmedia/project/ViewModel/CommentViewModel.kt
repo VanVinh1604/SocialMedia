@@ -24,4 +24,11 @@ class CommentViewModel : ViewModel() {
             loadComments(postId) // reload sau khi thêm
         }
     }
+    fun addReply(postId: String, parentCommentId: String, userId: String, content: String) {
+        viewModelScope.launch {
+            repository.addReply(postId, parentCommentId, userId, content)
+            loadComments(postId) // reload comment + reply
+        }
+    }
+
 }

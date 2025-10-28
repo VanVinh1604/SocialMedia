@@ -51,12 +51,44 @@ class PostAdapter(
         }
 
         val commentsRef = FirebaseDatabase.getInstance().getReference("comments").child(post.postId)
-        commentsRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                post.commentCount = snapshot.childrenCount.toInt()
-                b.tvCommentCount.text = "${post.commentCount} comments"
+
+        var totalComments = 0 // lưu tổng số comment + reply
+
+// Listener cho comment cha
+        commentsRef.addChildEventListener(object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                totalComments++ // comment cha mới
+                // cộng số reply nếu đã có sẵn
+                totalComments += snapshot.child("replies").childrenCount.toInt()
+                b.tvCommentCount.text = "$totalComments comments"
+
+                // listener cho reply của comment này
+                val repliesRef = snapshot.ref.child("replies")
+                repliesRef.addChildEventListener(object : ChildEventListener {
+                    override fun onChildAdded(snap: DataSnapshot, previousChildName: String?) {
+                        totalComments++
+                        b.tvCommentCount.text = "$totalComments comments"
+                    }
+
+                    override fun onChildRemoved(snap: DataSnapshot) {
+                        totalComments--
+                        b.tvCommentCount.text = "$totalComments comments"
+                    }
+
+                    override fun onChildChanged(snap: DataSnapshot, previousChildName: String?) {}
+                    override fun onChildMoved(snap: DataSnapshot, previousChildName: String?) {}
+                    override fun onCancelled(error: DatabaseError) {}
+                })
             }
 
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                // trừ comment cha + số reply của nó
+                totalComments -= 1 + snapshot.child("replies").childrenCount.toInt()
+                b.tvCommentCount.text = "$totalComments comments"
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
             override fun onCancelled(error: DatabaseError) {}
         })
 

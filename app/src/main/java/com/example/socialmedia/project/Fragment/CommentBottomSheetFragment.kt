@@ -40,9 +40,25 @@ class CommentBottomSheetFragment(private val postId: String, private val current
 
         // Load danh sách comment
         commentViewModel.comments.observe(viewLifecycleOwner) { comments ->
-            binding.rvComments.adapter = CommentAdapter(comments, currentUserId, postAuthorId)
+            binding.rvComments.adapter = CommentAdapter(comments, currentUserId, postAuthorId) { comment ->
+                // Click Reply
+                binding.etComment.hint = "Trả lời ${comment.userId}"
+
+                // Khi nhấn gửi, gọi addReply
+                binding.ivSendComment.setOnClickListener {
+                    val content = binding.etComment.text.toString().trim()
+                    if (content.isNotEmpty()) {
+                        commentViewModel.addReply(comment.commentableId, comment.commentId, currentUserId, content)
+                        binding.etComment.text.clear()
+                        binding.etComment.hint = "Viết bình luận..."
+                    }
+                }
+            }
         }
+
         commentViewModel.loadComments(postId)
+
+
 
         // 🔹 Load avatar user hiện tại
         val userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(currentUserId)
@@ -60,6 +76,7 @@ class CommentBottomSheetFragment(private val postId: String, private val current
                 // Có thể log lỗi ở đây
             }
         })
+
 
 
         // 🔹 Gửi comment

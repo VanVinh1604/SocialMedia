@@ -13,7 +13,7 @@ data class CommentModel(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val editedAt: Long? = null,
-    val likeCount: Int = 0,
+    var likeCount: Int = 0,
     val replyCount: Int = 0,
     val isPinned: Boolean = false
 )

@@ -14,6 +14,7 @@ class CommentRepository {
         try {
             val snapshot = database.child("comments").child(postId).get().await()
             snapshot.children.mapNotNull { it.getValue(CommentModel::class.java) }
+                .filter { it.parentCommentId == null } // chỉ lấy comment gốc
                 .sortedBy { it.createdAt }
         } catch (e: Exception) {
             emptyList()
@@ -28,4 +29,17 @@ class CommentRepository {
         )
         database.child("comments").child(postId).child(comment.commentId).setValue(comment).await()
     }
+    suspend fun addReply(postId: String, parentCommentId: String, userId: String, content: String) {
+        val reply = CommentModel(
+            userId = userId,
+            commentableId = postId,
+            parentCommentId = parentCommentId,
+            content = content
+        )
+        database.child("comments").child(postId)
+            .child(parentCommentId).child("replies")
+            .child(reply.commentId) // dùng commentId do model sinh sẵn
+            .setValue(reply).await()
+    }
+
 }
