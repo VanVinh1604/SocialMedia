@@ -18,17 +18,23 @@ class CommentViewModel : ViewModel() {
         }
     }
 
-    fun addComment(postId: String, userId: String, content: String) {
+    fun addComment(postId: String, userId: String, postOwnerId: String, content: String) {
         viewModelScope.launch {
-            repository.addComment(postId, userId, content)
-            loadComments(postId) // reload sau khi thêm
-        }
-    }
-    fun addReply(postId: String, parentCommentId: String, userId: String, content: String) {
-        viewModelScope.launch {
-            repository.addReply(postId, parentCommentId, userId, content)
-            loadComments(postId) // reload comment + reply
+            repository.addComment(postId, userId, postOwnerId, content)
+            loadComments(postId)
         }
     }
 
+    fun addReply(postId: String, parentCommentId: String, userId: String, content: String) {
+        viewModelScope.launch {
+            repository.addReply(postId, parentCommentId, userId, content)
+            loadComments(postId)
+        }
+    }
+
+    fun listenComments(postId: String) {
+        repository.listenCommentsByPostId(postId) { newComments ->
+            comments.postValue(newComments)
+        }
+    }
 }

@@ -17,7 +17,8 @@ import com.google.firebase.database.ValueEventListener
 class ReplyAdapter(
     private val replies: List<CommentModel>,
     private val postAuthorId: String,
-    private val currentUserId: String
+    private val currentUserId: String,
+    private val onReplyClick: (comment: CommentModel) -> Unit
 ) : RecyclerView.Adapter<ReplyAdapter.ReplyViewHolder>() {
 
     inner class ReplyViewHolder(val binding: ItemCommentReplyBinding) :
@@ -39,6 +40,11 @@ class ReplyAdapter(
                         .placeholder(R.drawable.image_avata_user)
                         .circleCrop()
                         .into(binding.imgReplyAvatar)
+
+                    binding.btnReplyToReply.setOnClickListener {
+                        // Luôn trả về comment gốc để không tạo cấp 2
+                        onReplyClick(reply.copy(parentCommentId = reply.parentCommentId))
+                    }
 
                     if (reply.userId == postAuthorId) {
                         binding.tvReplyAuthorLabel.visibility = View.VISIBLE
@@ -91,6 +97,7 @@ class ReplyAdapter(
                     )
                 }
             }
+
         }
     }
 

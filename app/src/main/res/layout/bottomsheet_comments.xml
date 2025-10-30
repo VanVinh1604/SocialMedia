@@ -19,7 +19,6 @@
         android:layout_width="match_parent"
         android:layout_height="400dp"/>
 
-    <!-- Input thêm comment -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,7 +26,6 @@
         android:paddingTop="8dp"
         android:gravity="center_vertical">
 
-        <!-- Avatar user -->
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/imgUserAvatar"
             android:layout_width="36dp"
@@ -36,7 +34,6 @@
             android:scaleType="centerCrop"
             android:layout_marginEnd="8dp"/>
 
-        <!-- EditText nhập bình luận -->
         <EditText
             android:id="@+id/etComment"
             android:layout_width="0dp"
@@ -44,7 +41,20 @@
             android:layout_weight="1"
             android:hint="Viết bình luận..."
             android:padding="8dp"
-          />
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="4"
+            android:scrollbars="vertical"/>
+
+        <!-- Nút sticker -->
+        <ImageView
+            android:id="@+id/ivSticker"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_sticker"
+            android:padding="8dp"
+            android:layout_marginStart="8dp"/>
 
         <!-- Nút gửi -->
         <ImageView
@@ -55,6 +65,7 @@
             android:padding="8dp"
             android:layout_marginStart="8dp"/>
     </LinearLayout>
+
 
 
 </LinearLayout>

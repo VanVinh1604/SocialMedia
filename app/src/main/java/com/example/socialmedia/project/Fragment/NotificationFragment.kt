@@ -41,10 +41,14 @@ class NotificationFragment : Fragment() {
         binding.recyclerNotification.adapter = adapter
 
         // Quan sát dữ liệu từ ViewModel
-        viewModel.notifications.observe(viewLifecycleOwner) { list ->
-            adapter.updateListGrouped(list)
-        }
+//        viewModel.notifications.observe(viewLifecycleOwner) { list ->
+//            adapter.updateListGrouped(list)
+//        }
 
+        viewModel.notifications.observe(viewLifecycleOwner) { list ->
+            // Sử dụng adapter mới theo thiết kế của bạn
+            adapter.updateList(list)
+        }
         // Gradient tiêu đề
         TextGradientUtils.applyGradient(binding.tvTitle, "#FF6FB1", "#9B59B6")
 

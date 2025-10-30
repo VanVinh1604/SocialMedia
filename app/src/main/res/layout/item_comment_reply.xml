@@ -3,7 +3,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="44dp"
+    android:paddingStart="35dp"
     android:paddingTop="4dp"
     android:paddingBottom="4dp">
 
@@ -104,15 +104,31 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Thời gian -->
-            <TextView
-                android:id="@+id/tvReplyTime"
+            <!-- Thời gian + nút trả lời -->
+            <LinearLayout
+                android:orientation="horizontal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="5 phút trước"
-                android:textSize="12sp"
-                android:textColor="#888888"
-                android:layout_marginTop="2dp"/>
+                android:gravity="center_vertical"
+                android:layout_marginTop="2dp">
+
+                <TextView
+                    android:id="@+id/tvReplyTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5 phút trước"
+                    android:textSize="12sp"
+                    android:textColor="#888888"/>
+
+                <TextView
+                    android:id="@+id/btnReplyToReply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Trả lời"
+                    android:textColor="@color/black"
+                    android:textSize="12sp"
+                    android:layout_marginStart="16dp"/>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

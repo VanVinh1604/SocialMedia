@@ -9,8 +9,9 @@ import com.example.socialmedia.project.data.repository.NotificationRepository
 class NotificationViewModel : ViewModel() {
 
     private val repository = NotificationRepository()
+
     private val _notifications = MutableLiveData<List<NotificationModel>>()
-    val notifications: LiveData<List<NotificationModel>> = _notifications
+    val notifications: LiveData<List<NotificationModel>> get() = _notifications
 
     fun loadNotifications() {
         repository.observeNotifications { list ->

@@ -3,6 +3,8 @@ package com.example.socialmedia.project.Adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
@@ -50,6 +52,7 @@ class PostAdapter(
             onCommentClickListener?.invoke(post.postId, authorId)
         }
 
+
         val commentsRef = FirebaseDatabase.getInstance().getReference("comments").child(post.postId)
 
         var totalComments = 0 // lưu tổng số comment + reply
@@ -92,38 +95,62 @@ class PostAdapter(
             override fun onCancelled(error: DatabaseError) {}
         })
 
-        // Hiển thị media
         if (post.mediaList.isNotEmpty()) {
             b.rvMediaList.visibility = View.VISIBLE
 
-            if (b.rvMediaList.adapter == null) {
-                val layoutManager = LinearLayoutManager(
+            // Gắn LayoutManager chỉ 1 lần
+            if (b.rvMediaList.layoutManager == null) {
+                b.rvMediaList.layoutManager = LinearLayoutManager(
                     b.root.context,
                     LinearLayoutManager.HORIZONTAL,
                     false
                 )
-                b.rvMediaList.layoutManager = layoutManager
-                b.rvMediaList.adapter = MediaAdapter(post.mediaList)
+            }
 
-                // PagerSnapHelper để snap từng ảnh như ViewPager
+            // Gắn SnapHelper chỉ nếu chưa có
+            if (b.rvMediaList.onFlingListener == null) {
                 val snapHelper = PagerSnapHelper()
                 snapHelper.attachToRecyclerView(b.rvMediaList)
+            }
 
-                // Custom dot indicator
-                val tvDots = TextView(b.root.context)
-                tvDots.textSize = 12f
-                tvDots.text = "1/${post.mediaList.size}"
-                b.root.addView(tvDots)
-
-                b.rvMediaList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                        val snapView = snapHelper.findSnapView(layoutManager)
-                        val currentPos = snapView?.let { layoutManager.getPosition(it) } ?: 0
-                        tvDots.text = "${currentPos + 1}/${post.mediaList.size}"
-                    }
-                })
+            // Set adapter (cập nhật hoặc tạo mới)
+            if (b.rvMediaList.adapter == null) {
+                b.rvMediaList.adapter = MediaAdapter(post.mediaList)
             } else {
                 (b.rvMediaList.adapter as MediaAdapter).updateMedia(post.mediaList)
+            }
+
+            // Tạo dots
+            b.dotsContainer.removeAllViews()
+            for (i in post.mediaList.indices) {
+                val dot = ImageView(b.root.context)
+                dot.setImageResource(if (i == 0) R.drawable.dot_selected else R.drawable.dot_unselected)
+                val params = LinearLayout.LayoutParams(16, 16)
+                params.setMargins(4, 0, 4, 0)
+                dot.layoutParams = params
+                b.dotsContainer.addView(dot)
+            }
+
+            // Lắng nghe scroll — chỉ gắn 1 lần duy nhất
+            if (b.rvMediaList.getTag(R.id.rvMediaList) == null) {
+                b.rvMediaList.setTag(R.id.rvMediaList, true) // đánh dấu đã gắn listener
+                b.rvMediaList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                            val snapHelper = PagerSnapHelper()
+                            val snapView = snapHelper.findSnapView(layoutManager)
+                            val pos = snapView?.let { layoutManager.getPosition(it) } ?: 0
+
+                            for (i in 0 until post.mediaList.size) {
+                                val dot = b.dotsContainer.getChildAt(i) as ImageView
+                                dot.setImageResource(
+                                    if (i == pos) R.drawable.dot_selected else R.drawable.dot_unselected
+                                )
+                            }
+                        }
+                    }
+                })
             }
         } else {
             b.rvMediaList.visibility = View.GONE
@@ -178,19 +205,28 @@ class PostAdapter(
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val hasLiked = snapshot.getValue(Boolean::class.java) ?: false
                     if (!hasLiked) {
+                        // 🔹 Thả tym
                         likedUsersRef.setValue(true)
                         postRef.child("likeCount").setValue(post.likeCount + 1)
                         post.isLikedByCurrentUser = true
+
+                        // ✅ Gửi thông báo cho chủ bài viết
+                        val notifRepo = com.example.socialmedia.project.data.repository.NotificationRepository()
+                        val postOwnerId = post.userId ?: return
+                        notifRepo.sendLikeNotification(currentUserId, postOwnerId, post.postId)
                     } else {
+                        // 🔹 Bỏ tym
                         likedUsersRef.removeValue()
                         postRef.child("likeCount").setValue(post.likeCount - 1)
                         post.isLikedByCurrentUser = false
                     }
                     updateLikeUI(post, b)
                 }
+
                 override fun onCancelled(error: DatabaseError) {}
             })
         }
+
     }
 
     private fun updateLikeUI(post: PostModel, b: ItemPostBinding) {

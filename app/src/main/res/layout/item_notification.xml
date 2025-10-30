@@ -1,43 +1,99 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
     android:padding="10dp"
-    android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground"
     android:layout_marginVertical="4dp">
 
+    <!-- Avatar -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/imgUser"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/image_avata_user"
         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.Circle"
-        android:layout_marginEnd="8dp"/>
+        android:src="@drawable/image_avata_user"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Tên người gửi -->
+    <TextView
+        android:id="@+id/tvActorName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Lisa"
+        android:textColor="#222"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/imgUser"
+        app:layout_constraintTop_toTopOf="@id/imgUser"
+        app:layout_constraintEnd_toStartOf="@id/rightContainer"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_marginStart="10dp"
+    <!-- Nội dung -->
+    <TextView
+        android:id="@+id/tvMessage"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="đã nhắc đến bạn trong bình luận rất dài rất dài rất dài rất dài rất dài..."
+        android:textColor="#333"
+        android:textSize="15sp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        app:layout_constraintTop_toBottomOf="@id/tvActorName"
+        app:layout_constraintStart_toEndOf="@id/imgUser"
+        app:layout_constraintEnd_toStartOf="@id/rightContainer"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="2dp"/>
+
+    <!-- Thời gian -->
+    <TextView
+        android:id="@+id/tvTime"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:text="2 giờ trước"
+        android:textColor="#888"
+        android:textSize="12sp"
+        app:layout_constraintStart_toEndOf="@id/imgUser"
+        app:layout_constraintTop_toBottomOf="@id/tvMessage"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="2dp"/>
 
-        <TextView
-            android:id="@+id/tvMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="User A liked your post"
-            android:textColor="#333"
-            android:textSize="15sp" />
+    <!-- Thumbnail bài post -->
+    <FrameLayout
+        android:id="@+id/rightContainer"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintEnd_toStartOf="@id/btnMore"
+        app:layout_constraintTop_toTopOf="@id/imgUser"
+        app:layout_constraintBottom_toBottomOf="@id/imgUser">
 
-        <TextView
-            android:id="@+id/tvTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="2 hours ago"
-            android:textColor="#888"
-            android:textSize="12sp" />
-    </LinearLayout>
-</LinearLayout>
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgPost"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="#EAEAEA"
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/roundedCorner8dp" />
+    </FrameLayout>
+
+    <!-- Nút More -->
+    <ImageView
+        android:id="@+id/btnMore"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_more"
+        android:tint="#555"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/imgUser"
+        app:layout_constraintBottom_toBottomOf="@id/imgUser" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

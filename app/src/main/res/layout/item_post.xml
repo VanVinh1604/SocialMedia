@@ -88,14 +88,17 @@
             android:nestedScrollingEnabled="false"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-        <!-- DotsIndicator nằm trên RecyclerView nhưng căn giữa phía dưới -->
-        <com.tbuonomo.viewpagerdotsindicator.WormDotsIndicator
-            android:id="@+id/dotsIndicator"
+        <!-- 🔹 Thêm layout chứa dots ở đây -->
+        <LinearLayout
+            android:id="@+id/dotsContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
             android:layout_gravity="center|bottom"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
+            android:layout_marginBottom="10dp"
+            android:visibility="visible" />
+
     </FrameLayout>
 
 

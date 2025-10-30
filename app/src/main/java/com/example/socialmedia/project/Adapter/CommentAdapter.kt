@@ -108,7 +108,7 @@ class CommentAdapter(
             if (repliesCount > 0) {
                 // Reply đầu tiên
                 val firstReply = replyList[0]
-                val replyAdapter = ReplyAdapter(listOf(firstReply), postAuthorId, currentUserId)
+                val replyAdapter = ReplyAdapter(listOf(firstReply), postAuthorId, currentUserId, onReplyClick)
                 val rvReplies = RecyclerView(b.root.context)
                 rvReplies.layoutManager = LinearLayoutManager(b.root.context)
                 rvReplies.adapter = replyAdapter
@@ -122,7 +122,7 @@ class CommentAdapter(
 
                     tvSeeMore.setOnClickListener {
                         b.layoutFirstReply.visibility = View.GONE
-                        rvReplies.adapter = ReplyAdapter(replyList, postAuthorId, currentUserId)
+                        rvReplies.adapter = ReplyAdapter(replyList, postAuthorId, currentUserId, onReplyClick)
                         rvReplies.visibility = View.VISIBLE
                         tvSeeMore.visibility = View.GONE
                         b.tvHideReplies.visibility = View.VISIBLE
