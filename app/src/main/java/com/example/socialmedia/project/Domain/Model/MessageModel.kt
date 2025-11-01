@@ -4,11 +4,13 @@ import com.example.socialmedia.project.Domain.Enum.MessageType
 import java.util.UUID
 
 data class MessageModel(
-    val messageId: String = UUID.randomUUID().toString(),
+    var messageId: String = "",
     val conversationId: String = "",
     val senderId: String = "",
+    val senderName: String = "",
+    val senderAvatar: String? = null,
     val messageType: MessageType = MessageType.TEXT,
-    val content: String? = null,
+    val content: String = "",
     val mediaUrl: String? = null,
     val replyToMessageId: String? = null,
     val postId: String? = null,           // For shared posts

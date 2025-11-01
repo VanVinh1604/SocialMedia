@@ -10,6 +10,8 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.example.socialmedia.databinding.ActivityMainBinding
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +24,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupUserPresence()
         // Save Firebase user info
         FirebaseAuth.getInstance().currentUser?.let { user ->
             val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
@@ -72,17 +75,44 @@ class MainActivity : AppCompatActivity() {
 
         // Listener để ẩn BottomNavigation + FAB trên các fragment full screen
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.id == R.id.messageFragment ||
-                destination.id == R.id.notificationFragment) {
-                // Ẩn BottomNavigation + FAB
-                binding.container.visibility = View.GONE
-                binding.navHostFragment.setPadding(0, 0, 0, 0)
-            } else {
-                // Hiện lại BottomNavigation + FAB
-                binding.container.visibility = View.VISIBLE
-                binding.navHostFragment.setPadding(0, 0, 0, dpToPx(80))
+            when (destination.id) {
+                R.id.chatFragment,
+                R.id.messageFragment,
+                R.id.notificationFragment -> {
+                    // Ẩn BottomNavigation + FAB
+                    binding.container.visibility = View.GONE
+                    binding.navHostFragment.setPadding(0, 0, 0, 0)
+                }
+                else -> {
+                    // Hiện lại BottomNavigation + FAB
+                    binding.container.visibility = View.VISIBLE
+                    binding.navHostFragment.setPadding(0, 0, 0, dpToPx(80)) // padding cũ
+                }
             }
         }
+
+    }
+
+    private fun setupUserPresence() {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        val userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(user.uid)
+        val connectedRef = FirebaseDatabase.getInstance().getReference(".info/connected")
+
+        connectedRef.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                val connected = snapshot.getValue(Boolean::class.java) ?: false
+                if (connected) {
+                    // 🔹 Khi user kết nối vào Firebase
+                    userRef.child("isOnline").setValue(true)
+
+                    // 🔹 Khi mất kết nối hoặc đóng app
+                    userRef.child("isOnline").onDisconnect().setValue(false)
+                    userRef.child("lastLogin").onDisconnect().setValue(ServerValue.TIMESTAMP)
+                }
+            }
+
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+        })
     }
 
     private fun setupNavigation() {

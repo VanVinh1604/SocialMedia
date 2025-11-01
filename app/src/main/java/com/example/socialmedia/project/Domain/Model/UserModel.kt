@@ -22,6 +22,7 @@ data class UserModel(
     val Private: Boolean = false,
     val Verified: Boolean = false,
     val Active: Boolean = true,
+    val isOnline: Boolean = false,
 //    val accountType: AccountType = AccountType.PERSONAL,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),

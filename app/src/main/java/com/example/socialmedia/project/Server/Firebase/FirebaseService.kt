@@ -1,5 +1,6 @@
 package com.example.socialmedia.project.Server.Firebase
 
+import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.StoryModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.google.android.gms.tasks.Task
@@ -8,7 +9,7 @@ import com.google.firebase.database.*
 
 class FirebaseService {
 
-    private val database = FirebaseDatabase.getInstance().reference
+    val database = FirebaseDatabase.getInstance().reference
 
     fun listenStories(onResult: (List<StoryModel>) -> Unit, onError: (Exception) -> Unit) {
         val storiesRef = database.child("stories")
@@ -46,6 +47,89 @@ class FirebaseService {
         })
     }
 
+    // -------------------------------
+// FirebaseService.kt
+    fun getMutualFollowUsers(
+        currentUserId: String,
+        onResult: (List<String>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val followRef = database.child("Follow")
+
+        followRef.child(currentUserId).child("following").get().addOnSuccessListener { followingSnap ->
+            followRef.child(currentUserId).child("followers").get().addOnSuccessListener { followersSnap ->
+                val following = followingSnap.children.mapNotNull { it.key }
+                val followers = followersSnap.children.mapNotNull { it.key }
+                val mutual = following.intersect(followers.toSet()).toList()
+                onResult(mutual)
+            }
+        }.addOnFailureListener { onError(it) }
+    }
+
+    fun listenMessages(
+        conversationId: String,
+        onSuccess: (List<MessageModel>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val ref = database.child("messages").child(conversationId)
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val tasks = mutableListOf<Task<DataSnapshot>>()
+                val messageList = mutableListOf<MessageModel>()
+
+                for (child in snapshot.children) {
+                    val map = child.value as? Map<String, Any> ?: continue
+                    val senderId = map["senderId"] as? String ?: continue
+
+                    val task = database.child("InfoUser").child(senderId).get()
+                    tasks.add(task)
+                    task.addOnSuccessListener { userSnap ->
+                        val senderName = userSnap.child("fullName").getValue(String::class.java) ?: "Người dùng"
+                        val senderAvatar = userSnap.child("profilePictureUrl").getValue(String::class.java)
+                        val msg = MessageModel(
+                            messageId = map["id"] as? String ?: "",
+                            conversationId = conversationId,
+                            senderId = senderId,
+                            senderName = senderName,
+                            senderAvatar = senderAvatar,
+                            content = map["text"] as? String ?: "",
+                            createdAt = map["timestamp"] as? Long ?: System.currentTimeMillis()
+                        )
+                        messageList.add(msg)
+                    }
+                }
+
+                Tasks.whenAllComplete(tasks).addOnSuccessListener {
+                    // Sắp xếp theo thời gian
+                    onSuccess(messageList.sortedBy { it.createdAt })
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onFailure(error.toException())
+            }
+        })
+    }
+
+
+    fun sendMessage(
+        conversationId: String,
+        senderId: String,
+        text: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val ref = database.child("messages").child(conversationId).push()
+        val message = mapOf(
+            "id" to ref.key,
+            "senderId" to senderId,
+            "text" to text,
+            "timestamp" to System.currentTimeMillis()
+        )
+        ref.setValue(message)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { onFailure(it) }
+    }
 
 
     // Lắng nghe users realtime
@@ -66,6 +150,7 @@ class FirebaseService {
             }
         })
     }
+
 
     fun getUserFollowing(
         currentUserId: String,

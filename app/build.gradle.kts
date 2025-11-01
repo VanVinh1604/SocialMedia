@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
     id("com.google.gms.google-services")
+    id("androidx.navigation.safeargs.kotlin") version "2.8.5"
+
 }
 
 android {
@@ -64,12 +66,22 @@ dependencies {
     implementation("com.cloudinary:cloudinary-android:2.3.1")
 
     // Firebase (sử dụng version cụ thể thay vì BOM)
-    implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
-    implementation("com.google.firebase:firebase-database-ktx:21.0.0")
-    implementation("com.google.firebase:firebase-analytics-ktx:22.1.2")
+
+        // Firebase BOM
+    implementation (platform("com.google.firebase:firebase-bom:33.6.0"))
+
+// --- Firebase SDKs ---
+    implementation ("com.google.firebase:firebase-auth-ktx")
+    implementation ("com.google.firebase:firebase-database-ktx")
+    implementation ("com.google.firebase:firebase-storage-ktx")
+    implementation ("com.google.firebase:firebase-firestore-ktx")
+    implementation ("com.google.firebase:firebase-analytics-ktx")
+
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation(libs.lifecycle.viewmodel.ktx)
+
     kapt("com.github.bumptech.glide:compiler:4.16.0")
     // Xóa libs.glide và libs.glide.compiler nếu chúng trùng lặp trong build.gradle.kts
 

@@ -19,15 +19,13 @@ class UserManagementActivity : AppCompatActivity() {
         binding = ActivityUserManagementBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val auth = FirebaseAuth.getInstance()
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
             // Đã đăng nhập -> chuyển thẳng vào MainActivity
-//            startActivity(Intent(this, MainActivity::class.java))
-//            finish()
-//            return
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
 
-            auth.signOut()
         }
 
         // Chưa đăng nhập -> hiển thị màn hình login

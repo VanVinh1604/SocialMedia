@@ -7,14 +7,13 @@
     android:padding="8dp">
 
     <!-- Ảnh đại diện người dùng -->
-    <ImageView
+    <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/ivAvatar"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_marginEnd="18dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
         android:src="@drawable/baseline_person_24"
-        android:scaleType="centerCrop"
-        android:background="@drawable/circle_background_gray"
+        app:shapeAppearanceOverlay="@style/CircleImageView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
