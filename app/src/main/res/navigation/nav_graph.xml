@@ -5,14 +5,13 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/homeFragment">
 
-    <!-- HomeFragment -->
+    <!-- PersonalProfileFragment (Trang của bạn) -->
     <fragment
         android:id="@+id/personalProfileFragment"
         android:name="com.example.socialmedia.project.Fragment.PersonalProfileFragment"
         android:label="Personal Profile"
         tools:layout="@layout/fragment_personal_profile">
 
-        <!-- Giữ nguyên action sang reelsFragment nếu bạn cần -->
         <action
             android:id="@+id/action_personalProfileFragment_to_reelsFragment"
             app:destination="@id/reelsFragment"
@@ -20,12 +19,39 @@
             app:exitAnim="@anim/slide_out_right"
             app:popEnterAnim="@anim/slide_in_right"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <!-- Sửa: Đi thẳng đến trang Sửa Tên -->
+        <action
+            android:id="@+id/action_personalProfileFragment_to_editProfileNameFragment"
+            app:destination="@id/editProfileNameFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_personalProfileFragment_to_settingFragment"
+            app:destination="@id/settingFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_personalProfileFragment_to_followListFragment"
+            app:destination="@id/followListFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
     </fragment>
+
+    <!-- HomeFragment -->
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.example.socialmedia.project.Fragment.HomeFragment"
         android:label="Home"
-        tools:layout="@layout/fragment_home" >
+        tools:layout="@layout/fragment_home">
         <action
             android:id="@+id/action_homeFragment_to_searchFragment"
             app:destination="@id/searchFragment"
@@ -47,7 +73,6 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
-
         <action
             android:id="@+id/action_homeFragment_to_notificationFragment"
             app:destination="@id/notificationFragment"
@@ -55,7 +80,6 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
-
     </fragment>
 
     <!-- SearchFragment -->
@@ -124,7 +148,7 @@
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
-    <!-- ProfileFragment -->
+    <!-- ProfileFragment (Trang của người khác) -->
     <fragment
         android:id="@+id/profileFragment"
         android:name="com.example.socialmedia.project.Fragment.ProfileFragment"
@@ -137,9 +161,28 @@
             app:exitAnim="@anim/slide_out_right"
             app:popEnterAnim="@anim/slide_in_right"
             app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/action_profileFragment_to_settingFragment"
+            app:destination="@id/settingFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <argument
+            android:name="userId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <action
+            android:id="@+id/action_profileFragment_to_followListFragment"
+            app:destination="@id/followListFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
-    <!-- MessageFragment (giữ nguyên) -->
+    <!-- MessageFragment -->
     <fragment
         android:id="@+id/messageFragment"
         android:name="com.example.socialmedia.project.Fragment.MessageFragment"
@@ -167,7 +210,6 @@
         android:name="com.example.socialmedia.project.Fragment.NotificationFragment"
         android:label="Notification"
         tools:layout="@layout/fragment_notification">
-
         <action
             android:id="@+id/action_notificationFragment_to_homeFragment"
             app:destination="@id/homeFragment"
@@ -211,4 +253,87 @@
         tools:layout="@layout/fragment_call" />
 
 
+    <!-- EditProfileFragment (Trang Account Center) -->
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="com.example.socialmedia.project.Fragment.EditProfileFragment"
+        android:label="Edit Profile"
+        tools:layout="@layout/fragment_edit_profile" >
+        <action
+            android:id="@+id/action_editProfileFragment_to_changePasswordFragment"
+            app:destination="@id/changePasswordFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+
+    </fragment>
+
+    <!-- SettingFragment -->
+    <fragment
+        android:id="@+id/settingFragment"
+        android:name="com.example.socialmedia.Fragment.Fragment.SettingFragment"
+        android:label="Settings"
+        tools:layout="@layout/fragment_setting" >
+        <action
+            android:id="@+id/action_settingFragment_to_editProfileFragment"
+            app:destination="@id/editProfileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <!-- === SỬA LỖI TYPO Ở ĐÂY === -->
+        <action
+            android:id="@+id/action_settingFragment_to_loginFragment"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+        <!-- === KẾT THÚC SỬA LỖI === -->
+    </fragment>
+
+    <!-- FollowListFragment (Màn hình Tab) -->
+    <fragment
+        android:id="@+id/followListFragment"
+        android:name="com.example.socialmedia.project.Fragment.FollowListFragment"
+        android:label="FollowListFragment"
+        tools:layout="@layout/fragment_follow_list">
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="listType"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_followListFragment_to_profileFragment"
+            app:destination="@id/profileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <!-- ChangePasswordFragment -->
+    <fragment
+        android:id="@+id/changePasswordFragment"
+        android:name="com.example.socialmedia.project.Fragment.ChangePasswordFragment"
+        android:label="Change Password"
+        tools:layout="@layout/fragment_change_password" />
+
+    <!-- LoginFragment -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.socialmedia.project.Fragment.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login" />
+
+    <!-- EditProfileNameFragment -->
+    <fragment
+        android:id="@+id/editProfileNameFragment"
+        android:name="com.example.socialmedia.project.Fragment.EditProfileNameFragment"
+        android:label="Edit Profile Name"
+        tools:layout="@layout/fragment_edit_profile_name" />
+
 </navigation>
+

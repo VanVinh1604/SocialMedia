@@ -1,140 +1,164 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FAFAFA"
     tools:context=".project.Fragment.EditProfileFragment">
 
-    <LinearLayout
+    <!-- 1. THÊM TOOLBAR ĐỂ QUAY VỀ -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@android:color/white">
+        android:background="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Title Section -->
-        <TextView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Account center"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#FF00A0"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp" />
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_back"
+            app:title="Account Center"
+            app:titleCentered="true"
+            app:titleTextColor="#FF00A0" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- Profile Section -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="12dp"
-            android:background="@android:color/white"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_profile"
-                android:contentDescription="Profile icon" />
-
-            <TextView
-                android:layout_width="0dp"
+            <!-- Profile Section -->
+            <!-- 2. THÊM ID VÀ HIỆU ỨNG CLICK -->
+            <LinearLayout
+                android:id="@+id/llProfile"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:text="Profile"
-                android:textSize="16sp"
+                android:layout_marginTop="16dp"
+                android:padding="12dp"
+                android:background="?attr/selectableItemBackground"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_profile"
+                    android:contentDescription="Profile icon" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="Profile"
+                    android:textSize="16sp"
+                    android:textColor="#000000" />
+
+                <TextView
+                    android:id="@+id/tvCurrentUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Huy Neeewwd"
+                    android:textSize="16sp"
+                    android:textColor="#757575" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="16dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
+
+            <!-- Account Setting Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Account setting"
+                android:textSize="18sp"
+                android:textStyle="bold"
                 android:textColor="#000000" />
 
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Password and Security Section -->
+            <!-- 3. THÊM ID VÀ HIỆU ỨNG CLICK -->
+            <LinearLayout
+                android:id="@+id/llPassword"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Nhat Sang"
-                android:textSize="16sp"
-                android:textColor="#757575" />
+                android:layout_marginTop="16dp"
+                android:padding="12dp"
+                android:background="?attr/selectableItemBackground"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="16dp"
-                android:src="@drawable/ic_arrow_right"
-                android:contentDescription="Arrow icon" />
-        </LinearLayout>
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_lock"
+                    android:contentDescription="Lock icon" />
 
-        <!-- Account Setting Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Account setting"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#000000" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="Password and security"
+                    android:textSize="16sp"
+                    android:textColor="#000000" />
 
-        <!-- Password and Security Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:padding="12dp"
-            android:background="@android:color/white"
-            android:orientation="horizontal">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="16dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_lock"
-                android:contentDescription="Lock icon" />
-
-            <TextView
-                android:layout_width="0dp"
+            <!-- Personal Information Section -->
+            <!-- 4. THÊM ID VÀ HIỆU ỨNG CLICK -->
+            <LinearLayout
+                android:id="@+id/llPersonalInfo"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:text="Password and security"
-                android:textSize="16sp"
-                android:textColor="#000000" />
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="?attr/selectableItemBackground"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="16dp"
-                android:src="@drawable/ic_arrow_right"
-                android:contentDescription="Arrow icon" />
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_info"
+                    android:contentDescription="Info icon" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="Personal Information"
+                    android:textSize="16sp"
+                    android:textColor="#000000" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="16dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:contentDescription="Arrow icon" />
+            </LinearLayout>
         </LinearLayout>
+    </ScrollView>
 
-        <!-- Personal Information Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:padding="12dp"
-            android:background="@android:color/white"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info"
-                android:contentDescription="Info icon" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:text="Personal Information"
-                android:textSize="16sp"
-                android:textColor="#000000" />
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginStart="16dp"
-                android:src="@drawable/ic_arrow_right"
-                android:contentDescription="Arrow icon" />
-        </LinearLayout>
-    </LinearLayout>
-
-</FrameLayout>
+</LinearLayout>

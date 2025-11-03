@@ -16,6 +16,7 @@ data class UserModel(
     val fullName: String = "$firstName $lastName",
     val bio: String? = null,
     val profilePictureUrl: String? = null,
+    val headerPictureUrl: String? = null,
     val website: String? = null,
     val gender: Gender = Gender.PREFER_NOT_TO_SAY,
     val dateOfBirth: Long? = null,
