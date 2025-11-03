@@ -22,9 +22,9 @@ class UserManagementActivity : AppCompatActivity() {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
             // Đã đăng nhập -> chuyển thẳng vào MainActivity
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-            return
+//            startActivity(Intent(this, MainActivity::class.java))
+//            finish()
+//            return
 
         }
 

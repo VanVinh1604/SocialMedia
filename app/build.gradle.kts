@@ -4,7 +4,6 @@ plugins {
     id("kotlin-kapt")
     id("com.google.gms.google-services")
     id("androidx.navigation.safeargs.kotlin") version "2.8.5"
-
 }
 
 android {
@@ -23,7 +22,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -36,15 +38,13 @@ android {
         jvmTarget = "11"
     }
 
-
     buildFeatures {
         viewBinding = true
     }
-
 }
 
 dependencies {
-    // AndroidX và Material Design
+    // AndroidX & Material
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -62,36 +62,34 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.5")
     implementation("androidx.navigation:navigation-ui-ktx:2.8.5")
 
-    // Cloudinary
+    // Firebase BOM
+    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+
+    // Zego
+    implementation(libs.zego.uikit.prebuilt.call.android)
+
+    // Cloudinary & OkHttp
     implementation("com.cloudinary:cloudinary-android:2.3.1")
-
-    // Firebase (sử dụng version cụ thể thay vì BOM)
-
-        // Firebase BOM
-    implementation (platform("com.google.firebase:firebase-bom:33.6.0"))
-
-// --- Firebase SDKs ---
-    implementation ("com.google.firebase:firebase-auth-ktx")
-    implementation ("com.google.firebase:firebase-database-ktx")
-    implementation ("com.google.firebase:firebase-storage-ktx")
-    implementation ("com.google.firebase:firebase-firestore-ktx")
-    implementation ("com.google.firebase:firebase-analytics-ktx")
-
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.lifecycle.viewmodel.ktx)
-
     kapt("com.github.bumptech.glide:compiler:4.16.0")
-    // Xóa libs.glide và libs.glide.compiler nếu chúng trùng lặp trong build.gradle.kts
 
     // Gson
     implementation(libs.gson)
 
-    // Extra
+    // Extra UI
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
     implementation("com.tbuonomo:dotsindicator:5.1.0")
 
     // Test

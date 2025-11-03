@@ -59,25 +59,16 @@
     <!-- Badge số lượng tin nhắn -->
     <TextView
         android:id="@+id/badgeUnread"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginStart="4dp"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
         android:background="@drawable/circle_status_online"
         android:gravity="center"
-        android:minWidth="16dp"
-        android:minHeight="16dp"
-        android:paddingStart="4dp"
-        android:paddingTop="2dp"
-        android:paddingEnd="4dp"
-        android:paddingBottom="2dp"
-        android:text="13"
+        android:text="0"
         android:textColor="@android:color/white"
-
         android:textSize="10sp"
-        app:layout_constraintBottom_toBottomOf="@+id/tvLastMessage"
-        app:layout_constraintEnd_toEndOf="@+id/tvTime"
-        app:layout_constraintStart_toEndOf="@id/tvLastMessage"
-        app:layout_constraintTop_toBottomOf="@+id/tvTime" />
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/ivAvatar"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <!-- Thời gian tin nhắn -->
     <TextView

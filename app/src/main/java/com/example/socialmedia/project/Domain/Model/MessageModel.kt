@@ -11,6 +11,7 @@ data class MessageModel(
     val senderAvatar: String? = null,
     val messageType: MessageType = MessageType.TEXT,
     val content: String = "",
+    val duration: String? = null,
     val mediaUrl: String? = null,
     val replyToMessageId: String? = null,
     val postId: String? = null,           // For shared posts

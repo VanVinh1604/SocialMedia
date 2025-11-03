@@ -204,4 +204,11 @@
             android:defaultValue="" />
     </fragment>
 
+    <fragment
+        android:id="@+id/callFragment"
+        android:name="com.example.socialmedia.project.Fragment.CallFragment"
+        android:label="CallFragment"
+        tools:layout="@layout/fragment_call" />
+
+
 </navigation>

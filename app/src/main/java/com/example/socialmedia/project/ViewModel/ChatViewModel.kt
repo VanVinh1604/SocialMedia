@@ -23,8 +23,18 @@ class ChatViewModel : ViewModel() {
         repository.loadMoreMessages(conversationId, oldestTimestamp, onLoaded)
     }
 
-    fun sendMessage(conversationId: String?, message: MessageModel, onComplete: (Boolean) -> Unit) {
-        repository.sendMessage(conversationId, message, onComplete)
+    fun markMessagesAsRead(conversationId: String, userId: String) {
+        repository.markMessagesAsRead(conversationId, userId)
+    }
+
+
+    fun sendMessage(
+        conversationId: String?,
+        participants: List<String>,
+        message: MessageModel,
+        onComplete: (Boolean) -> Unit
+    ) {
+        repository.sendMessage(conversationId, participants, message, onComplete)
     }
 
     fun removeListener() {
