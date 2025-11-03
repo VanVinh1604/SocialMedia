@@ -1,60 +1,277 @@
 package com.example.socialmedia.project.Fragment
 
+import android.app.Activity // THÊM IMPORT
+import android.app.DatePickerDialog
+import android.content.Intent // THÊM IMPORT
+import android.net.Uri // THÊM IMPORT
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts // THÊM IMPORT
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels // Quan trọng: dùng navGraphViewModels
+import com.bumptech.glide.Glide
 import com.example.socialmedia.R
+import com.example.socialmedia.databinding.FragmentEditProfileNameBinding // Import View Binding
+import com.example.socialmedia.project.Domain.Enum.Gender
+import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.ViewModel.ProfileViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [EditProfileNameFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class EditProfileNameFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+    // Thiết lập View Binding
+    private var _binding: FragmentEditProfileNameBinding? = null
+    private val binding get() = _binding!!
+
+    // LẤY VIEWMODEL ĐƯỢC CHIA SẺ TỪ NAV GRAPH
+    private val viewModel: ProfileViewModel by navGraphViewModels(R.id.nav_graph)
+
+    // Biến để lưu ngày sinh đã chọn
+    private var selectedDateOfBirth: Long? = null
+    private val calendar = Calendar.getInstance()
+
+    // --- PHẦN MỚI: Logic chọn ảnh ---
+    private var imageTypeToUpdate: String? = null // "avatar" hoặc "header"
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val imageUri: Uri? = result.data?.data
+            if (imageUri != null && imageTypeToUpdate != null) {
+                // Có ảnh, gọi ViewModel để upload
+                Toast.makeText(context, "Đang tải ảnh lên...", Toast.LENGTH_SHORT).show()
+                viewModel.uploadProfileImage(imageUri, imageTypeToUpdate!!)
+            }
         }
     }
+    // --- HẾT PHẦN MỚI ---
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_edit_profile_name, container, false)
+        // Inflate layout bằng View Binding
+        _binding = FragmentEditProfileNameBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment EditProfileNameFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            EditProfileNameFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupGenderDropdown()
+        setupClickListeners()
+        setupObservers()
+
+        // ViewModel đã tự động tải dữ liệu (listener trong init)
+    }
+
+    /**
+     * Lắng nghe dữ liệu từ ViewModel
+     */
+    private fun setupObservers() {
+        // 1. Lắng nghe dữ liệu profile (đã được fetch bởi fragment trước)
+        viewModel.userProfile.observe(viewLifecycleOwner, Observer { user ->
+            if (user != null) {
+                Log.d("EditProfileFragment", "Observer nhận được user: ${user.fullName}")
+                populateData(user)
+            } else {
+                Log.d("EditProfileFragment", "Observer nhận được user NULL")
+            }
+        })
+
+        // 2. Lắng nghe trạng thái update TEXT
+        viewModel.updateStatus.observe(viewLifecycleOwner, Observer { success ->
+            if (success) {
+                Toast.makeText(context, "Cập nhật thông tin thành công!", Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdateStatus() // Reset cờ
+                findNavController().popBackStack() // Quay lại
+            }
+        })
+
+        // 3. --- PHẦN MỚI: Lắng nghe trạng thái update ẢNH ---
+        viewModel.imageUpdateStatus.observe(viewLifecycleOwner, Observer { status ->
+            when {
+                status == "success" -> {
+                    Toast.makeText(context, "Cập nhật ảnh thành công!", Toast.LENGTH_SHORT).show()
+                    viewModel.resetImageUpdateStatus() // Reset cờ
+                    // Ảnh sẽ tự động cập nhật trong Observer (mục 1)
+                }
+                status?.startsWith("error:") == true -> {
+                    Toast.makeText(context, status, Toast.LENGTH_LONG).show()
+                    viewModel.resetImageUpdateStatus()
                 }
             }
+        })
+        // --- HẾT PHẦN MỚI ---
+    }
+
+    /**
+     * Điền dữ liệu có sẵn của user vào các trường
+     */
+    private fun populateData(user: UserModel) {
+        binding.etName.setText(user.fullName)
+
+        // --- CẬP NHẬT: Điền ảnh bìa ---
+        Glide.with(this)
+            .load(user.headerPictureUrl) // Đã thêm
+            .centerCrop()
+            .placeholder(R.drawable.image_backgroud)
+            .error(R.drawable.image_backgroud)
+            .into(binding.ivHeaderImage)
+
+        // Điền avatar
+        Glide.with(this)
+            .load(user.profilePictureUrl)
+            .circleCrop()
+            .placeholder(R.drawable.image_avata_user)
+            .error(R.drawable.image_avata_user)
+            .into(binding.ivAvatar)
+
+        // Điền ngày sinh
+        user.dateOfBirth?.let { dob ->
+            selectedDateOfBirth = dob
+            calendar.timeInMillis = dob
+            binding.etDob.setText(formatDate(dob))
+        }
+
+        // Điền giới tính
+        val genderString = when (user.gender) {
+            Gender.MALE -> "Male"
+            Gender.FEMALE -> "Female"
+            Gender.OTHER -> "Other"
+            Gender.PREFER_NOT_TO_SAY -> "Prefer not to say"
+        }
+        binding.actvGender.setText(genderString, false) // false để không filter
+    }
+
+    /**
+     * Thiết lập các nút bấm
+     */
+    private fun setupClickListeners() {
+        // Nút quay lại
+        binding.ivBackButton.setOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        // Nút Hủy
+        binding.btnCancel.setOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        // Bấm vào ô ngày sinh
+        binding.etDob.setOnClickListener {
+            showDatePicker()
+        }
+
+        // Nút Lưu (lưu thay đổi TEXT)
+        binding.btnSave.setOnClickListener {
+            saveTextChanges() // Đổi tên hàm cho rõ
+        }
+
+        // --- PHẦN MỚI: Click để đổi ảnh ---
+        // Bấm vào avatar
+        binding.ivAvatar.setOnClickListener {
+            imageTypeToUpdate = "avatar"
+            openGallery()
+        }
+
+        // Bấm vào ảnh bìa
+        binding.ivHeaderImage.setOnClickListener {
+            imageTypeToUpdate = "header"
+            openGallery()
+        }
+        // --- HẾT PHẦN MỚI ---
+    }
+
+    /**
+     * Hiển thị bảng chọn ngày
+     */
+    private fun showDatePicker() {
+        val dateSetListener =
+            DatePickerDialog.OnDateSetListener { _, year, month, dayOfMonth ->
+                calendar.set(Calendar.YEAR, year)
+                calendar.set(Calendar.MONTH, month)
+                calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+
+                selectedDateOfBirth = calendar.timeInMillis
+                binding.etDob.setText(formatDate(selectedDateOfBirth))
+            }
+
+        DatePickerDialog(
+            requireContext(),
+            dateSetListener,
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    /**
+     * Thiết lập menu thả xuống cho Giới tính
+     */
+    private fun setupGenderDropdown() {
+        val genders = listOf("Male", "Female", "Other", "Prefer not to say")
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, genders)
+        binding.actvGender.setAdapter(adapter)
+    }
+
+    // --- PHẦN MỚI: Hàm mở thư viện ---
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
+        pickImageLauncher.launch(intent)
+    }
+    // --- HẾT PHẦN MỚI ---
+
+    /**
+     * Lấy dữ liệu TEXT và gọi ViewModel để lưu
+     */
+    private fun saveTextChanges() { // Đổi tên từ saveChanges
+        // Lấy tên và tách ra
+        val fullName = binding.etName.text.toString().trim()
+        val names = fullName.split(" ", limit = 2)
+        val firstName = names.getOrNull(0) ?: ""
+        val lastName = names.getOrNull(1) ?: ""
+
+        // Lấy giới tính và chuyển về Enum
+        val genderString = binding.actvGender.text.toString()
+            .uppercase(Locale.ROOT)
+            .replace(" ", "_")
+            .replace("PREFER_NOT_TO_SAY", "PREFER_NOT_TO_SAY")
+
+        val gender = try {
+            Gender.valueOf(genderString)
+        } catch (e: Exception) {
+            Gender.PREFER_NOT_TO_SAY
+        }
+
+        // Lấy ngày sinh (đã lưu trong selectedDateOfBirth)
+        val dob = selectedDateOfBirth
+
+        // Gọi ViewModel
+        viewModel.updateProfile(firstName, lastName, dob, gender)
+    }
+
+    private fun formatDate(milliseconds: Long?): String {
+        if (milliseconds == null) return ""
+        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        return formatter.format(milliseconds)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null // Dọn dẹp binding
     }
 }
+

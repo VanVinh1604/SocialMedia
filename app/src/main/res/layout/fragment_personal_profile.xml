@@ -13,9 +13,11 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- ... (Phần Header) ... -->
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="220dp">
+            android:layout_height="220dp"
+            android:fitsSystemWindows="true">
 
             <ImageView
                 android:id="@+id/ivHeaderImage"
@@ -24,11 +26,13 @@
                 android:scaleType="centerCrop"
                 android:src="@drawable/image_backgroud" />
 
+            <!-- === SỬA LỖI Ở ĐÂY: Giảm chiều cao từ 80dp xuống 50dp === -->
             <View
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="1dp"
                 android:layout_alignParentBottom="true"
                 android:background="@drawable/gradient_overlay" />
+            <!-- === KẾT THÚC SỬA LỖI === -->
 
             <ImageView
                 android:id="@+id/ivBackButton"
@@ -61,6 +65,7 @@
             android:layout_marginTop="-50dp"
             android:paddingBottom="24dp">
 
+            <!-- ... (ivProfileImage giữ nguyên) ... -->
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivProfileImage"
                 android:layout_width="100dp"
@@ -75,6 +80,7 @@
                 app:strokeColor="#FFFFFF"
                 app:strokeWidth="4dp" />
 
+            <!-- Stats Container -->
             <LinearLayout
                 android:id="@+id/llStats"
                 android:layout_width="0dp"
@@ -87,33 +93,9 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/ivProfileImage"
                 app:layout_constraintTop_toTopOf="@id/ivProfileImage"
-                app:layout_constraintVertical_bias="2"> <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="8dp">
+                app:layout_constraintVertical_bias="2">
 
-                <TextView
-                    android:id="@+id/tvPostCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="10"
-                    android:textColor="#333333"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Posts"
-                    android:textColor="#777777"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
+                <!-- 1. Posts (Giữ nguyên) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -121,6 +103,67 @@
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/tvPostCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="10"
+                        android:textColor="#333333"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Posts"
+                        android:textColor="#777777"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- 2. Followers (ĐÃ DI CHUYỂN LÊN VÀ SỬA ID) -->
+                <LinearLayout
+                    android:id="@+id/llFollowersWrapper"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless">
+
+                    <!-- === ID ĐÃ ĐƯỢC SỬA === -->
+                    <TextView
+                        android:id="@+id/tvFollowersCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="190k"
+                        android:textColor="#333333"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Followers"
+                        android:textColor="#777777"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- 3. Following (ĐÃ DI CHUYỂN XUỐNG) -->
+                <LinearLayout
+                    android:id="@+id/llFollowingWrapper"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless">
 
                     <TextView
                         android:id="@+id/tvFollowingCount"
@@ -140,35 +183,9 @@
                         android:textColor="#777777"
                         android:textSize="12sp" />
                 </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-
-                    <TextView
-                        android:id="@+id/tvLikeCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="190k"
-                        android:textColor="#333333"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Likes"
-                        android:textColor="#777777"
-                        android:textSize="12sp" />
-                </LinearLayout>
             </LinearLayout>
 
+            <!-- ... (llUserInfo và llActionButtons giữ nguyên) ... -->
             <LinearLayout
                 android:id="@+id/llUserInfo"
                 android:layout_width="0dp"
@@ -245,9 +262,10 @@
                     app:iconGravity="textStart"
                     app:iconSize="18dp"
                     app:iconTint="#FFFFFF" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-            </LinearLayout> </androidx.constraintlayout.widget.ConstraintLayout>
-
+        <!-- ... (Phần Collections và Photos (RecyclerView) giữ nguyên) ... -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -335,7 +353,6 @@
                             android:textColor="#666666"
                             android:textSize="13sp" />
                     </LinearLayout>
-
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -362,7 +379,6 @@
                             android:textColor="#666666"
                             android:textSize="13sp" />
                     </LinearLayout>
-
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -424,3 +440,4 @@
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
+

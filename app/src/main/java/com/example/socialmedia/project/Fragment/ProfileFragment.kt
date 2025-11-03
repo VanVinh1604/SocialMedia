@@ -1,210 +1,234 @@
 package com.example.socialmedia.project.Fragment
 
+import android.content.Intent // <-- THÊM IMPORT MỚI
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.socialmedia.R
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.imageview.ShapeableImageView
+import com.example.socialmedia.databinding.FragmentProfileBinding // Sử dụng ViewBinding
+import com.example.socialmedia.project.Adapter.ProfilePostAdapter
+import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.ViewModel.ProfileViewModel
+import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Fragment này hiển thị trang cá nhân của NGƯỜI KHÁC
+ */
 class ProfileFragment : Fragment() {
 
-    // View components
-    private lateinit var ivBackButton: ImageView
-    private lateinit var ivMenuButton: ImageView
-    private lateinit var ivHeaderImage: ImageView
-    private lateinit var ivProfileImage: ShapeableImageView
+    private var _binding: FragmentProfileBinding? = null
+    private val binding get() = _binding!!
 
-    private lateinit var tvUsername: TextView
-    private lateinit var tvBio: TextView
-    private lateinit var tvPostCount: TextView
-    private lateinit var tvFollowingCount: TextView
-    private lateinit var tvLikeCount: TextView
+    // Dùng ViewModel CHIA SẺ (shared)
+    private val viewModel: ProfileViewModel by navGraphViewModels(R.id.nav_graph)
 
-    private lateinit var btnFollow: MaterialButton
-    private lateinit var btnShareProfile: MaterialButton
-
-    private lateinit var rvPhotos: RecyclerView
-
-    // Data
-    private var isFollowing = false
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+    private lateinit var postAdapter: ProfilePostAdapter
+    private var targetUserId: String? = null
+    private var isCurrentlyFollowing: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_profile, container, false)
-
-        initViews(view)
-        setupListeners()
-        loadUserData()
-        setupPhotoGrid()
-
-        return view
+        // Dùng ViewBinding để liên kết với fragment_profile.xml
+        _binding = FragmentProfileBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    private fun initViews(view: View) {
-        // Header
-        ivBackButton = view.findViewById(R.id.ivBackButton)
-        ivMenuButton = view.findViewById(R.id.ivMenuButton)
-        ivHeaderImage = view.findViewById(R.id.ivHeaderImage)
-        ivProfileImage = view.findViewById(R.id.ivProfileImage)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        // User info
-        tvUsername = view.findViewById(R.id.tvUsername)
-        tvBio = view.findViewById(R.id.tvBio)
+        // 1. Lấy userId (Sửa lỗi: Lấy từ arguments Bundle)
+        targetUserId = arguments?.getString("userId")
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
 
-        // Stats
-        tvPostCount = view.findViewById(R.id.tvPostCount)
-        tvFollowingCount = view.findViewById(R.id.tvFollowingCount)
-        tvLikeCount = view.findViewById(R.id.tvLikeCount)
+        // 2. Kiểm tra
+        if (targetUserId == null || targetUserId == currentUid) {
+            // Nếu đây là trang CỦA TÔI, điều hướng về PersonalProfileFragment
+            Toast.makeText(context, "Đang mở trang cá nhân của bạn...", Toast.LENGTH_SHORT).show()
+            try {
+                findNavController().navigate(R.id.personalProfileFragment)
+            } catch (e: Exception) {
+                Log.e("ProfileFragment", "Lỗi điều hướng về PersonalProfileFragment: ${e.message}")
+                findNavController().popBackStack()
+            }
+            return
+        }
 
-        // Buttons
-        btnFollow = view.findViewById(R.id.btnFollow)
-        btnShareProfile = view.findViewById(R.id.btnShareProfile)
+        // 3. Nếu là của người khác, tải profile của họ
+        viewModel.loadProfile(targetUserId)
 
-        // RecyclerView
-        rvPhotos = view.findViewById(R.id.rvPhotos)
+        setupUI()
+        setupListeners()
+        setupObservers()
+    }
+
+    private fun setupUI() {
+        postAdapter = ProfilePostAdapter { post ->
+            Toast.makeText(context, "Clicked post ${post.postId}", Toast.LENGTH_SHORT).show()
+        }
+        binding.rvPhotos.apply {
+            layoutManager = GridLayoutManager(context, 3)
+            adapter = postAdapter
+            isNestedScrollingEnabled = false
+        }
     }
 
     private fun setupListeners() {
-        // Back button
-        ivBackButton.setOnClickListener {
-            requireActivity().onBackPressed()
+        binding.ivBackButton.setOnClickListener {
+            findNavController().popBackStack()
         }
 
-        // Menu button
-        ivMenuButton.setOnClickListener {
-            showMenu()
+        // Nút Follow/Following chính
+        binding.btnFollow.setOnClickListener {
+            targetUserId?.let { id ->
+                if (isCurrentlyFollowing) {
+                    viewModel.unfollowUser(id)
+                } else {
+                    viewModel.followUser(id)
+                }
+            }
         }
 
-        // Follow button
-        btnFollow.setOnClickListener {
-            toggleFollow()
+        // === THÊM MỚI NÚT SHARE ===
+        binding.btnShareProfile.setOnClickListener {
+            // Lấy user (của người khác) từ ViewModel
+            val user = viewModel.userProfile.value
+            if (user != null) {
+                shareUserProfile(user)
+            } else {
+                Toast.makeText(context, "Đang tải dữ liệu...", Toast.LENGTH_SHORT).show()
+            }
+        }
+        // === KẾT THÚC THÊM MỚI ===
+
+        // Click vào "Followers" (của người khác)
+        binding.llFollowersWrapper.setOnClickListener {
+            targetUserId?.let { id ->
+                val bundle = Bundle().apply {
+                    putString("userId", id) // Gửi ID của người này
+                    putString("listType", "followers")
+                }
+                try {
+                    // (Bạn cần tạo action này trong nav_graph)
+                    findNavController().navigate(R.id.action_profileFragment_to_followListFragment, bundle)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
-        // Share button
-        btnShareProfile.setOnClickListener {
-            shareProfile()
+        // Click vào "Following" (của người khác)
+        binding.llFollowingWrapper.setOnClickListener {
+            targetUserId?.let { id ->
+                val bundle = Bundle().apply {
+                    putString("userId", id) // Gửi ID của người này
+                    putString("listType", "following")
+                }
+                try {
+                    // (Bạn cần tạo action này trong nav_graph)
+                    findNavController().navigate(R.id.action_profileFragment_to_followListFragment, bundle)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
-        // Profile image click
-        ivProfileImage.setOnClickListener {
-            showProfileImageFullScreen()
-        }
+        // binding.ivMenuButton.setOnClickListener { ... }
     }
 
-    private fun loadUserData() {
-        // Load user data - Replace with actual data from your backend/database
-        tvUsername.text = "Van Vinh"
-        tvBio.text = "Photography enthusiast 📸 | Traveler ✈️"
-        tvPostCount.text = "10"
-        tvFollowingCount.text = "15k"
-        tvLikeCount.text = "190k"
-    }
+    // === THÊM HÀM MỚI ĐỂ SHARE ===
+    /**
+     * Hàm này tạo ra một Intent chia sẻ "phổ thông"
+     */
+    private fun shareUserProfile(user: UserModel) {
+        val profileLink = "https://my-social-app.com/profile/${user.userId}"
+        // (Layout này không có bio, nên chúng ta chỉ share tên)
+        val shareText = """
+            Check out ${user.fullName} on SocialApp!
+            
+            See their profile: $profileLink
+        """.trimIndent()
 
-    private fun setupPhotoGrid() {
-        rvPhotos.layoutManager = GridLayoutManager(requireContext(), 3)
-
-        // TODO: Set up your photo adapter
-        // val photoAdapter = PhotoAdapter(photoList)
-        // rvPhotos.adapter = photoAdapter
-    }
-
-    private fun toggleFollow() {
-        isFollowing = !isFollowing
-
-        if (isFollowing) {
-            btnFollow.text = "Following"
-            btnFollow.setBackgroundColor(resources.getColor(android.R.color.transparent))
-            btnFollow.setTextColor(resources.getColor(R.color.purple_main))
-            btnFollow.strokeColor = resources.getColorStateList(R.color.purple_main)
-            btnFollow.strokeWidth = 4
-
-            Toast.makeText(requireContext(), "Followed!", Toast.LENGTH_SHORT).show()
-
-            // Update following count
-            val currentCount = tvFollowingCount.text.toString().replace("k", "").toFloatOrNull() ?: 0f
-            tvFollowingCount.text = "${String.format("%.1f", currentCount + 0.1)}k"
-        } else {
-            btnFollow.text = "Follow"
-            btnFollow.setBackgroundColor(resources.getColor(R.color.purple_main))
-            btnFollow.setTextColor(resources.getColor(android.R.color.white))
-            btnFollow.strokeWidth = 0
-
-            Toast.makeText(requireContext(), "Unfollowed!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun shareProfile() {
-        // Implement share functionality
-        Toast.makeText(requireContext(), "Share profile", Toast.LENGTH_SHORT).show()
-
-        // Example share intent:
-        /*
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, "Check out ${tvUsername.text}'s profile!")
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Check out ${user.fullName}'s Profile")
+            putExtra(Intent.EXTRA_TEXT, shareText)
         }
-        startActivity(Intent.createChooser(shareIntent, "Share profile via"))
-        */
+        startActivity(Intent.createChooser(shareIntent, "Share Profile via"))
     }
+    // === KẾT THÚC HÀM MỚI ===
 
-    private fun showMenu() {
-        // Show menu options
-        Toast.makeText(requireContext(), "Menu clicked", Toast.LENGTH_SHORT).show()
-
-        // TODO: Implement popup menu or bottom sheet
-        /*
-        val popup = PopupMenu(requireContext(), ivMenuButton)
-        popup.menuInflater.inflate(R.menu.profile_menu, popup.menu)
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_block -> {
-                    // Block user
-                    true
-                }
-                R.id.menu_report -> {
-                    // Report user
-                    true
-                }
-                else -> false
+    private fun setupObservers() {
+        // 1. Quan sát Profile
+        viewModel.userProfile.observe(viewLifecycleOwner) { user ->
+            // Chỉ cập nhật nếu user này là user chúng ta đang xem
+            if (user != null && user.userId == targetUserId) {
+                updateProfileUI(user)
             }
         }
-        popup.show()
-        */
-    }
 
-    private fun showProfileImageFullScreen() {
-        // Show profile image in full screen
-        Toast.makeText(requireContext(), "View profile image", Toast.LENGTH_SHORT).show()
+        // 2. Quan sát Bài đăng
+        viewModel.userPosts.observe(viewLifecycleOwner) { posts ->
+            postAdapter.submitList(posts)
+        }
 
-        // TODO: Implement full screen image viewer
-    }
+        // 3. Quan sát Trạng thái Follow
+        viewModel.isFollowing.observe(viewLifecycleOwner) { isFollowing ->
+            isCurrentlyFollowing = isFollowing
+            updateFollowButtonUI(isFollowing)
+        }
 
-    companion object {
-        private const val ARG_USER_ID = "user_id"
-
-        @JvmStatic
-        fun newInstance(userId: String) =
-            ProfileFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_USER_ID, userId)
-                }
+        // 4. Quan sát Lỗi
+        viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            if (error != null) {
+                Toast.makeText(context, "Lỗi: $error", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    private fun updateProfileUI(user: UserModel) {
+        binding.tvUsername.text = user.fullName
+        // (Layout của bạn không có tvBio)
+        binding.tvPostCount.text = user.postCount.toString()
+        binding.tvFollowingCount.text = user.followingCount.toString()
+
+        // Sửa lỗi ID: Dùng tvFollowersCount (từ layout trên Canvas)
+        binding.tvFollowersCount.text = user.followerCount.toString()
+
+        Glide.with(this).load(user.headerPictureUrl).placeholder(R.drawable.image_backgroud).into(binding.ivHeaderImage)
+        Glide.with(this).load(user.profilePictureUrl).placeholder(R.drawable.image_avata_user).circleCrop().into(binding.ivProfileImage)
+    }
+
+    private fun updateFollowButtonUI(isFollowing: Boolean) {
+        val context = context ?: return
+        if (isFollowing) {
+            binding.btnFollow.text = "Following"
+            binding.btnFollow.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+        } else {
+            binding.btnFollow.text = "Follow"
+            binding.btnFollow.setBackgroundColor(ContextCompat.getColor(context, R.color.purple_main))
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Gỡ listener của ViewModel khi thoát
+        viewModel.userProfile.removeObservers(viewLifecycleOwner)
+        viewModel.userPosts.removeObservers(viewLifecycleOwner)
+        viewModel.isFollowing.removeObservers(viewLifecycleOwner)
+
+        binding.rvPhotos.adapter = null
+        _binding = null
     }
 }
+
