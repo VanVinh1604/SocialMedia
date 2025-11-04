@@ -10,15 +10,15 @@
         android:id="@+id/imageContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintHeight_percent="0.6"
+        app:layout_constraintHeight_percent="0.55"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/scrollContainer">
 
         <!-- Back Button -->
         <ImageButton
             android:id="@+id/btnBack"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Back"
             android:padding="12dp"
@@ -33,9 +33,9 @@
         <ImageView
             android:id="@+id/previewImage"
             android:layout_width="0dp"
-            android:layout_height="520dp"
-            android:translationY="0dp"
+            android:layout_height="450dp"
             android:elevation="10dp"
+            android:layout_marginBottom="-40dp"
             android:contentDescription="Selected image"
             android:scaleType="centerCrop"
             app:layout_constraintTop_toTopOf="parent"
@@ -74,6 +74,7 @@
             android:scrollbars="none"
             app:layout_constraintBottom_toBottomOf="parent"
             android:elevation="20dp"
+
             android:clipToPadding="false">
 
             <LinearLayout
@@ -89,15 +90,14 @@
     <ScrollView
         android:id="@+id/scrollContainer"
         android:layout_width="match_parent"
-        android:layout_height="310dp"
+        android:layout_height="0dp"
         android:layout_marginTop="-30dp"
         app:layout_constraintTop_toBottomOf="@id/imageContainer"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:clipToPadding="false"
-        android:fillViewport="true"
-        android:translationY="0dp">
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -107,7 +107,7 @@
             android:paddingBottom="16dp"
             android:paddingLeft="20dp"
             android:paddingRight="20dp"
-            android:background="@drawable/rounded_top_30dp_bg"
+
             android:elevation="8dp">
 
             <!-- Caption input with emoji picker -->

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="2dp"
+    app:cardCornerRadius="0dp"
+    app:cardElevation="2dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="120dp">
+
+        <!-- Image View -->
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/image_to_select" />
+
+        <!-- Overlay for selected state -->
+        <View
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80FFFFFF"
+            android:visibility="gone"
+            android:alpha="0.6" />
+
+        <!-- CheckBox in top-right corner with custom background -->
+
+        <!-- Order Number in center with circular background -->
+        <TextView
+            android:id="@+id/orderNumber"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:background="@drawable/order_number_background"
+            android:gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:elevation="4dp" />
+
+        <!-- Icon checkmark khi được chọn (thêm mới) -->
+        <ImageView
+            android:id="@+id/iconSelected"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+
+
+            android:background="@drawable/btn_background"
+            android:padding="4dp"
+            android:visibility="gone"
+            android:elevation="5dp" />
+
+    </FrameLayout>
+
+</androidx.cardview.widget.CardView>

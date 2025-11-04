@@ -10,4 +10,7 @@
     <dimen name="spacing_large">24dp</dimen>
     <dimen name="corner_radius">12dp</dimen>
     <dimen name="button_height">50dp</dimen>
+
+        <dimen name="explore_item_small_height">120dp</dimen>
+
 </resources>
