@@ -3,18 +3,26 @@ package com.example.socialmedia.project.Adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.socialmedia.R
 import com.example.socialmedia.project.Domain.Model.NotificationModel
 import com.example.socialmedia.project.Helper.TimeUtils
+import com.example.socialmedia.project.Server.Firebase.FirebaseService
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 
 class NotificationAdapter(
     private val items: MutableList<NotificationModel> = mutableListOf()
 ) : RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder>() {
+
+
+    private val firebaseService = FirebaseService()
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     inner class NotificationViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val imgUser: ImageView = view.findViewById(R.id.imgUser)
@@ -22,6 +30,10 @@ class NotificationAdapter(
         val tvMessage: TextView = view.findViewById(R.id.tvMessage)
         val tvTime: TextView = view.findViewById(R.id.tvTime)
         val btnMore: ImageView = view.findViewById(R.id.btnMore)
+
+        val btnFollow: LinearLayout = view.findViewById(R.id.btnFollow)
+        val tvFollowText: TextView = view.findViewById(R.id.tvFollowText)
+
 
     }
 
@@ -94,6 +106,37 @@ class NotificationAdapter(
             holder.imgPost.visibility = View.GONE
         }
 
+        if (n.notificationType.name == "FOLLOW") {
+            holder.btnMore.visibility = View.GONE
+            holder.imgPost.visibility = View.GONE
+            holder.btnFollow.visibility = View.VISIBLE
+
+            if (currentUserId != null && n.actorId != null) {
+                firebaseService.isUserFollowing(currentUserId, n.actorId!!) { isFollowing ->
+                    updateFollowButtonUI(holder.btnFollow, holder.tvFollowText, isFollowing)
+                }
+
+                holder.btnFollow.setOnClickListener {
+                    firebaseService.isUserFollowing(currentUserId, n.actorId!!) { isFollowing ->
+                        if (isFollowing) {
+                            firebaseService.unfollowUser(currentUserId, n.actorId!!, {
+                                updateFollowButtonUI(holder.btnFollow, holder.tvFollowText, false)
+                            }, {})
+                        } else {
+                            firebaseService.followUser(currentUserId, n.actorId!!, {
+                                updateFollowButtonUI(holder.btnFollow, holder.tvFollowText, true)
+                            }, {})
+                        }
+                    }
+                }
+            }
+        } else {
+            // --- Các loại thông báo khác ---
+            holder.btnMore.visibility = View.VISIBLE
+            holder.btnFollow.visibility = View.GONE
+            holder.imgPost.visibility = View.VISIBLE
+        }
+
         // Sự kiện click "More"
         holder.btnMore.setOnClickListener {
             // Gợi ý: hiển thị PopupMenu để block / xoá / báo cáo...
@@ -111,6 +154,19 @@ class NotificationAdapter(
         items.addAll(list.sortedByDescending { it.createdAt })
         notifyDataSetChanged()
     }
+
+    private fun updateFollowButtonUI(layout: LinearLayout, textView: TextView, isFollowing: Boolean) {
+        if (isFollowing) {
+            layout.setBackgroundResource(R.drawable.bg_following_button)
+            textView.text = "Following"
+            textView.setTextColor(layout.context.getColor(R.color.black))
+        } else {
+            layout.setBackgroundResource(R.drawable.bg_follow_button)
+            textView.text = "Follow"
+            textView.setTextColor(layout.context.getColor(android.R.color.white))
+        }
+    }
+
 
     // TODO: Cập nhật hàm này để lấy thumbnail bài viết từ Firebase
     private fun loadPostThumbnail(postId: String, imageView: ImageView) {

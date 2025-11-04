@@ -9,32 +9,115 @@ class NotificationRepository {
 
     private val database = FirebaseDatabase.getInstance().getReference("notifications")
     private val userId = FirebaseAuth.getInstance().currentUser?.uid
+    private var lastTimestampLoaded: Long? = null
 
-    fun observeNotifications(callback: (List<NotificationModel>) -> Unit) {
+    fun loadNotificationsPaged(
+        limit: Int = 20,
+        onResult: (List<NotificationModel>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        if (userId == null) {
+            onResult(emptyList())
+            return
+        }
+
+        val baseQuery = database.orderByChild("userId").equalTo(userId)
+
+        baseQuery.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val allList = snapshot.children.mapNotNull { it.getValue(NotificationModel::class.java) }
+                val sortedList = allList.sortedByDescending { it.createdAt }
+
+                val now = System.currentTimeMillis()
+                val todayStart = getStartOfDay(now)
+                val dayMillis = 24 * 60 * 60 * 1000L
+
+                val resultList = mutableListOf<NotificationModel>()
+                var currentDay = todayStart
+
+                // Lấy lần lượt từng ngày cho đến khi đủ limit
+                while (resultList.size < limit && currentDay > 0) {
+                    val dayStart = currentDay
+                    val dayEnd = currentDay + dayMillis
+
+                    val dayItems = sortedList.filter {
+                        it.createdAt in dayStart..dayEnd
+                    }
+
+                    resultList.addAll(dayItems)
+
+                    if (resultList.size >= limit) break
+                    currentDay -= dayMillis // Lùi lại 1 ngày
+                }
+
+                // Lưu lại timestamp cuối cùng đã load
+                lastTimestampLoaded = resultList.lastOrNull()?.createdAt
+                onResult(resultList.take(limit))
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onError(error.toException())
+            }
+        })
+    }
+
+    /**
+     * Load thêm các thông báo cũ hơn
+     */
+    fun loadMoreNotifications(
+        limit: Int = 20,
+        onResult: (List<NotificationModel>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        if (userId == null || lastTimestampLoaded == null) {
+            onResult(emptyList())
+            return
+        }
+
+        database.orderByChild("userId").equalTo(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val allList = snapshot.children.mapNotNull { it.getValue(NotificationModel::class.java) }
+                    val sortedList = allList.sortedByDescending { it.createdAt }
+
+                    val older = sortedList.filter { it.createdAt < lastTimestampLoaded!! }
+                    val nextBatch = older.take(limit)
+
+                    if (nextBatch.isNotEmpty()) {
+                        lastTimestampLoaded = nextBatch.last().createdAt
+                    }
+
+                    onResult(nextBatch)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    onError(error.toException())
+                }
+            })
+    }
+
+    fun observeNewNotifications(afterTimestamp: Long, callback: (List<NotificationModel>) -> Unit) {
         if (userId == null) {
             callback(emptyList())
             return
         }
 
-        database.orderByChild("userId").equalTo(userId)
+        database.orderByChild("createdAt")
+            .startAfter(afterTimestamp.toDouble()) // chỉ lấy mới hơn batch đầu
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val rawList = mutableListOf<NotificationModel>()
-                    for (child in snapshot.children) {
-                        child.getValue(NotificationModel::class.java)?.let {
-                            rawList.add(it)
-                        }
-                    }
-                    // Sắp xếp theo thời gian mới nhất
-                    val sortedList = rawList.sortedByDescending { it.createdAt }
-                    callback(sortedList)
+                    val newList = snapshot.children.mapNotNull {
+                        it.getValue(NotificationModel::class.java)
+                    }.filter { it.userId == userId }
+                        .sortedByDescending { it.createdAt }
+
+                    if (newList.isNotEmpty()) callback(newList)
                 }
 
-                override fun onCancelled(error: DatabaseError) {
-                    callback(emptyList())
-                }
+                override fun onCancelled(error: DatabaseError) {}
             })
     }
+
 
     fun sendNotificationMap(
         receiverId: String,
@@ -120,6 +203,16 @@ class NotificationRepository {
                 content = "đã nhắc đến bạn trong bình luận"
             )
         }
+    }
+
+    private fun getStartOfDay(timeMillis: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = timeMillis
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
 }

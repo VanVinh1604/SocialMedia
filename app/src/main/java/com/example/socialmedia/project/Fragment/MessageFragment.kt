@@ -38,54 +38,26 @@ class MessageFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ) = FragmentMessageBinding.inflate(inflater, container, false).also {
-        _binding = it
-    }.root
+    ) = FragmentMessageBinding.inflate(inflater, container, false).also { _binding = it }.root
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         viewModel = ViewModelProvider(this)[MessageViewModel::class.java]
-        TextGradientUtils.applyGradient(binding.tvMessage, "#FF6FB1", "#9B59B6")
-        binding.ivBack.setOnClickListener { findNavController().popBackStack() }
-
         setupUserOnlineRecycler()
         setupLastMessagesRecycler()
 
         viewModel.loadChatUsers(currentUserId)
-        observeViewModels()
+        observeChatUsers()
 
-        conversationViewModel.listenConversationsRealtime()
-
-        // ✅ Observe conversations và enrich với thông tin user
-        conversationViewModel.conversations.observe(viewLifecycleOwner) { convList ->
-            enrichConversationsWithUserInfo(convList) { enrichedList ->
-                messageAdapter.updateList(enrichedList)
-            }
-        }
-
+        // ✅ Listen conversation realtime
         conversationViewModel.listenConversationsRealtime(currentUserId)
-
-        conversationViewModel.conversations.observe(viewLifecycleOwner) { convList ->
-            messageAdapter.updateList(convList)
-
-            // ✅ Cập nhật tổng tin chưa đọc (nếu bạn có TextView tổng)
-            val totalUnread = messageAdapter.getTotalUnreadCount()
-            if (totalUnread > 0) {
-                binding.tvTotalUnread.text = totalUnread.toString()
-                binding.tvTotalUnread.visibility = View.VISIBLE
-            } else {
-                binding.tvTotalUnread.visibility = View.GONE
-            }
-        }
-
-
+        observeConversations()
     }
 
     private fun setupUserOnlineRecycler() {
         binding.rvUsers.layoutManager =
             LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-
         userAdapter = UserOnlineAdapter(mutableListOf()) { clickedUser ->
             getOrCreateConversationId(currentUserId, clickedUser.userId) { convId ->
                 val action = MessageFragmentDirections.actionMessageFragmentToChatFragment(
@@ -103,6 +75,8 @@ class MessageFragment : Fragment() {
     private fun setupLastMessagesRecycler() {
         binding.rvMessages.layoutManager = LinearLayoutManager(context)
         messageAdapter = MessageAdapter(emptyList(), currentUserId, conversationViewModel) { conv ->
+            // Click conversation -> đánh dấu đã đọc
+            conversationViewModel.markConversationAsRead(conv.conversationId, currentUserId)
             val otherUserId = conv.participants.firstOrNull { it != currentUserId } ?: conv.conversationId
             val action = MessageFragmentDirections.actionMessageFragmentToChatFragment(
                 conversationId = conv.conversationId,
@@ -115,7 +89,33 @@ class MessageFragment : Fragment() {
         binding.rvMessages.adapter = messageAdapter
     }
 
-    // ✅ Enrich conversations với thông tin user thực tế
+    private fun observeChatUsers() {
+        viewModel.chatUsers.observe(viewLifecycleOwner) { users ->
+            val sortedUsers = users.sortedByDescending { it.isOnline }
+            userAdapter.updateList(sortedUsers)
+        }
+    }
+
+    private fun observeConversations() {
+        conversationViewModel.conversations.observe(viewLifecycleOwner) { convList ->
+            // ✅ Enrich thông tin user trước khi hiển thị
+            enrichConversationsWithUserInfo(convList) { enrichedList ->
+                messageAdapter.updateList(enrichedList)
+                updateTotalUnreadBadge(enrichedList)
+            }
+        }
+    }
+
+    private fun updateTotalUnreadBadge(conversations: List<ConversationModel>) {
+        val totalUnread = conversations.sumOf { it.unreadCount[currentUserId] ?: 0 }
+        if (totalUnread > 0) {
+            binding.tvTotalUnread.text = if (totalUnread > 99) "99+" else totalUnread.toString()
+            binding.tvTotalUnread.visibility = View.VISIBLE
+        } else {
+            binding.tvTotalUnread.visibility = View.GONE
+        }
+    }
+
     private fun enrichConversationsWithUserInfo(
         conversations: List<ConversationModel>,
         callback: (List<ConversationModel>) -> Unit
@@ -129,64 +129,32 @@ class MessageFragment : Fragment() {
         var processedCount = 0
 
         conversations.forEach { conv ->
-            // Tìm userId của người còn lại (không phải currentUser)
             val otherUserId = conv.participants.firstOrNull { it != currentUserId }
-
             if (otherUserId != null) {
-                // ✅ Fetch thông tin user từ InfoUser
                 fetchUserInfoForDisplay(otherUserId) { name, avatar ->
-                    val enrichedConv = conv.copy(
-                        name = name,
-                        photoUrl = avatar
-                    )
-                    enrichedList.add(enrichedConv)
+                    enrichedList.add(conv.copy(name = name, photoUrl = avatar))
                     processedCount++
-
-                    // Khi đã xử lý hết tất cả conversations
                     if (processedCount == conversations.size) {
-                        // Sort theo thời gian tin nhắn cuối
-                        val sortedList = enrichedList.sortedByDescending { it.lastMessageAt ?: 0 }
-                        callback(sortedList)
+                        callback(enrichedList.sortedByDescending { it.lastMessageAt ?: 0 })
                     }
                 }
             } else {
-                // Trường hợp không tìm thấy otherUserId (lỗi data)
                 enrichedList.add(conv)
                 processedCount++
-
                 if (processedCount == conversations.size) {
-                    val sortedList = enrichedList.sortedByDescending { it.lastMessageAt ?: 0 }
-                    callback(sortedList)
+                    callback(enrichedList.sortedByDescending { it.lastMessageAt ?: 0 })
                 }
             }
         }
     }
 
-    // ✅ Fetch thông tin user để hiển thị trong danh sách chat
     private fun fetchUserInfoForDisplay(userId: String, callback: (String, String?) -> Unit) {
-        val userRef = FirebaseDatabase.getInstance()
-            .getReference("InfoUser")
-            .child(userId)
-
+        val userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(userId)
         userRef.get().addOnSuccessListener { snapshot ->
             val name = snapshot.child("fullName").getValue(String::class.java) ?: "Người dùng"
             val avatar = snapshot.child("profilePictureUrl").getValue(String::class.java)
             callback(name, avatar)
-            Log.d("MessageFragment", "Fetching info for user: $userId")
-            Log.d("MessageFragment", "Got name: $name, avatar: $avatar")
-        }.addOnFailureListener {
-            callback("Người dùng", null)
-
-        }
-        // Trong fetchUserInfoForDisplay()
-
-    }
-
-    private fun observeViewModels() {
-        viewModel.chatUsers.observe(viewLifecycleOwner) { users ->
-            val sortedUsers = users.sortedByDescending { it.isOnline }
-            userAdapter.updateList(sortedUsers)
-        }
+        }.addOnFailureListener { callback("Người dùng", null) }
     }
 
     private fun getOrCreateConversationId(
@@ -196,29 +164,22 @@ class MessageFragment : Fragment() {
     ) {
         val ids = listOf(currentUserId, otherUserId).sorted()
         val conversationId = ids.joinToString("_")
-        val docRef = FirebaseFirestore.getInstance()
-            .collection("conversations")
-            .document(conversationId)
-
+        val docRef = FirebaseFirestore.getInstance().collection("conversations").document(conversationId)
         docRef.get().addOnSuccessListener { snapshot ->
             if (!snapshot.exists()) {
-                // ✅ Khi tạo mới, để trống name/photoUrl
                 val data = mapOf(
                     "conversationId" to conversationId,
                     "participants" to listOf(currentUserId, otherUserId),
-                    "name" to "",  // Sẽ fetch khi hiển thị
+                    "name" to "",
                     "photoUrl" to "",
                     "createdAt" to System.currentTimeMillis(),
                     "updatedAt" to System.currentTimeMillis(),
                     "lastMessagePreview" to "",
-                    "lastMessageAt" to null
+                    "lastMessageAt" to null,
+                    "unreadCount" to mapOf(currentUserId to 0, otherUserId to 0)
                 )
-                docRef.set(data)
-                    .addOnSuccessListener { onComplete(conversationId) }
-                    .addOnFailureListener { onComplete(conversationId) }
-            } else {
-                onComplete(conversationId)
-            }
+                docRef.set(data).addOnSuccessListener { onComplete(conversationId) }
+            } else onComplete(conversationId)
         }.addOnFailureListener { onComplete(conversationId) }
     }
 

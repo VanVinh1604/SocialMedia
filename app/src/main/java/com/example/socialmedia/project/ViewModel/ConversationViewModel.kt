@@ -24,66 +24,6 @@ class ConversationViewModel : ViewModel() {
     private var conversationListeners = mutableMapOf<String, ListenerRegistration>()
 
 
-    fun createOrGetConversation(currentUserId: String, otherUserId: String, onComplete: (String) -> Unit) {
-        chatRepository.createOrGetConversation(currentUserId, otherUserId, onComplete)
-    }
-
-    fun listenConversationsRealtime() {
-        db.collection("conversations")
-            .whereArrayContains("participants", currentUserId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
-                val conversations = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(ConversationModel::class.java)?.copy(conversationId = doc.id)
-                }
-                _conversations.postValue(conversations)
-
-                // Tạo listener cho từng conversation để cập nhật unreadCount realtime
-                conversations.forEach { conv ->
-                    if (conversationListeners[conv.conversationId] == null) {
-                        val listener = db.collection("conversations")
-                            .document(conv.conversationId)
-                            .addSnapshotListener { docSnapshot, _ ->
-                                if (docSnapshot != null && docSnapshot.exists()) {
-                                    val updatedConv = docSnapshot.toObject(ConversationModel::class.java)
-                                        ?.copy(conversationId = docSnapshot.id)
-                                    updatedConv?.let { updated ->
-                                        // Cập nhật conversation trong list
-                                        val currentList = _conversations.value?.toMutableList() ?: mutableListOf()
-                                        val index = currentList.indexOfFirst { it.conversationId == updated.conversationId }
-                                        if (index >= 0) {
-                                            currentList[index] = updated
-                                            _conversations.postValue(currentList)
-                                        }
-                                    }
-                                }
-                            }
-                        conversationListeners[conv.conversationId] = listener
-                    }
-                }
-            }
-    }
-    fun loadConversations() {
-        db.collection("conversations")
-            .whereArrayContains("participants", currentUserId)
-            .orderBy("updatedAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) {
-                    _conversations.postValue(emptyList())
-                    return@addSnapshotListener
-                }
-
-                val conversations = snapshot.documents.mapNotNull { doc ->
-                    val conv = doc.toObject(ConversationModel::class.java)?.copy(conversationId = doc.id)
-                    conv?.copy(
-                        name = doc.getString("lastMessageSenderName") ?: "Người dùng",
-                        photoUrl = doc.getString("lastMessageSenderAvatar") ?: ""
-                    )
-                }
-
-                _conversations.postValue(conversations)
-            }
-    }
 
     fun markConversationAsRead(conversationId: String, userId: String) {
         db.collection("conversations").document(conversationId)
@@ -96,6 +36,15 @@ class ConversationViewModel : ViewModel() {
         }
     }
 
+    fun openConversation(conversationId: String) {
+        // Khi mở conversation, reset unreadCount cho currentUser
+        chatRepository.markMessagesAsRead(conversationId, currentUserId)
+
+        // Load lại conversation realtime
+        chatRepository.loadAllConversations(currentUserId) { list ->
+            _conversations.postValue(list)
+        }
+    }
 
 
 

@@ -51,6 +51,8 @@ class MessageAdapter(
                 binding.tvName.setTypeface(null, Typeface.NORMAL)
                 binding.tvLastMessage.setTypeface(null, Typeface.NORMAL)
             }
+            Log.d("MessageAdapter", "convId=${conv.conversationId}, unread=${conv.unreadCount}, currentUserId=$currentUserId")
+
 
             // Click vào sẽ đánh dấu đọc
             binding.root.setOnClickListener {

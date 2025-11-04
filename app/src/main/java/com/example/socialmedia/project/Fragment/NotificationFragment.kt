@@ -8,11 +8,12 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentNotificationBinding
 import com.example.socialmedia.project.Adapter.NotificationAdapter
 import com.example.socialmedia.project.Helper.TextGradientUtils
 import com.example.socialmedia.project.ViewModel.NotificationViewModel
-import com.example.socialmedia.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -21,10 +22,12 @@ import com.google.firebase.database.ValueEventListener
 
 class NotificationFragment : Fragment() {
 
+
     private var _binding: FragmentNotificationBinding? = null
     private val binding get() = _binding!!
     private val viewModel: NotificationViewModel by viewModels()
     private val adapter = NotificationAdapter()
+    private var isLoadingMore = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -37,24 +40,43 @@ class NotificationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.recyclerNotification.layoutManager = LinearLayoutManager(requireContext())
+        setupRecyclerView()
+        setupObservers()
+        setupClickListeners()
+
+        viewModel.loadNotifications()
+    }
+
+    private fun setupRecyclerView() {
+        val layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerNotification.layoutManager = layoutManager
         binding.recyclerNotification.adapter = adapter
 
-        // Quan sát dữ liệu từ ViewModel
-//        viewModel.notifications.observe(viewLifecycleOwner) { list ->
-//            adapter.updateListGrouped(list)
-//        }
+        binding.recyclerNotification.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                val totalItemCount = layoutManager.itemCount
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
 
-        viewModel.notifications.observe(viewLifecycleOwner) { list ->
-            // Sử dụng adapter mới theo thiết kế của bạn
-            adapter.updateList(list)
-        }
+                if (!isLoadingMore && totalItemCount <= lastVisible + 3) {
+                    isLoadingMore = true
+                    viewModel.loadMore()
+                }
+            }
+        })
+    }
+
+    private fun setupObservers() {
         // Gradient tiêu đề
         TextGradientUtils.applyGradient(binding.tvTitle, "#FF6FB1", "#9B59B6")
 
-        // Gọi hàm tải dữ liệu realtime
-        viewModel.loadNotifications()
+        // Quan sát dữ liệu notification
+        viewModel.notifications.observe(viewLifecycleOwner) { list ->
+            adapter.updateList(list)
+        }
+    }
 
+    private fun setupClickListeners() {
         binding.ivBack.setOnClickListener {
             findNavController().navigate(R.id.action_notificationFragment_to_homeFragment)
         }
@@ -81,9 +103,10 @@ class NotificationFragment : Fragment() {
             })
     }
 
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
+
+
 }

@@ -95,7 +95,6 @@ class ChatRepository {
         val messageWithId = message.copy(messageId = msgId)
         val conversationRef = db.collection("conversations").document(conversationId)
 
-        // Gửi tin nhắn
         conversationRef.collection("messages")
             .document(msgId)
             .set(messageWithId)
@@ -108,7 +107,6 @@ class ChatRepository {
                         else -> ""
                     }
 
-                    // ✅ CHỈ lưu preview, timestamp và senderId
                     val updateMap = mutableMapOf<String, Any>(
                         "lastMessagePreview" to preview,
                         "lastMessageAt" to System.currentTimeMillis(),
@@ -117,19 +115,20 @@ class ChatRepository {
                         "participants" to participants
                     )
 
-                    participants.filter { it != message.senderId }.forEach { receiverId ->
-                        updateMap["unreadCount.$receiverId"] = FieldValue.increment(1)
+                    // ✅ Chỉ tăng unreadCount cho người nhận, không tăng cho sender
+                    participants.forEach { participantId ->
+                        if (participantId != message.senderId) {
+                            updateMap["unreadCount.$participantId"] = FieldValue.increment(1)
+                        }
                     }
 
                     conversationRef.set(updateMap, SetOptions.merge())
-                        .addOnSuccessListener {
-                            Log.d("ChatRepository", "✅ Updated conversation")
-                            onComplete(true)
-                        }
+                        .addOnSuccessListener { onComplete(true) }
                         .addOnFailureListener { e ->
-                            Log.e("ChatRepository", "❌ Failed to update", e)
+                            Log.e("ChatRepository", "Failed to update conversation", e)
                             onComplete(false)
                         }
+
                 } else {
                     onComplete(false)
                 }
@@ -140,61 +139,49 @@ class ChatRepository {
             }
     }
 
+
     fun markMessagesAsRead(conversationId: String?, userId: String) {
         if (conversationId.isNullOrEmpty() || userId.isEmpty()) return
+
         db.collection("conversations")
             .document(conversationId)
-            .set(mapOf("unreadCount.$userId" to 0), SetOptions.merge())
+            .update("unreadCount.$userId", 0)
+            .addOnSuccessListener { Log.d("ChatRepository", "Unread reset for $userId") }
+            .addOnFailureListener { e -> Log.e("ChatRepository", "Failed reset unread", e) }
     }
 
-    fun createOrGetConversation(
-        currentUserId: String,
-        otherUserId: String,
-        onComplete: (String) -> Unit
-    ) {
-        val ids = listOf(currentUserId, otherUserId).sorted()
-        val conversationId = ids.joinToString("_")
-        val conversationRef = db.collection("conversations").document(conversationId)
 
-        conversationRef.get().addOnSuccessListener { snapshot ->
-            if (!snapshot.exists()) {
-                val data = mapOf(
-                    "conversationId" to conversationId,
-                    "participants" to ids,
-                    "lastMessagePreview" to "",
-                    "lastMessageAt" to null,
-                    "lastMessageSenderId" to "",
-                    "createdAt" to System.currentTimeMillis(),
-                    "updatedAt" to System.currentTimeMillis(),
-                    "unreadCount" to mapOf(currentUserId to 0, otherUserId to 0)
-                )
-                conversationRef.set(data).addOnSuccessListener { onComplete(conversationId) }
-            } else {
-                onComplete(conversationId)
-            }
-        }
-    }
 
     fun loadAllConversations(currentUserId: String, onLoaded: (List<ConversationModel>) -> Unit) {
         db.collection("conversations")
             .whereArrayContains("participants", currentUserId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
-                    Log.e("ChatRepository", "Failed to load conversations", error)
                     onLoaded(emptyList())
                     return@addSnapshotListener
                 }
 
                 val conversations = snapshot.documents.mapNotNull { doc ->
                     val conv = doc.toObject(ConversationModel::class.java)
-                    conv?.copy(conversationId = doc.id)
-                }
+                    if (conv != null) {
+                        // Đọc unreadCount theo đúng key participantId
+                        val rawUnread = doc.get("unreadCount") as? Map<*, *>
+                        val unreadMap = rawUnread?.mapNotNull { entry ->
+                            val key = entry.key as? String
+                            val value = (entry.value as? Number)?.toLong()
+                            if (key != null && value != null) key to value else null
+                        }?.toMap() ?: emptyMap()
 
-                Log.d("ChatRepository", "✅ Loaded ${conversations.size} conversations for $currentUserId")
+                        conv.copy(
+                            conversationId = doc.id,
+                            unreadCount = unreadMap
+                        )
+                    } else null
+                }.sortedByDescending { it.lastMessageAt ?: 0 }
+
                 onLoaded(conversations)
             }
     }
-
 
 
     fun removeListener() {
