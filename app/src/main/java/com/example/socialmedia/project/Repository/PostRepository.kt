@@ -91,7 +91,7 @@ class PostRepository {
     suspend fun getLikedUsers(postId: String): List<UserModel> = withContext(Dispatchers.IO) {
         try {
             // Sửa lại cho nhất quán: đọc từ "posts" (p thường)
-            val snapshot = database.child("posts").child(postId).child("likedUsers").get().await()
+            val snapshot = database.child("Posts").child(postId).child("likedUsers").get().await()
             val userIds = snapshot.children.mapNotNull { it.key }
             val users = mutableListOf<UserModel>()
             for (uid in userIds) {
