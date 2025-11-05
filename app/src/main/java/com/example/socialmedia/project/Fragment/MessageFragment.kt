@@ -55,8 +55,7 @@ class MessageFragment : Fragment() {
         viewModel.loadChatUsers(currentUserId)
         observeViewModels()
 
-
-
+        
         // ✅ Observe conversations và enrich với thông tin user
         conversationViewModel.conversations.observe(viewLifecycleOwner) { convList ->
             enrichConversationsWithUserInfo(convList) { enrichedList ->
