@@ -118,7 +118,12 @@ class ChatRepository {
                     // ✅ Chỉ tăng unreadCount cho người nhận, không tăng cho sender
                     participants.forEach { participantId ->
                         if (participantId != message.senderId) {
-                            updateMap["unreadCount.$participantId"] = FieldValue.increment(1)
+                            val unreadMap = participants
+                                .filter { it != message.senderId }
+                                .associateWith { FieldValue.increment(1) }
+
+                            updateMap["unreadCount"] = unreadMap
+
                         }
                     }
 
