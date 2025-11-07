@@ -1,5 +1,7 @@
 package com.example.socialmedia.Fragment.Fragment
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -9,9 +11,13 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
+import com.example.socialmedia.MainActivity
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentSettingBinding // <-- Import ViewBinding
+import com.example.socialmedia.project.UserManagementActivity
 import com.google.firebase.auth.FirebaseAuth // <-- THÊM IMPORT FIREBASE
+import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
+import im.zego.zim.ZIM
 
 class SettingFragment : Fragment() {
 
@@ -51,30 +57,58 @@ class SettingFragment : Fragment() {
             }
         }
 
-        // === SỬA LỖI NÚT LOG OUT ===
+        // SettingFragment.kt - Phần xử lý logout
         binding.cvLogout.setOnClickListener {
-            // 1. Đăng xuất khỏi Firebase
-            FirebaseAuth.getInstance().signOut()
-
-            // 2. Điều hướng về LoginFragment và XÓA SẠCH back stack
             try {
-                // Cấu hình NavOptions để xóa tất cả các fragment trước đó
-                val navOptions = NavOptions.Builder()
-                    .setPopUpTo(R.id.nav_graph, true) // Xóa back stack đến tận gốc của nav_graph
-                    .build()
+                // 1️⃣ Logout ZIM (nếu đang đăng nhập)
+                try {
+                    val zimInstance = ZIM.getInstance()
+                    if (MainActivity.isZIMLoggedIn && zimInstance != null) {
+                        zimInstance.logout()
+                        MainActivity.isZIMLoggedIn = false
+                        Log.d("SettingFragment", "✅ ZIM logout thành công")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SettingFragment", "⚠️ Lỗi khi logout ZIM: ${e.message}")
+                }
 
-                // (Bạn cần đảm bảo đã tạo action này trong nav_graph)
-                findNavController().navigate(R.id.action_settingFragment_to_loginFragment, null, navOptions)
+                // 2️⃣ Dọn Zego Call Service
+                try {
+                    if (MainActivity.isZegoInitialized) {
+                        ZegoUIKitPrebuiltCallService.unInit()
+                        MainActivity.isZegoInitialized = false
+                        Log.d("SettingFragment", "✅ Zego Call Service unInit thành công")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SettingFragment", "⚠️ Lỗi khi unInit Zego: ${e.message}")
+                }
+
+                // 3️⃣ Đăng xuất Firebase
+                FirebaseAuth.getInstance().signOut()
+                Log.d("SettingFragment", "✅ Firebase signOut thành công")
+
+                // 4️⃣ Xóa SharedPreferences (xoá session cũ)
+                val sharedPref = requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+                with(sharedPref.edit()) {
+                    clear()
+                    apply()
+                }
+                Log.d("SettingFragment", "✅ SharedPreferences cleared")
+
+                // 5️⃣ Chuyển về màn hình UserManagementActivity (Login)
+                val intent = Intent(requireContext(), UserManagementActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                requireActivity().finish()
+
+                Toast.makeText(requireContext(), "Đã đăng xuất hoàn toàn", Toast.LENGTH_SHORT).show()
 
             } catch (e: Exception) {
-                Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
-
-                // === SỬA LỖI Ở ĐÂY ===
-                // Truyền 'e' (Throwable) chứ không phải 'e.message' (String)
-                Log.e("SettingFragment", "Lỗi điều hướng logout: ", e)
-                // === KẾT THÚC SỬA LỖI ===
+                Log.e("SettingFragment", "❌ Lỗi khi đăng xuất: ${e.message}", e)
+                Toast.makeText(requireContext(), "Lỗi đăng xuất: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+
         // === KẾT THÚC SỬA LỖI ===
 
         // Các nút khác (hiển thị Toast tạm thời)

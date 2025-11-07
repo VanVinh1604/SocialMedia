@@ -75,7 +75,8 @@ class PostAdapter(
         if (post.mediaList.isNotEmpty()) {
             b.rvMediaList.visibility = View.VISIBLE
             if (b.rvMediaList.layoutManager == null) {
-                b.rvMediaList.layoutManager = LinearLayoutManager(b.root.context, LinearLayoutManager.HORIZONTAL, false)
+                b.rvMediaList.layoutManager =
+                    LinearLayoutManager(b.root.context, LinearLayoutManager.HORIZONTAL, false)
             }
 
             if (b.rvMediaList.onFlingListener == null) {
@@ -90,6 +91,7 @@ class PostAdapter(
 
             // 🔘 Tạo dot indicator
             b.dotsContainer.removeAllViews()
+            val dots = mutableListOf<ImageView>()
             for (i in post.mediaList.indices) {
                 val dot = ImageView(b.root.context)
                 dot.setImageResource(if (i == 0) R.drawable.dot_selected else R.drawable.dot_unselected)
@@ -97,7 +99,23 @@ class PostAdapter(
                 params.setMargins(4, 0, 4, 0)
                 dot.layoutParams = params
                 b.dotsContainer.addView(dot)
+                dots.add(dot)
             }
+
+            // 🎯 Lắng nghe scroll để update dot
+            b.rvMediaList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    val lm = recyclerView.layoutManager as LinearLayoutManager
+                    val pos = lm.findFirstCompletelyVisibleItemPosition()
+                    if (pos != RecyclerView.NO_POSITION) {
+                        dots.forEachIndexed { index, imageView ->
+                            imageView.setImageResource(
+                                if (index == pos) R.drawable.dot_selected else R.drawable.dot_unselected
+                            )
+                        }
+                    }
+                }
+            })
         }
 
         // 👤 Load user info

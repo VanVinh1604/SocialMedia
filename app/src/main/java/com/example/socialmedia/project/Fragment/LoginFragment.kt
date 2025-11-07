@@ -69,11 +69,13 @@ class LoginFragment : Fragment() {
                         // Chỉ lưu SharedPreferences để hiển thị
                         val sharedPref = requireContext().getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
                         with(sharedPref.edit()) {
+                            putBoolean("is_logged_in", true)
                             putString("user_id", user.userId)
                             putString("email", user.email)
                             putString("full_name", user.fullName)
                             apply()
                         }
+
 
                         // Mở MainActivity
                         val intent = Intent(requireContext(), MainActivity::class.java)

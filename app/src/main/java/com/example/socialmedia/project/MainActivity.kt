@@ -3,6 +3,7 @@ package com.example.socialmedia
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import androidx.activity.addCallback
@@ -35,7 +36,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
         var isZegoInitialized = false
-        var isZIMLoggedIn = false // ✅ Thêm flag cho ZIM
+        var isZIMLoggedIn = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,38 +51,49 @@ class MainActivity : AppCompatActivity() {
         setupNavigation()
         setupBottomNav()
 
-        // ✅ Khởi tạo Zego và ZIM
-        initZegoCallServiceSync()
-    }
+        // ✅ Đảm bảo lấy userId và userName một cách đáng tin cậy
+        val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
+        val userId = sharedPref.getString("user_id", null)
+        val fullName = sharedPref.getString("full_name", null)
 
-    // -------------------- Zego Call Service + ZIM Login --------------------
-    private fun initZegoCallServiceSync() {
-        val currentUser = auth.currentUser
-
-        if (currentUser == null) {
-            Log.e(TAG, "❌ User chưa login, không thể init Zego")
-            finish()
-            return
+        if (!userId.isNullOrEmpty() && !fullName.isNullOrEmpty()) {
+            Log.d(TAG, "✅ User data found: userId=$userId, name=$fullName")
+            initZegoWithRetry(userId, fullName, maxRetries = 3)
+        } else {
+            Log.e(TAG, "❌ User data missing! userId=$userId, fullName=$fullName")
+            // Thử lấy từ FirebaseAuth nếu có
+            auth.currentUser?.let { user ->
+                val fallbackUserId = user.uid
+                val fallbackName = user.displayName ?: "User"
+                Log.d(TAG, "⚠️ Using FirebaseAuth fallback: $fallbackUserId, $fallbackName")
+                initZegoWithRetry(fallbackUserId, fallbackName, maxRetries = 3)
+            }
         }
-
-        // ✅ Init Zego Call Service
-        setupZegoForUser(currentUser.uid, currentUser.displayName ?: "User")
-
-        // ✅ Login ZIM (quan trọng!)
-        loginZIM(currentUser.uid, currentUser.displayName ?: "User")
     }
 
-    private fun setupZegoForUser(userId: String, userName: String) {
+    // ✅ Khởi tạo Zego với retry mechanism
+    private fun initZegoWithRetry(userId: String, userName: String, maxRetries: Int, currentAttempt: Int = 1) {
         try {
+            // Kiểm tra lại dữ liệu trước khi init
+            if (userId.isEmpty() || userName.isEmpty()) {
+                Log.e(TAG, "❌ Invalid user data: userId=$userId, userName=$userName")
+                return
+            }
+
             val appID: Long = Constants.APP_ID.toLong()
             val appSign: String = Constants.APP_SIGN
             val config = ZegoUIKitPrebuiltCallInvitationConfig()
 
+            // ✅ UnInit nếu đã init trước đó
             if (isZegoInitialized) {
+                Log.d(TAG, "⚠️ Zego đã init, đang unInit...")
                 ZegoUIKitPrebuiltCallService.unInit()
-                Log.d(TAG, "⚠️ Zego đã init trước đó, đang re-init...")
+                isZegoInitialized = false
+                // Đợi một chút để cleanup hoàn tất
+                Thread.sleep(500)
             }
 
+            // ✅ Init Zego Call Service
             ZegoUIKitPrebuiltCallService.init(
                 application,
                 appID,
@@ -92,37 +104,87 @@ class MainActivity : AppCompatActivity() {
             )
 
             isZegoInitialized = true
-            Log.d(TAG, "✅ Zego Call Service initialized for user: $userId ($userName)")
+            Log.d(TAG, "✅ Zego initialized successfully for: $userId ($userName)")
+
+            // ✅ Đợi một chút để Zego khởi tạo hoàn tất
+            android.os.Handler(Looper.getMainLooper()).postDelayed({
+                loginZIMWithRetry(userId, userName, maxRetries = 3)
+            }, 1000)
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Lỗi khi init Zego: ${e.message}", e)
+            Log.e(TAG, "❌ Zego init failed (attempt $currentAttempt/$maxRetries): ${e.message}", e)
             isZegoInitialized = false
+
+            // Retry nếu chưa hết số lần thử
+            if (currentAttempt < maxRetries) {
+                android.os.Handler(Looper.getMainLooper()).postDelayed({
+                    Log.d(TAG, "🔄 Retrying Zego init... (attempt ${currentAttempt + 1}/$maxRetries)")
+                    initZegoWithRetry(userId, userName, maxRetries, currentAttempt + 1)
+                }, 2000L * currentAttempt) // Tăng dần delay: 2s, 4s, 6s...
+            }
         }
     }
 
-    // ✅ QUAN TRỌNG: Login ZIM để có thể gửi/nhận call invitation
-    private fun loginZIM(userId: String, userName: String) {
+    // ✅ Login ZIM với retry và null check
+    private fun loginZIMWithRetry(userId: String, userName: String, maxRetries: Int, currentAttempt: Int = 1) {
         try {
-            val zimUserInfo = ZIMUserInfo().apply {
-                userID = userId
-                this.userName = userName
+            // ✅ QUAN TRỌNG: Kiểm tra ZIM instance có sẵn không
+            val zimInstance = ZIM.getInstance()
+            if (zimInstance == null) {
+                Log.e(TAG, "❌ ZIM instance is null! (attempt $currentAttempt/$maxRetries)")
+
+                if (currentAttempt < maxRetries) {
+                    android.os.Handler(Looper.getMainLooper()).postDelayed({
+                        Log.d(TAG, "🔄 Retrying ZIM login... (attempt ${currentAttempt + 1}/$maxRetries)")
+                        loginZIMWithRetry(userId, userName, maxRetries, currentAttempt + 1)
+                    }, 1500L * currentAttempt)
+                }
+                return
             }
 
-            ZIM.getInstance()?.login(zimUserInfo, object : ZIMLoggedInCallback {
+            // ✅ Tạo ZIMUserInfo với null check
+            val zimUserInfo = ZIMUserInfo()
+            zimUserInfo.userID = userId
+            zimUserInfo.userName = userName
+
+            // ✅ Kiểm tra dữ liệu trước khi login
+            if (zimUserInfo.userID.isNullOrEmpty()) {
+                Log.e(TAG, "❌ ZIMUserInfo.userID is null or empty!")
+                return
+            }
+
+            Log.d(TAG, "🔐 Attempting ZIM login: userId=$userId, userName=$userName")
+
+            zimInstance.login(zimUserInfo, object : ZIMLoggedInCallback {
                 override fun onLoggedIn(errorInfo: ZIMError?) {
                     if (errorInfo == null || errorInfo.code == ZIMErrorCode.SUCCESS) {
                         isZIMLoggedIn = true
-                        Log.d(TAG, "✅ ZIM logged in successfully for user: $userId")
+                        Log.d(TAG, "✅ ZIM logged in successfully for: $userId")
                     } else {
                         isZIMLoggedIn = false
                         Log.e(TAG, "❌ ZIM login failed: ${errorInfo.code} - ${errorInfo.message}")
+
+                        // Retry nếu chưa hết lần thử
+                        if (currentAttempt < maxRetries) {
+                            android.os.Handler(Looper.getMainLooper()).postDelayed({
+                                Log.d(TAG, "🔄 Retrying ZIM login after error... (attempt ${currentAttempt + 1}/$maxRetries)")
+                                loginZIMWithRetry(userId, userName, maxRetries, currentAttempt + 1)
+                            }, 2000L * currentAttempt)
+                        }
                     }
                 }
             })
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Lỗi khi login ZIM: ${e.message}", e)
+            Log.e(TAG, "❌ ZIM login exception (attempt $currentAttempt/$maxRetries): ${e.message}", e)
             isZIMLoggedIn = false
+
+            if (currentAttempt < maxRetries) {
+                android.os.Handler(Looper.getMainLooper()).postDelayed({
+                    Log.d(TAG, "🔄 Retrying ZIM login after exception... (attempt ${currentAttempt + 1}/$maxRetries)")
+                    loginZIMWithRetry(userId, userName, maxRetries, currentAttempt + 1)
+                }, 2000L * currentAttempt)
+            }
         }
     }
 
@@ -267,16 +329,40 @@ class MainActivity : AppCompatActivity() {
 
         // ✅ Logout ZIM trước
         if (isZIMLoggedIn) {
-            ZIM.getInstance()?.logout()
-            isZIMLoggedIn = false
-            Log.d(TAG, "🧹 ZIM logged out")
+            try {
+                ZIM.getInstance()?.logout()
+                isZIMLoggedIn = false
+                Log.d(TAG, "🧹 ZIM logged out")
+            } catch (e: Exception) {
+                Log.e(TAG, "⚠️ Error during ZIM logout: ${e.message}")
+            }
         }
 
         // ✅ Cleanup Zego Call Service
         if (isZegoInitialized) {
-            ZegoUIKitPrebuiltCallService.unInit()
-            isZegoInitialized = false
-            Log.d(TAG, "🧹 Zego service cleaned up")
+            try {
+                ZegoUIKitPrebuiltCallService.unInit()
+                isZegoInitialized = false
+                Log.d(TAG, "🧹 Zego service cleaned up")
+            } catch (e: Exception) {
+                Log.e(TAG, "⚠️ Error during Zego cleanup: ${e.message}")
+            }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+
+        val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
+        val userId = sharedPref.getString("user_id", null)
+        val fullName = sharedPref.getString("full_name", null)
+
+        if (!isZegoInitialized || !isZIMLoggedIn) {
+            Log.w(TAG, "⚠️ Reconnecting Zego/ZIM after resume")
+            if (!userId.isNullOrEmpty() && !fullName.isNullOrEmpty()) {
+                initZegoWithRetry(userId, fullName, maxRetries = 3)
+            }
+        }
+    }
+
 }
