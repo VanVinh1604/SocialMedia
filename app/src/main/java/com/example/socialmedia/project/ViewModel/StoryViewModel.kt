@@ -21,23 +21,19 @@ class StoryViewModel(
 
     private var currentUserId: String = ""
 
+
     fun loadStories(currentUserId: String) {
         this.currentUserId = currentUserId
 
-        // Lắng nghe users realtime
         firebaseService.listenUsers(onResult = { users ->
-            // Lắng nghe stories realtime
             firebaseService.listenStories(onResult = { storyList ->
-                // Lấy danh sách following
                 repository.fetchStoriesAndFollowState(
                     currentUserId,
                     onSuccess = { _, _ ->
                         val finalList = mutableListOf<StoryModel>()
 
-                        // Add "Add Story"
                         finalList.add(StoryModel(isAddStory = true))
 
-                        // Suggest Friend nếu chưa follow ai
                         val followingList = storyList.map { it.userId }
                         val notFollowedUsers =
                             users.filter { it.userId !in followingList && it.userId != currentUserId }
@@ -70,4 +66,20 @@ class StoryViewModel(
             }, onError = { e -> _error.value = e.message })
         }, onError = { e -> _error.value = e.message })
     }
+
+    fun loadUserStories(userId: String) {
+        firebaseService.getStoriesByUserId(userId) { stories ->
+            firebaseService.getUserById(userId) { user ->
+                val storiesWithUser = stories.map { story ->
+                    story.copy(
+                        userName = user.fullName,
+                        userProfileImage = user.profilePictureUrl ?: ""
+                    )
+                }
+                _stories.value = storiesWithUser
+            }
+        }
+    }
 }
+
+

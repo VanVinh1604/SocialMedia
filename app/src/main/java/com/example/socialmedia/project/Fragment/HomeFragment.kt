@@ -64,19 +64,30 @@ class HomeFragment : Fragment() {
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
     }
 
-
-
     private fun setupObservers() {
         storyViewModel.stories.observe(viewLifecycleOwner) { storyList ->
             val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return@observe
-            binding.recyclerStory.adapter = StoryAdapter(storyList, currentUserId)
-        }
+            binding.recyclerStory.adapter = StoryAdapter(
+                stories = storyList,
+                currentUserId = currentUserId,
+                onAddStoryClick = {
+// Khi click Add Story → navigate tới AddStoryFragment
+                    findNavController().navigate(R.id.action_homeFragment_to_addStoryFragment)
+                },
 
+                        onStoryClick = { story ->
+                    // ✅ Khi click vào story → chuyển sang trang xem chi tiết
+                    val action = HomeFragmentDirections.actionHomeFragmentToStoryViewerFragment(story.userId)
+                    findNavController().navigate(action)
+                }
+            )
+        }
 
         storyViewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let { println("⚠️ Firebase error: $it") }
         }
     }
+
 
     private fun setupClicks() {
         binding.ivMessage.setOnClickListener {
@@ -142,6 +153,7 @@ class HomeFragment : Fragment() {
                 }
             })
     }
+
 
 
     override fun onDestroyView() {

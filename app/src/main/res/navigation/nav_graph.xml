@@ -80,7 +80,29 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_homeFragment_to_addStoryFragment"
+            app:destination="@id/addStoryFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_homeFragment_to_storyViewerFragment"
+            app:destination="@id/storyViewerFragment" />
+
+
     </fragment>
+
+    <!-- AddStoryFragment -->
+    <fragment
+        android:id="@+id/addStoryFragment"
+        android:name="com.example.socialmedia.project.Fragment.AddStoryFragment"
+        android:label="Add Story"
+        tools:layout="@layout/fragment_add_story" />
+
 
     <!-- SearchFragment -->
     <fragment
@@ -103,6 +125,16 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
+
+    <fragment
+        android:id="@+id/storyViewerFragment"
+        android:name="com.example.socialmedia.project.Fragment.StoryViewerFragment"
+        android:label="Story Viewer">
+        <argument
+            android:name="userId"
+            app:argType="string" />
+    </fragment>
+
 
     <!-- UploadFragment -->
     <fragment

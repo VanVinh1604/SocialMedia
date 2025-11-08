@@ -15,29 +15,36 @@ class FirebaseService {
         val storiesRef = database.child("stories")
         storiesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val storyList = mutableListOf<StoryModel>()
+                val allStories = mutableListOf<StoryModel>()
                 val tasks = mutableListOf<Task<DataSnapshot>>()
+                val storiesWithUser = mutableListOf<StoryModel>()
 
+                // Lấy tất cả story
                 for (child in snapshot.children) {
                     val story = child.getValue(StoryModel::class.java)
-                    if (story != null) {
-                        val userTask = database.child("InfoUser").child(story.userId).get()
-                        tasks.add(userTask)
-                        userTask.addOnSuccessListener { userSnap ->
-                            val userName = userSnap.child("fullName").getValue(String::class.java) ?: "Unknown"
-                            val userAvatar = userSnap.child("userProfileImage").getValue(String::class.java) ?: ""
-                            val merged = story.copy(
-                                userName = userName,
-                                userProfileImage = userAvatar
-                            )
-                            storyList.add(merged)
-                        }
+                    if (story != null) allStories.add(story)
+                }
+
+                if (allStories.isEmpty()) {
+                    onResult(emptyList())
+                    return
+                }
+
+                // Lấy thông tin user cho từng story
+                allStories.forEach { story ->
+                    val userTask = database.child("InfoUser").child(story.userId).get()
+                    tasks.add(userTask)
+                    userTask.addOnSuccessListener { userSnap ->
+                        val userName = userSnap.child("fullName").getValue(String::class.java) ?: "Unknown"
+                        val userAvatar = userSnap.child("profilePictureUrl").getValue(String::class.java) ?: ""
+                        storiesWithUser.add(story.copy(userName = userName, userProfileImage = userAvatar))
                     }
                 }
 
-                // Khi tất cả user info load xong → trả về list
+                // Khi tất cả task hoàn tất
                 Tasks.whenAllComplete(tasks).addOnSuccessListener {
-                    onResult(storyList)
+                    // Sắp xếp theo thời gian tạo story (từ cũ đến mới)
+                    onResult(storiesWithUser.sortedBy { it.createdAt })
                 }
             }
 
@@ -46,6 +53,7 @@ class FirebaseService {
             }
         })
     }
+
 
     // -------------------------------
 // FirebaseService.kt
@@ -322,6 +330,56 @@ class FirebaseService {
 
             notifRef.child(notifId).setValue(data)
         }
+    }
+
+    // Thêm vào FirebaseService.kt
+    fun uploadStoryToFirebase(
+        userId: String,
+        mediaUrl: String,
+        type: String, // "image" hoặc "video"
+        onComplete: (success: Boolean) -> Unit
+    ) {
+        val storyRef = database.child("stories").push()
+        val storyId = storyRef.key ?: return onComplete(false)
+        val storyData = mapOf(
+            "storyId" to storyId,
+            "userId" to userId,
+            "mediaUrl" to mediaUrl,
+            "type" to type,
+            "createdAt" to System.currentTimeMillis()
+        )
+
+        storyRef.setValue(storyData)
+            .addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener { onComplete(false) }
+    }
+
+    fun getStoriesByUserId(userId: String, onResult: (List<StoryModel>) -> Unit) {
+        val ref = database.child("stories").orderByChild("userId").equalTo(userId)
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<StoryModel>()
+                for (child in snapshot.children) {
+                    val story = child.getValue(StoryModel::class.java)
+                    if (story != null) list.add(story)
+                }
+                onResult(list.sortedBy { it.createdAt }) // từ cũ đến mới
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    fun getUserById(userId: String, callback: (UserModel) -> Unit) {
+        database.child("InfoUser").child(userId).get()
+            .addOnSuccessListener { snapshot ->
+                val user = snapshot.getValue(UserModel::class.java)
+                if (user != null) callback(user)
+            }
+            .addOnFailureListener {
+                // nếu lỗi, gửi user mặc định
+                callback(UserModel(userId = userId, fullName = "Người dùng", profilePictureUrl = ""))
+            }
     }
 
 

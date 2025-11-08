@@ -18,6 +18,7 @@ object ChatCloudinaryHelper {
 
     private const val CLOUD_NAME = "demhfqz6u"
     private const val UPLOAD_PRESET = "voice_messages"
+    private const val STORY_UPLOAD_PRESET = "social_story_upload"
     private const val CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/upload"
     private const val TAG = "CloudinaryHelper"
 
@@ -100,4 +101,45 @@ object ChatCloudinaryHelper {
     suspend fun uploadVoiceMessage(file: File): String? = uploadFile(file, "video")
     suspend fun uploadImage(file: File): String? = uploadFile(file, "image")
     fun isConfigured(): Boolean = CLOUD_NAME != "your_cloud_name" && UPLOAD_PRESET != "your_upload_preset"
+
+    suspend fun uploadStory(file: File): String? = withContext(Dispatchers.IO) {
+        try {
+            if (!file.exists()) {
+                Log.e(TAG, "File story không tồn tại: ${file.absolutePath}")
+                return@withContext null
+            }
+
+            Log.d(TAG, "Bắt đầu upload story: ${file.name}")
+
+            val client = OkHttpClient()
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", file.name, file.asRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                .addFormDataPart("upload_preset", STORY_UPLOAD_PRESET)
+                .addFormDataPart("resource_type", "auto") // ✅ cho phép cả ảnh và video
+                .build()
+
+            val request = Request.Builder()
+                .url(CLOUDINARY_URL)
+                .post(requestBody)
+                .build()
+
+            val response = client.newCall(request).execute()
+
+            if (response.isSuccessful) {
+                val jsonResponse = JSONObject(response.body?.string() ?: "{}")
+                val secureUrl = jsonResponse.getString("secure_url")
+                Log.d(TAG, "Story upload thành công: $secureUrl")
+                secureUrl
+            } else {
+                Log.e(TAG, "Story upload thất bại: ${response.code} - ${response.message}")
+                Log.e(TAG, "Response body: ${response.body?.string()}")
+                null
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi upload story", e)
+            null
+        }
+    }
 }

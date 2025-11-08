@@ -16,7 +16,9 @@ import de.hdodenhof.circleimageview.CircleImageView
 class StoryAdapter(
     private val stories: List<StoryModel>,
     private val currentUserId: String,
-    private val firebaseService: FirebaseService = FirebaseService()
+    private val firebaseService: FirebaseService = FirebaseService(),
+    private val onAddStoryClick: (() -> Unit)? = null,
+    private val onStoryClick: ((StoryModel) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -54,12 +56,18 @@ class StoryAdapter(
             is StoryViewHolder -> {
                 holder.tvUserName?.text = story.userName
                 Glide.with(holder.itemView.context)
-                    .load(story.userProfileImage.takeIf { !it.isNullOrEmpty() }) // dùng story
-                    .placeholder(R.drawable.default_avatar) // ảnh mặc định khi đang load
-                    .error(R.drawable.default_avatar)       // ảnh mặc định khi lỗi/null
+                    .load(story.userProfileImage.takeIf { !it.isNullOrEmpty() })
+                    .placeholder(R.drawable.default_avatar)
+                    .error(R.drawable.default_avatar)
                     .circleCrop()
                     .into(holder.imgAvatar!!)
+
+                // ✅ Thêm phần này để click được
+                holder.itemView.setOnClickListener {
+                    onStoryClick?.invoke(story)
+                }
             }
+
 
             is SuggestFriendViewHolder -> bindSuggestFriend(holder, story)
         }
@@ -138,6 +146,9 @@ class StoryAdapter(
     // ==================== ViewHolders ====================
     inner class AddStoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val btnAdd: ImageView? = view.findViewById(R.id.btnStory)
+        init { btnAdd?.setOnClickListener { onAddStoryClick?.invoke() // gọi callback khi click
+         }
+        }
     }
 
     inner class StoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
