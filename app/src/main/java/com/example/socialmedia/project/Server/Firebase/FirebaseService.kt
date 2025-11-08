@@ -54,6 +54,47 @@ class FirebaseService {
         })
     }
 
+    fun listenStoriesByFollowedUsers(
+        currentUserId: String,
+        onResult: (List<StoryModel>) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        // Lấy danh sách user mà currentUser đang follow
+        getUserFollowing(currentUserId, { followingList ->
+
+            // Lắng nghe tất cả story
+            val storiesRef = database.child("stories")
+            storiesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val allStories = mutableListOf<StoryModel>()
+
+                    for (child in snapshot.children) {
+                        val story = child.getValue(StoryModel::class.java)
+                        if (story != null) {
+                            // Chỉ lấy story mà user đang follow và chưa quá 24h
+                            if (story.userId in followingList && story.expiresAt > System.currentTimeMillis()) {
+                                allStories.add(story)
+                            }
+                        }
+                    }
+
+                    // Lấy story cũ nhất mỗi user
+                    val firstStoryPerUser = allStories
+                        .groupBy { it.userId }
+                        .map { (_, stories) ->
+                            stories.minByOrNull { it.createdAt }!!
+                        }
+
+                    onResult(firstStoryPerUser)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    onError(error.toException())
+                }
+            })
+        }, onError)
+    }
+
 
     // -------------------------------
 // FirebaseService.kt

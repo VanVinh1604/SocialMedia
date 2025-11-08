@@ -145,30 +145,28 @@ class AddStoryFragment : Fragment() {
         }
 
         lifecycleScope.launch {
+            val firebaseService = FirebaseService()
+            val auth = FirebaseAuth.getInstance()
+
             val results = selectedMedia.map { uri ->
                 async(Dispatchers.IO) {
                     try {
                         val file = uriToFile(uri)
                         val url = ChatCloudinaryHelper.uploadStory(file)
                         if (url == null) {
-                            if (url == null) {
-                                Log.e("UploadStory", "Cloudinary upload failed for file: ${file.path}")
-                                return@async false
-                            }
-
+                            Log.e("UploadStory", "❌ Upload Cloudinary thất bại: ${file.path}")
+                            return@async false
                         }
 
-                        return@async suspendCancellableCoroutine<Boolean> { cont ->
-                            FirebaseService().uploadStoryToFirebase(
-                                FirebaseAuth.getInstance().currentUser!!.uid,
+                        // Gửi từng ảnh riêng biệt lên Firebase
+                        suspendCancellableCoroutine<Boolean> { cont ->
+                            firebaseService.uploadStoryToFirebase(
+                                auth.currentUser!!.uid,
                                 url,
                                 if (uri.toString().endsWith("mp4")) "video" else "image"
-
                             ) { success ->
-                                cont.resume(success) {} // ✅ Luôn resume
+                                cont.resume(success) {}
                             }
-                            Log.d("UploadStory", "Uploading to Firebase: $url, type=${if (uri.toString().endsWith("mp4")) "video" else "image"}")
-
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
@@ -178,10 +176,17 @@ class AddStoryFragment : Fragment() {
             }.awaitAll()
 
             val successCount = results.count { it }
-            Toast.makeText(context, "Đã đăng $successCount/${selectedMedia.size} story", Toast.LENGTH_SHORT).show()
-            if (successCount > 0) findNavController().navigateUp()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    "✅ Đã đăng $successCount/${selectedMedia.size} story",
+                    Toast.LENGTH_SHORT
+                ).show()
+                if (successCount > 0) findNavController().navigateUp()
+            }
         }
     }
+
 
     private fun uriToFile(uri: Uri): File {
         val mimeType = requireContext().contentResolver.getType(uri)

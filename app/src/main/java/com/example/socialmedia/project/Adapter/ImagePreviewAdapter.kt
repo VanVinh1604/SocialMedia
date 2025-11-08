@@ -12,7 +12,7 @@ import com.example.socialmedia.databinding.ItemImagePreviewBinding
 class ImagePreviewAdapter(
     private val items: List<Uri>,
     private val selectedItems: MutableList<Uri>,
-    private val onItemClick: (Uri?) -> Unit // Uri? = null => mở camera
+    private val onItemClick: (Uri?) -> Unit
 ) : RecyclerView.Adapter<ImagePreviewAdapter.ImageViewHolder>() {
 
     inner class ImageViewHolder(val binding: ItemImagePreviewBinding) :
@@ -20,29 +20,52 @@ class ImagePreviewAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
         val binding = ItemImagePreviewBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+
+        // Luôn giữ hình vuông
+        parent.post {
+            val width = parent.measuredWidth / 3 - 8
+            binding.root.layoutParams.height = width
+        }
+
         return ImageViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
         if (position == 0) {
-            holder.binding.imgPreview.setImageResource(0)
+            // Camera / add story
             holder.binding.iconVideo.visibility = View.VISIBLE
+            holder.binding.overlaySelected.visibility = View.GONE
             holder.binding.root.setOnClickListener { onItemClick(null) }
         } else {
-            val uri = items[position - 1] // trừ 1 vì ô đầu tiên là camera
+            val uri = items[position - 1]
             Glide.with(holder.itemView)
                 .load(uri)
                 .centerCrop()
                 .into(holder.binding.imgPreview)
 
-            holder.binding.overlaySelected.visibility = if (selectedItems.contains(uri)) View.VISIBLE else View.GONE
-            holder.binding.iconVideo.visibility = if (uri.toString().endsWith("mp4")) View.VISIBLE else View.GONE
+            // Overlay nếu đang chọn
+            holder.binding.overlaySelected.visibility =
+                if (selectedItems.contains(uri)) View.VISIBLE else View.GONE
+
+            // Icon video
+            holder.binding.iconVideo.apply {
+                visibility = if (uri.toString().endsWith("mp4")) View.VISIBLE else View.GONE
+                setImageResource(R.drawable.clapper)
+            }
 
             holder.binding.root.setOnClickListener {
-                if (selectedItems.contains(uri)) selectedItems.remove(uri)
-                else selectedItems.add(uri)
-                onItemClick(uri)
+                val previousSelection = if (selectedItems.isNotEmpty()) selectedItems[0] else null
+                selectedItems.clear() // chỉ chọn 1 ảnh
+                selectedItems.add(uri)
+
+                // Cập nhật 2 item liên quan
+                previousSelection?.let { prev ->
+                    val prevIndex = items.indexOf(prev) + 1
+                    if (prevIndex >= 0) notifyItemChanged(prevIndex)
+                }
                 notifyItemChanged(position)
+
+                onItemClick(uri)
             }
         }
     }

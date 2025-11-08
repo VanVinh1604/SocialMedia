@@ -27,5 +27,7 @@ data class StoryModel(
     var isFollowing: Boolean = false,
 
     val isAddStory: Boolean = false,          // ✅ thêm flag này
-    val isSuggestFriend: Boolean = false      // ✅ thêm flag này
+    val isSuggestFriend: Boolean = false,      // ✅ thêm flag này
+
+    val storyCount: Int = 1
 )

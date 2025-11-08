@@ -55,6 +55,16 @@ class StoryAdapter(
 
             is StoryViewHolder -> {
                 holder.tvUserName?.text = story.userName
+
+                // Load ảnh story nền
+                Glide.with(holder.itemView.context)
+                    .load(story.mediaUrl.takeIf { !it.isNullOrEmpty() }) // link từ Firebase
+                    .placeholder(R.drawable.image_person) // ảnh mặc định nếu chưa có
+                    .error(R.drawable.image_person)
+                    .centerCrop()
+                    .into(holder.imgStory!!)
+
+                // Load avatar
                 Glide.with(holder.itemView.context)
                     .load(story.userProfileImage.takeIf { !it.isNullOrEmpty() })
                     .placeholder(R.drawable.default_avatar)
@@ -62,7 +72,6 @@ class StoryAdapter(
                     .circleCrop()
                     .into(holder.imgAvatar!!)
 
-                // ✅ Thêm phần này để click được
                 holder.itemView.setOnClickListener {
                     onStoryClick?.invoke(story)
                 }
@@ -152,6 +161,7 @@ class StoryAdapter(
     }
 
     inner class StoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val imgStory: ShapeableImageView? = view.findViewById(R.id.imgStory)
         val imgAvatar: CircleImageView? = view.findViewById(R.id.imgAvatar)
         val tvUserName: TextView? = view.findViewById(R.id.tvUsername)
     }

@@ -26,46 +26,49 @@ class StoryViewModel(
         this.currentUserId = currentUserId
 
         firebaseService.listenUsers(onResult = { users ->
-            firebaseService.listenStories(onResult = { storyList ->
-                repository.fetchStoriesAndFollowState(
-                    currentUserId,
-                    onSuccess = { _, _ ->
-                        val finalList = mutableListOf<StoryModel>()
+            firebaseService.getUserFollowing(currentUserId, { followingList ->
 
-                        finalList.add(StoryModel(isAddStory = true))
+                firebaseService.listenStories(onResult = { allStories ->
 
-                        val followingList = storyList.map { it.userId }
-                        val notFollowedUsers =
-                            users.filter { it.userId !in followingList && it.userId != currentUserId }
-                        notFollowedUsers.forEach { user ->
-                            finalList.add(
-                                StoryModel(
-                                    userId = user.userId,
-                                    userName = user.fullName,
-                                    userProfileImage = user.profilePictureUrl ?: "",
-                                    isSuggestFriend = true
-                                )
-                            )
-                        }
+                    val finalList = mutableListOf<StoryModel>()
 
-                        // Map tất cả story → gán fullname + avatar mới
-                        finalList.addAll(storyList.map { story ->
-                            val user = users.find { it.userId == story.userId }
-                            if (user != null) story.copy(
+                    finalList.add(StoryModel(isAddStory = true))
+
+                    val userStory = allStories
+                        .filter { it.userId == currentUserId && it.expiresAt > System.currentTimeMillis() }
+                        .minByOrNull { it.createdAt } // lấy story cũ nhất
+
+                    userStory?.let { finalList.add(it) } // nếu có thì thêm 1 item duy nhất
+
+                    val followedStories = allStories
+                        .filter { it.userId in followingList && it.userId != currentUserId && it.expiresAt > System.currentTimeMillis() }
+                        .groupBy { it.userId }
+                        .map { (_, stories) -> stories.minByOrNull { it.createdAt }!! }
+
+                    finalList.addAll(followedStories)
+
+                    // ---- Step 4: Gợi ý kết bạn ----
+                    val notFollowedUsers = users.filter { it.userId !in followingList && it.userId != currentUserId }
+                    notFollowedUsers.forEach { user ->
+                        finalList.add(
+                            StoryModel(
+                                userId = user.userId,
                                 userName = user.fullName,
-                                userProfileImage = user.profilePictureUrl ?: ""
-                            ) else story
-                        })
-
-                        _stories.value = finalList
-                    },
-                    onFailure = { e ->
-                        _error.value = e.message
+                                userProfileImage = user.profilePictureUrl ?: "",
+                                isSuggestFriend = true
+                            )
+                        )
                     }
-                )
+
+                    _stories.value = finalList
+
+                }, onError = { e -> _error.value = e.message })
+
             }, onError = { e -> _error.value = e.message })
+
         }, onError = { e -> _error.value = e.message })
     }
+
 
     fun loadUserStories(userId: String) {
         firebaseService.getStoriesByUserId(userId) { stories ->
