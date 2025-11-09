@@ -23,15 +23,24 @@
 <!--        android:layout_gravity="top"-->
 <!--        android:progressDrawable="@drawable/story_progress_drawable" />-->
     <LinearLayout
-        android:id="@+id/progressContainer"
+        android:id="@+id/storyProgressContainer"
         android:layout_width="match_parent"
         android:layout_height="4dp"
         android:orientation="horizontal"
-        android:layout_gravity="top"
-        android:gravity="center_vertical"
-        android:weightSum="1"
-        android:background="@android:color/transparent">
-    </LinearLayout>
+        android:showDividers="middle"
+        android:divider="@android:color/transparent"
+        android:dividerPadding="4dp"
+        android:layout_marginTop="8dp" />
+
+
+    <!--    <androidx.recyclerview.widget.RecyclerView-->
+<!--        android:id="@+id/progressRecycler"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="4dp"-->
+<!--        android:layout_gravity="top"-->
+<!--        android:padding="4dp"-->
+<!--        android:clipToPadding="false"-->
+<!--        android:clipChildren="false" />-->
 
 
 

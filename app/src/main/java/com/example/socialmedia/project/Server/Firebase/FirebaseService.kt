@@ -359,10 +359,10 @@ class FirebaseService {
 
             val data = mapOf(
                 "id" to notifId,
-                "userId" to targetUserId,        // Người nhận thông báo
-                "actorId" to actorId,            // ID người thực hiện hành động
-                "actorName" to actorName,        // ✅ Lưu thêm tên
-                "actorAvatar" to actorAvatar,    // ✅ Lưu thêm ảnh đại diện
+                "userId" to targetUserId,
+                "actorId" to actorId,
+                "actorName" to actorName,
+                "actorAvatar" to actorAvatar,
                 "notificationType" to "FOLLOW",
                 "content" to "đã bắt đầu theo dõi bạn",
                 "createdAt" to System.currentTimeMillis(),

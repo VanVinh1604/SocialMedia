@@ -67,26 +67,27 @@ class HomeFragment : Fragment() {
     private fun setupObservers() {
         storyViewModel.stories.observe(viewLifecycleOwner) { storyList ->
             val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return@observe
+
+            // Tính số story của user
+            val userStoriesCount = storyList.count { it.userId == currentUserId }
+
             binding.recyclerStory.adapter = StoryAdapter(
                 stories = storyList,
                 currentUserId = currentUserId,
                 onAddStoryClick = {
-// Khi click Add Story → navigate tới AddStoryFragment
                     findNavController().navigate(R.id.action_homeFragment_to_addStoryFragment)
                 },
-
-                        onStoryClick = { story ->
-                    // ✅ Khi click vào story → chuyển sang trang xem chi tiết
-                    val action = HomeFragmentDirections.actionHomeFragmentToStoryViewerFragment(story.userId)
+                onStoryClick = { story ->
+                    // Truyền số lượng story vào bundle
+                    val action = HomeFragmentDirections.actionHomeFragmentToStoryViewerFragment(
+                        story.userId
+                    )
                     findNavController().navigate(action)
                 }
             )
         }
-
-        storyViewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let { println("⚠️ Firebase error: $it") }
-        }
     }
+
 
 
     private fun setupClicks() {
