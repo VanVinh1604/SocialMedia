@@ -22,7 +22,9 @@ data class StoryModel(
     val createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = System.currentTimeMillis() + 86400000,
     val viewCount: Int = 0,
+
     val isViewed: Boolean = false,
+    val userStoryViews: MutableMap<String, Boolean> = mutableMapOf()
 
     var isFollowing: Boolean = false,
 

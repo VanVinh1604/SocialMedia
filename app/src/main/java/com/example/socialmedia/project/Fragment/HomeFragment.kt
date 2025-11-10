@@ -64,12 +64,17 @@ class HomeFragment : Fragment() {
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
     }
 
+    // HomeFragment.kt - Sửa lại phần setupObservers()
+
     private fun setupObservers() {
         storyViewModel.stories.observe(viewLifecycleOwner) { storyList ->
             val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return@observe
 
-            // Tính số story của user
-            val userStoriesCount = storyList.count { it.userId == currentUserId }
+            // ✅ Lọc ra danh sách user có story (loại bỏ Add Story và Suggest Friend)
+            val usersWithStories = storyList
+                .filter { !it.isAddStory && !it.isSuggestFriend }
+                .map { it.userId }
+                .distinct()
 
             binding.recyclerStory.adapter = StoryAdapter(
                 stories = storyList,
@@ -78,18 +83,20 @@ class HomeFragment : Fragment() {
                     findNavController().navigate(R.id.action_homeFragment_to_addStoryFragment)
                 },
                 onStoryClick = { story ->
-                    // Truyền số lượng story vào bundle
-                    val action = HomeFragmentDirections.actionHomeFragmentToStoryViewerFragment(
-                        story.userId
+                    // ✅ Truyền cả userId và danh sách users
+                    val bundle = Bundle().apply {
+                        putString("userId", story.userId)
+                        putStringArrayList("usersList", ArrayList(usersWithStories))
+                    }
+
+                    findNavController().navigate(
+                        R.id.action_homeFragment_to_storyViewerFragment,
+                        bundle
                     )
-                    findNavController().navigate(action)
                 }
             )
         }
     }
-
-
-
     private fun setupClicks() {
         binding.ivMessage.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_messageFragment)
