@@ -24,7 +24,7 @@ data class StoryModel(
     val viewCount: Int = 0,
 
     val isViewed: Boolean = false,
-    val userStoryViews: MutableMap<String, Boolean> = mutableMapOf()
+    val userStoryViews: MutableMap<String, Boolean> = mutableMapOf(),
 
     var isFollowing: Boolean = false,
 
