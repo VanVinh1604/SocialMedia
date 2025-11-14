@@ -1,49 +1,76 @@
 package com.example.socialmedia.project.Server.Firebase
 
+import android.util.Log
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.StoryModel
+import com.example.socialmedia.project.Domain.Model.StoryViewerItem
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
 class FirebaseService {
 
     val database = FirebaseDatabase.getInstance().reference
+    private val viewCountListenerMap = mutableMapOf<String, ValueEventListener>()
+
+    fun getCurrentUserId(): String? {
+        return FirebaseAuth.getInstance().currentUser?.uid
+    }
+
 
     fun listenStories(onResult: (List<StoryModel>) -> Unit, onError: (Exception) -> Unit) {
+        val currentUserId = getCurrentUserId()
         val storiesRef = database.child("stories")
         storiesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val allStories = mutableListOf<StoryModel>()
                 val tasks = mutableListOf<Task<DataSnapshot>>()
                 val storiesWithUser = mutableListOf<StoryModel>()
+                val now = System.currentTimeMillis()
 
-                // Lấy tất cả story
                 for (child in snapshot.children) {
-                    val story = child.getValue(StoryModel::class.java)
-                    if (story != null) allStories.add(story)
+                    val story = child.getValue(StoryModel::class.java) ?: continue
+                    val now = System.currentTimeMillis()
+
+                    val hiddenByMap = child.child("hiddenBy").value as? Map<String, Boolean>
+                    if (currentUserId != null && hiddenByMap?.containsKey(currentUserId) == true) continue
+                    // ✅ Nếu story hết hạn → cập nhật Firebase và bỏ qua
+                    if (story.expiresAt <= now) {
+                        if (story.isExpired != true) {
+                            database.child("stories")
+                                .child(story.storyId)
+                                .child("isExpired")
+                                .setValue(true)
+                        }
+                        continue // ⛔ Bỏ qua story đã hết hạn
+                    }
+
+                    // ✅ Nếu story hợp lệ → thêm vào danh sách
+                    allStories.add(story)
                 }
+
 
                 if (allStories.isEmpty()) {
                     onResult(emptyList())
                     return
                 }
 
-                // Lấy thông tin user cho từng story
-                allStories.forEach { story ->
-                    val userTask = database.child("InfoUser").child(story.userId).get()
-                    tasks.add(userTask)
-                    userTask.addOnSuccessListener { userSnap ->
-                        val userName = userSnap.child("fullName").getValue(String::class.java) ?: "Unknown"
-                        val userAvatar = userSnap.child("profilePictureUrl").getValue(String::class.java) ?: ""
-                        storiesWithUser.add(story.copy(userName = userName, userProfileImage = userAvatar))
+                // Lấy thông tin user cho từng story còn hạn
+                allStories.filter { it.expiresAt > now && it.isExpired == false }
+                    .forEach { story ->
+                        val userTask = database.child("InfoUser").child(story.userId).get()
+                        tasks.add(userTask)
+                        userTask.addOnSuccessListener { userSnap ->
+                            val userName = userSnap.child("fullName").getValue(String::class.java) ?: "Unknown"
+                            val userAvatar = userSnap.child("profilePictureUrl").getValue(String::class.java) ?: ""
+                            storiesWithUser.add(story.copy(userName = userName, userProfileImage = userAvatar))
+                        }
                     }
-                }
 
-                // Khi tất cả task hoàn tất
                 Tasks.whenAllComplete(tasks).addOnSuccessListener {
-                    // Sắp xếp theo thời gian tạo story (từ cũ đến mới)
+                    // Sắp xếp story theo thời gian tạo
                     onResult(storiesWithUser.sortedBy { it.createdAt })
                 }
             }
@@ -54,46 +81,47 @@ class FirebaseService {
         })
     }
 
-    fun listenStoriesByFollowedUsers(
-        currentUserId: String,
-        onResult: (List<StoryModel>) -> Unit,
-        onError: (Exception) -> Unit
-    ) {
-        // Lấy danh sách user mà currentUser đang follow
-        getUserFollowing(currentUserId, { followingList ->
 
-            // Lắng nghe tất cả story
-            val storiesRef = database.child("stories")
-            storiesRef.addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val allStories = mutableListOf<StoryModel>()
-
-                    for (child in snapshot.children) {
-                        val story = child.getValue(StoryModel::class.java)
-                        if (story != null) {
-                            // Chỉ lấy story mà user đang follow và chưa quá 24h
-                            if (story.userId in followingList && story.expiresAt > System.currentTimeMillis()) {
-                                allStories.add(story)
-                            }
-                        }
-                    }
-
-                    // Lấy story cũ nhất mỗi user
-                    val firstStoryPerUser = allStories
-                        .groupBy { it.userId }
-                        .map { (_, stories) ->
-                            stories.minByOrNull { it.createdAt }!!
-                        }
-
-                    onResult(firstStoryPerUser)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    onError(error.toException())
-                }
-            })
-        }, onError)
-    }
+//    fun listenStoriesByFollowedUsers(
+//        currentUserId: String,
+//        onResult: (List<StoryModel>) -> Unit,
+//        onError: (Exception) -> Unit
+//    ) {
+//        // Lấy danh sách user mà currentUser đang follow
+//        getUserFollowing(currentUserId, { followingList ->
+//
+//            // Lắng nghe tất cả story
+//            val storiesRef = database.child("stories")
+//            storiesRef.addValueEventListener(object : ValueEventListener {
+//                override fun onDataChange(snapshot: DataSnapshot) {
+//                    val allStories = mutableListOf<StoryModel>()
+//
+//                    for (child in snapshot.children) {
+//                        val story = child.getValue(StoryModel::class.java)
+//                        if (story != null) {
+//                            // Chỉ lấy story mà user đang follow và chưa quá 24h
+//                            if (story.userId in followingList && story.expiresAt > System.currentTimeMillis()) {
+//                                allStories.add(story)
+//                            }
+//                        }
+//                    }
+//
+//                    // Lấy story cũ nhất mỗi user
+//                    val firstStoryPerUser = allStories
+//                        .groupBy { it.userId }
+//                        .map { (_, stories) ->
+//                            stories.minByOrNull { it.createdAt }!!
+//                        }
+//
+//                    onResult(firstStoryPerUser)
+//                }
+//
+//                override fun onCancelled(error: DatabaseError) {
+//                    onError(error.toException())
+//                }
+//            })
+//        }, onError)
+//    }
 
 
     // -------------------------------
@@ -263,19 +291,19 @@ class FirebaseService {
             }
     }
 
-    fun getUserStatus(userId: String, callback: (exists: Boolean, isBanned: Boolean) -> Unit) {
-        val infoRef = database.child("InfoUser").child(userId)
-        infoRef.get().addOnSuccessListener { snapshot ->
-            if (snapshot.exists()) {
-                val isBanned = snapshot.child("isBanned").getValue(Boolean::class.java) ?: false
-                callback(true, isBanned)
-            } else {
-                callback(false, false) // Không tồn tại
-            }
-        }.addOnFailureListener {
-            callback(false, false)
-        }
-    }
+//    fun getUserStatus(userId: String, callback: (exists: Boolean, isBanned: Boolean) -> Unit) {
+//        val infoRef = database.child("InfoUser").child(userId)
+//        infoRef.get().addOnSuccessListener { snapshot ->
+//            if (snapshot.exists()) {
+//                val isBanned = snapshot.child("isBanned").getValue(Boolean::class.java) ?: false
+//                callback(true, isBanned)
+//            } else {
+//                callback(false, false) // Không tồn tại
+//            }
+//        }.addOnFailureListener {
+//            callback(false, false)
+//        }
+//    }
 
 
     fun unfollowUser(
@@ -373,27 +401,191 @@ class FirebaseService {
         }
     }
 
+
+    fun hasUserViewedAllStories(
+        userId: String,
+        viewerId: String,
+        onResult: (allViewed: Boolean) -> Unit
+    ) {
+        getStoriesByUserId(userId) { stories ->
+            if (stories.isEmpty()) {
+                onResult(true) // Không có story → coi như đã xem hết
+                return@getStoriesByUserId
+            }
+
+            val tasks = stories.map { story ->
+                database.child("stories").child(story.storyId)
+                    .child("views").child(viewerId).get()
+            }
+
+            Tasks.whenAllComplete(tasks).addOnSuccessListener { results ->
+                val allViewed = results.all { task ->
+                    val snapshot = task.result as? DataSnapshot
+                    snapshot?.getValue(Boolean::class.java) == true
+                }
+                onResult(allViewed)
+            }
+        }
+    }
+
+    fun markStoryAsViewed(storyId: String, viewerId: String) {
+        val storyRef = FirebaseDatabase.getInstance().getReference("stories").child(storyId)
+
+        // Ghi người xem vào node views
+        storyRef.child("views").child(viewerId).setValue(true)
+            .addOnSuccessListener {
+                // Cập nhật lại viewCount = số lượng views hiện tại
+                storyRef.child("views").get().addOnSuccessListener { snapshot ->
+                    val count = snapshot.childrenCount
+                    storyRef.child("viewCount").setValue(count)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("FirebaseService", "❌ markStoryAsViewed lỗi: ${e.message}")
+            }
+    }
+
+    fun listenStoryViewCount(storyId: String, onCountChanged: (Int) -> Unit) {
+        val ref = FirebaseDatabase.getInstance()
+            .getReference("stories")
+            .child(storyId)
+            .child("views")
+
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val count = snapshot.childrenCount.toInt()
+                onCountChanged(count)
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+
+    fun removeAllStoryViewListeners() {
+        for ((storyId, listener) in viewCountListenerMap) {
+            database.child("storyViews").child(storyId).removeEventListener(listener)
+        }
+        viewCountListenerMap.clear()
+    }
+
+
     // Thêm vào FirebaseService.kt
+    // Kiểm tra user trước khi thao tác
+    private fun canModifyStory(userId: String, storyId: String, callback: (canModify: Boolean) -> Unit) {
+        val currentUserId = getCurrentUserId() ?: run {
+            callback(false)
+            return
+        }
+
+        database.child("stories").child(storyId).child("userId").get()
+            .addOnSuccessListener { snapshot ->
+                val ownerId = snapshot.getValue(String::class.java)
+                callback(ownerId == currentUserId)
+            }
+            .addOnFailureListener {
+                callback(false)
+            }
+    }
+
+    // Xóa story với kiểm tra user
+    fun deleteStory(storyId: String, onComplete: (success: Boolean) -> Unit = {}) {
+        canModifyStory(getCurrentUserId() ?: "", storyId) { canModify ->
+            if (!canModify) {
+                Log.e("FirebaseService", "❌ Không có quyền xóa story này")
+                onComplete(false)
+                return@canModifyStory
+            }
+
+            database.child("stories").child(storyId).removeValue()
+                .addOnSuccessListener { onComplete(true) }
+                .addOnFailureListener { e ->
+                    Log.e("FirebaseService", "❌ deleteStory lỗi: ${e.message}")
+                    onComplete(false)
+                }
+        }
+    }
+
+    // Lưu trữ (archive) story với kiểm tra user
+    fun archiveStory(storyId: String, onComplete: (success: Boolean) -> Unit = {}) {
+        canModifyStory(getCurrentUserId() ?: "", storyId) { canModify ->
+            if (!canModify) {
+                Log.e("FirebaseService", "❌ Không có quyền lưu/ẩn story này")
+                onComplete(false)
+                return@canModifyStory
+            }
+
+            database.child("stories").child(storyId).child("isArchived").setValue(true)
+                .addOnSuccessListener { onComplete(true) }
+                .addOnFailureListener { e ->
+                    Log.e("FirebaseService", "❌ archiveStory lỗi: ${e.message}")
+                    onComplete(false)
+                }
+        }
+    }
+
+    // Upload story cũng nên kiểm tra userId trước khi push
     fun uploadStoryToFirebase(
         userId: String,
         mediaUrl: String,
-        type: String, // "image" hoặc "video"
+        isVideo: Boolean,
+        duration: Long? = null,
+        thumbnailUrl: String? = null,
+        saveToDatabase: Boolean = true,
         onComplete: (success: Boolean) -> Unit
     ) {
+        if (getCurrentUserId() != userId) {
+            Log.e("FirebaseService", "❌ Không có quyền upload story cho user khác")
+            onComplete(false)
+            return
+        }
+
+        if (!saveToDatabase) {
+            onComplete(true)
+            return
+        }
+
         val storyRef = database.child("stories").push()
         val storyId = storyRef.key ?: return onComplete(false)
-        val storyData = mapOf(
+        val storyType = if (isVideo) "video" else "image"
+
+        val storyData = mutableMapOf(
             "storyId" to storyId,
             "userId" to userId,
             "mediaUrl" to mediaUrl,
-            "type" to type,
-            "createdAt" to System.currentTimeMillis()
+            "type" to storyType,
+            "createdAt" to System.currentTimeMillis(),
+            "expiresAt" to (System.currentTimeMillis() + 24 * 60 * 60 * 1000),
+            "viewCount" to 0,
+            "views" to mapOf<String, Boolean>(),
+            "isExpired" to false
         )
+
+        if (isVideo) {
+            thumbnailUrl?.let { storyData["thumbnailUrl"] = it }
+            duration?.let { storyData["duration"] = it }
+        }
 
         storyRef.setValue(storyData)
             .addOnSuccessListener { onComplete(true) }
             .addOnFailureListener { onComplete(false) }
     }
+
+
+
+//    fun updateStoryDuration(storyId: String, durationMs: Long) {
+//        val database = FirebaseDatabase.getInstance()
+//        val storyRef = database.getReference("stories").child(storyId)
+//
+//        storyRef.child("duration").setValue(durationMs)
+//            .addOnSuccessListener {
+//                Log.d("FirebaseService", "✅ Duration cập nhật thành công cho storyId=$storyId ($durationMs ms)")
+//            }
+//            .addOnFailureListener { e ->
+//                Log.e("FirebaseService", "❌ Cập nhật duration thất bại: ${e.message}")
+//            }
+//    }
+
 
     fun getStoriesByUserId(userId: String, onResult: (List<StoryModel>) -> Unit) {
         val ref = database.child("stories").orderByChild("userId").equalTo(userId)
@@ -422,6 +614,49 @@ class FirebaseService {
                 callback(UserModel(userId = userId, fullName = "Người dùng", profilePictureUrl = ""))
             }
     }
+
+    fun listenStoryViews(
+        storyId: String,
+        onViewsChanged: (Map<String, Boolean>) -> Unit
+    ) {
+        val ref = database.child("stories").child(storyId).child("views")
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val views = mutableMapOf<String, Boolean>()
+                for (child in snapshot.children) {
+                    val uid = child.key ?: continue
+                    val liked = child.getValue(Boolean::class.java) ?: false
+                    views[uid] = liked
+                }
+                onViewsChanged(views)
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    fun toggleStoryLike(storyId: String, userId: String, onComplete: (Boolean) -> Unit) {
+        val likeRef = database.child("stories").child(storyId).child("likes").child(userId)
+
+        likeRef.get().addOnSuccessListener { snapshot ->
+            val currentlyLiked = snapshot.exists()
+            if (currentlyLiked) {
+                // Người dùng đã like → giữ nguyên, không được unlike
+                onComplete(true)
+            } else {
+                // Người dùng chưa like → set true
+                likeRef.setValue(true).addOnSuccessListener {
+                    onComplete(true)
+                }.addOnFailureListener {
+                    onComplete(false)
+                }
+            }
+        }.addOnFailureListener {
+            onComplete(false)
+        }
+    }
+
+
 
 
 }

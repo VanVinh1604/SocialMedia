@@ -140,7 +140,10 @@ object ChatCloudinaryHelper {
                 .addFormDataPart("file", file.name, file.asRequestBody(mimeType.toMediaTypeOrNull()))
                 .addFormDataPart("upload_preset", STORY_UPLOAD_PRESET)
                 .addFormDataPart("folder", "stories")
-                .addFormDataPart("quality", "auto:best")
+                .addFormDataPart("quality", "auto") // giống CloudinaryHelper
+                .addFormDataPart("resource_type", resourceType) // giống CloudinaryHelper
+                .addFormDataPart("fetch_format", "auto") // giữ định dạng gốc + tối ưu
+                .addFormDataPart("flags", "keep_original") // giữ size gốc
                 .build()
 
             val request = Request.Builder()
@@ -157,8 +160,9 @@ object ChatCloudinaryHelper {
 
                 val json = JSONObject(response.body?.string() ?: "{}")
                 val url = json.optString("secure_url", "")
+                val duration = json.optDouble("duration", 0.0) // duration tính bằng giây, nếu là image = 0
                 if (url.isNotEmpty()) {
-                    Log.d(TAG, "✅ Upload thành công: $url")
+                    Log.d(TAG, "✅ Upload story thành công: $url")
                     return@withContext url
                 } else {
                     Log.e(TAG, "⚠️ Không tìm thấy secure_url trong response: $json")
@@ -171,5 +175,7 @@ object ChatCloudinaryHelper {
             null
         }
     }
+
+
 
 }

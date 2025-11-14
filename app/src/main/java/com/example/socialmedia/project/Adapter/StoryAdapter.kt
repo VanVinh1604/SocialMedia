@@ -1,5 +1,6 @@
 package com.example.socialmedia.project.Adapter
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -58,8 +59,8 @@ class StoryAdapter(
 
                 // Load ảnh story nền
                 Glide.with(holder.itemView.context)
-                    .load(story.mediaUrl.takeIf { !it.isNullOrEmpty() }) // link từ Firebase
-                    .placeholder(R.drawable.image_person) // ảnh mặc định nếu chưa có
+                    .load(story.mediaUrl.takeIf { !it.isNullOrEmpty() })
+                    .placeholder(R.drawable.image_person)
                     .error(R.drawable.image_person)
                     .centerCrop()
                     .into(holder.imgStory!!)
@@ -72,15 +73,32 @@ class StoryAdapter(
                     .circleCrop()
                     .into(holder.imgAvatar!!)
 
+                // ----------------- Cập nhật border dựa trên đã xem -----------------
+                // Trước tiên set borderWidth để thấy hiệu ứng
+                holder.imgAvatar.borderWidth = 5
+
+                // Kiểm tra Firebase xem currentUser đã xem chưa
+                firebaseService.hasUserViewedAllStories(
+                    userId = story.userId,  // user sở hữu story
+                    viewerId = currentUserId
+                ) { allViewed ->
+                    holder.imgAvatar.borderColor = if (allViewed) Color.GRAY else Color.GREEN
+                }
+
+
+                // ----------------- Click vào story -----------------
                 holder.itemView.setOnClickListener {
+                    // 1️⃣ Cập nhật Firebase là đã xem
+                    firebaseService.markStoryAsViewed(story.storyId, currentUserId)
+                    // 3️⃣ Gọi callback mở story
                     onStoryClick?.invoke(story)
                 }
             }
 
-
             is SuggestFriendViewHolder -> bindSuggestFriend(holder, story)
         }
     }
+
 
     private fun bindSuggestFriend(holder: SuggestFriendViewHolder, story: StoryModel) {
         val context = holder.itemView.context

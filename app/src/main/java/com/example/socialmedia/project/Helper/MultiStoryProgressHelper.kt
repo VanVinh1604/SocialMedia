@@ -11,10 +11,10 @@ import android.widget.LinearLayout
 
 class MultiStoryProgressHelper(
     private val container: LinearLayout,
-    private val duration: Long = 5000L,
+    private val segmentDurations: List<Long>, // Duration riêng cho từng video
     private val onFinishSegment: (() -> Unit)? = null,
     private val onFinishAll: (() -> Unit)? = null,
-    private val onProgressUpdate: ((currentIndex: Int, progress: Map<Int, Float>) -> Unit)? = null // callback lưu progress
+    private val onProgressUpdate: ((currentIndex: Int, progress: Map<Int, Float>) -> Unit)? = null
 ) {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -28,16 +28,16 @@ class MultiStoryProgressHelper(
     private var elapsedBeforePause: Long = 0
     private val segmentProgressMap = mutableMapOf<Int, Float>()
 
-    fun setup(count: Int) {
+    fun setup() {
         container.removeAllViews()
         segmentForegrounds.clear()
         segmentProgressMap.clear()
-        if (count <= 0) return
+        if (segmentDurations.isEmpty()) return
 
-        for (i in 0 until count) {
+        for (i in segmentDurations.indices) {
             val frame = FrameLayout(container.context).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-                    .apply { if (i != count - 1) marginEnd = 8 }
+                    .apply { if (i != segmentDurations.lastIndex) marginEnd = 8 }
             }
 
             val bg = View(container.context).apply {
@@ -62,8 +62,11 @@ class MultiStoryProgressHelper(
         segmentForegrounds.forEachIndexed { i, fg ->
             val parentWidth = (fg.parent as? View)?.width ?: 0
             val p = when {
-                i < currentIndex -> 1f
-                i == currentIndex -> savedProgress?.get(i) ?: 0f
+                // Segment đã xem hoàn toàn hoặc có progress = 1f → full
+                savedProgress?.get(i)?.let { it >= 1f } == true -> 1f
+                // Segment hiện tại → lấy progress lưu nếu có, nếu không full luôn
+                i == currentIndex -> savedProgress?.get(i) ?: 1f
+                // Segment chưa xem → 0
                 else -> 0f
             }
             fg.layoutParams = (fg.layoutParams as FrameLayout.LayoutParams).apply { width = (parentWidth * p).toInt() }
@@ -71,8 +74,9 @@ class MultiStoryProgressHelper(
             segmentProgressMap[i] = p
         }
         this.currentIndex = currentIndex
-        elapsedBeforePause = 0
+        elapsedBeforePause = savedProgress?.get(currentIndex)?.times(segmentDurations.getOrElse(currentIndex) { 5000L })?.toLong() ?: 0
     }
+
 
     fun start() {
         if (segmentForegrounds.isEmpty()) return
@@ -114,13 +118,11 @@ class MultiStoryProgressHelper(
         }
     }
 
-
-
     fun goTo(index: Int, resumeImmediately: Boolean = true, resetCurrentSegment: Boolean = true) {
         if (index !in segmentForegrounds.indices) return
         handler.removeCallbacks(updateRunnable)
         currentIndex = index
-        elapsedBeforePause = if (resetCurrentSegment) 0 else (segmentProgressMap[index] ?: 0f * duration).toLong()
+        elapsedBeforePause = if (resetCurrentSegment) 0 else (segmentProgressMap[index] ?: 0f * segmentDurations[index]).toLong()
         startTime = System.currentTimeMillis()
 
         segmentForegrounds.forEachIndexed { i, fg ->
@@ -150,17 +152,20 @@ class MultiStoryProgressHelper(
             if (parent.windowToken == null || !parent.isAttachedToWindow) {
                 isRunning = false
                 handler.removeCallbacks(this)
+                Log.d("MultiStoryProgressHelper", "Runnable stopped, view not attached")
                 return
             }
 
+            val currentDuration = segmentDurations.getOrElse(currentIndex) { 5000L }
             val elapsed = System.currentTimeMillis() - startTime + elapsedBeforePause
-            val fraction = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
-            val parentWidth = (fg.parent as View).width
+            val fraction = (elapsed.toFloat() / currentDuration).coerceIn(0f, 1f)
+            val parentWidth = parent.width
             fg.layoutParams = (fg.layoutParams as FrameLayout.LayoutParams).apply { width = (parentWidth * fraction).toInt() }
             fg.requestLayout()
             segmentProgressMap[currentIndex] = fraction
 
-            // Tự động lưu progress
+            Log.d("MultiStoryProgressHelper", "Segment $currentIndex: fraction=$fraction, elapsed=$elapsed/${currentDuration}")
+
             onProgressUpdate?.invoke(currentIndex, segmentProgressMap)
 
             if (fraction >= 1f) {
@@ -170,6 +175,7 @@ class MultiStoryProgressHelper(
                 if (currentIndex >= segmentForegrounds.size) {
                     isRunning = false
                     try { onFinishAll?.invoke() } catch (e: Exception) {}
+                    Log.d("MultiStoryProgressHelper", "All segments finished")
                 } else {
                     startTime = System.currentTimeMillis()
                     handler.postDelayed(this, 16)
@@ -179,5 +185,5 @@ class MultiStoryProgressHelper(
             }
         }
     }
-}
 
+}

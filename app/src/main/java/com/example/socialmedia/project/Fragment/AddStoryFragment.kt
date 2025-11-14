@@ -2,6 +2,7 @@ package com.example.socialmedia.project.Fragment
 
 import android.Manifest
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -19,6 +20,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.socialmedia.databinding.FragmentAddStoryBinding
 import com.example.socialmedia.project.Adapter.ImagePreviewAdapter
+import com.example.socialmedia.project.Domain.Enum.MediaType
 import com.example.socialmedia.project.Server.Firebase.FirebaseService
 import com.example.socialmedia.project.Utils.ChatCloudinaryHelper
 import com.google.firebase.auth.FirebaseAuth
@@ -65,22 +67,15 @@ class AddStoryFragment : Fragment() {
         binding.recyclerView.layoutManager = GridLayoutManager(context, 3)
         binding.recyclerView.adapter = ImagePreviewAdapter(allMedia, selectedMedia) { uri ->
             if (uri == null) {
-                // Mở camera
                 openCamera()
             } else {
-                // Chọn/deselect ảnh
                 binding.txtSelectedCount.text = "Đã chọn ${selectedMedia.size}/$maxSelection"
             }
         }
 
-
         binding.btnCancel.setOnClickListener { findNavController().navigateUp() }
         binding.btnConfirm.setOnClickListener { uploadSelectedMedia() }
-
-        binding.txtTitle.setOnLongClickListener {
-            openCamera()
-            true
-        }
+        binding.txtTitle.setOnLongClickListener { openCamera(); true }
 
         requestPermission.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA))
     }
@@ -104,38 +99,34 @@ class AddStoryFragment : Fragment() {
         val mediaList = mutableListOf<Uri>()
 
         // Load ảnh
-        val imageCursor = context.contentResolver.query(
+        context.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.Images.Media._ID),
             null, null,
             "${MediaStore.Images.Media.DATE_ADDED} DESC"
-        )
-        imageCursor?.use { cursor ->
+        )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                val contentUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
-                mediaList.add(contentUri)
+                mediaList.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()))
             }
         }
 
         // Load video
-        val videoCursor = context.contentResolver.query(
+        context.contentResolver.query(
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.Video.Media._ID),
             null, null,
             "${MediaStore.Video.Media.DATE_ADDED} DESC"
-        )
-        videoCursor?.use { cursor ->
+        )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                val contentUri = Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id.toString())
-                mediaList.add(contentUri)
+                mediaList.add(Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id.toString()))
             }
         }
 
-        mediaList.sortedByDescending { it.toString() } // Sắp xếp gần đây nhất lên đầu
+        mediaList.sortedByDescending { it.toString() }
     }
 
     private fun uploadSelectedMedia() {
@@ -152,22 +143,41 @@ class AddStoryFragment : Fragment() {
                 async(Dispatchers.IO) {
                     try {
                         val file = uriToFile(uri)
+                        val mimeType = requireContext().contentResolver.getType(uri)
+                        val isVideo = mimeType?.startsWith("video") == true
+                        var thumbnailUrl: String? = null
+                        val duration = if (isVideo) getVideoDurationFromUri(uri) else null
+
+                        if (isVideo) {
+                            val thumbnailBitmap = getVideoThumbnail(file)
+                            val thumbnailFile = thumbnailBitmap?.let {
+                                val tempFile = File(requireContext().cacheDir, "thumb_${System.currentTimeMillis()}.jpg")
+                                FileOutputStream(tempFile).use { out -> it.compress(Bitmap.CompressFormat.JPEG, 90, out) }
+                                tempFile
+                            }
+                            thumbnailUrl = thumbnailFile?.let { ChatCloudinaryHelper.uploadImage(it) }
+                            thumbnailFile?.delete()
+                        }
+
                         val url = ChatCloudinaryHelper.uploadStory(file)
+                        file.delete()
+
                         if (url == null) {
                             Log.e("UploadStory", "❌ Upload Cloudinary thất bại: ${file.path}")
                             return@async false
                         }
 
-                        // Gửi từng ảnh riêng biệt lên Firebase
                         suspendCancellableCoroutine<Boolean> { cont ->
                             firebaseService.uploadStoryToFirebase(
                                 auth.currentUser!!.uid,
                                 url,
-                                if (uri.toString().endsWith("mp4")) "video" else "image"
-                            ) { success ->
-                                cont.resume(success) {}
-                            }
+                                isVideo,
+                                duration,
+                                thumbnailUrl
+                            ) { success -> cont.resume(success) {} }
                         }
+
+
                     } catch (e: Exception) {
                         e.printStackTrace()
                         false
@@ -177,16 +187,11 @@ class AddStoryFragment : Fragment() {
 
             val successCount = results.count { it }
             withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    "✅ Đã đăng $successCount/${selectedMedia.size} story",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "✅ Đã đăng $successCount/${selectedMedia.size} story", Toast.LENGTH_SHORT).show()
                 if (successCount > 0) findNavController().navigateUp()
             }
         }
     }
-
 
     private fun uriToFile(uri: Uri): File {
         val mimeType = requireContext().contentResolver.getType(uri)
@@ -197,4 +202,33 @@ class AddStoryFragment : Fragment() {
         }
         return tempFile
     }
+
+    private fun getVideoThumbnail(videoFile: File, timeUs: Long = 1_000_000L): Bitmap? {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(videoFile.absolutePath)
+            retriever.getFrameAtTime(timeUs, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            retriever.release()
+        }
+    }
+
+    private fun getVideoDurationFromUri(uri: Uri): Long? {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(requireContext(), uri)
+            retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            retriever.release()
+        }
+    }
+
+
+
 }

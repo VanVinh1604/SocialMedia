@@ -8,8 +8,9 @@ import android.widget.ProgressBar
 import androidx.recyclerview.widget.RecyclerView
 import com.example.socialmedia.R
 
-class StoryProgressAdapter(private val count: Int, private val duration: Long) :
-    RecyclerView.Adapter<StoryProgressAdapter.ProgressViewHolder>() {
+class StoryProgressAdapter(
+    private val segmentDurations: List<Long> // mỗi item có duration riêng
+) : RecyclerView.Adapter<StoryProgressAdapter.ProgressViewHolder>() {
 
     private var currentIndex = 0
     private val handler = Handler(Looper.getMainLooper())
@@ -27,10 +28,13 @@ class StoryProgressAdapter(private val count: Int, private val duration: Long) :
     }
 
     override fun onBindViewHolder(holder: ProgressViewHolder, position: Int) {
-        progressBars.add(holder.progressBar)
+        if (!progressBars.contains(holder.progressBar)) {
+            progressBars.add(holder.progressBar)
+        }
+        holder.progressBar.progress = 0
     }
 
-    override fun getItemCount() = count
+    override fun getItemCount() = segmentDurations.size
 
     fun start() {
         if (progressBars.isEmpty()) return
@@ -44,22 +48,25 @@ class StoryProgressAdapter(private val count: Int, private val duration: Long) :
         }
 
         val bar = progressBars[index]
+        val duration = segmentDurations.getOrNull(index) ?: 5000L
         bar.progress = 0
-        val step = 100
-        val totalSteps = (duration / step).toInt()
 
+        val step = 50L // update mỗi 50ms
+        val totalSteps = (duration / step).toInt().coerceAtLeast(1)
         var progressValue = 0
+
         handler.post(object : Runnable {
             override fun run() {
                 if (isPaused) {
-                    handler.postDelayed(this, step.toLong())
+                    handler.postDelayed(this, step)
                     return
                 }
                 progressValue++
-                bar.progress = (progressValue * (10000 / totalSteps)).coerceAtMost(10000)
+                val progress = (progressValue * (10000 / totalSteps)).coerceAtMost(10000)
+                bar.progress = progress
 
                 if (progressValue < totalSteps) {
-                    handler.postDelayed(this, step.toLong())
+                    handler.postDelayed(this, step)
                 } else {
                     onFinishSegment?.invoke()
                     currentIndex++
@@ -69,40 +76,13 @@ class StoryProgressAdapter(private val count: Int, private val duration: Long) :
         })
     }
 
-    fun pause() {
-        isPaused = true
-    }
-
-    fun resume() {
-        isPaused = false
-    }
-    fun stop() {
+    fun reset() {
         handler.removeCallbacksAndMessages(null)
         currentIndex = 0
+        progressBars.forEach { it.progress = 0 }
         isPaused = false
-        progressBars.forEach { bar ->
-            bar.progress = 0
-        }
     }
 
-
-    fun goTo(position: Int) {
-        // Reset các bar trước đó full, sau đó chạy lại từ bar mới
-        progressBars.forEachIndexed { i, bar ->
-            bar.progress = when {
-                i < position -> 10000
-                i == position -> 0
-                else -> 0
-            }
-        }
-        currentIndex = position
-        start()
-    }
-
-    fun setCallbacks(onFinishSegment: () -> Unit, onFinishAll: () -> Unit) {
-        this.onFinishSegment = onFinishSegment
-        this.onFinishAll = onFinishAll
-    }
 
     inner class ProgressViewHolder(val progressBar: ProgressBar) :
         RecyclerView.ViewHolder(progressBar)

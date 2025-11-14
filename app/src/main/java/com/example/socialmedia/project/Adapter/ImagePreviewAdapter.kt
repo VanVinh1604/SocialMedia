@@ -49,7 +49,9 @@ class ImagePreviewAdapter(
 
             // Icon video
             holder.binding.iconVideo.apply {
-                visibility = if (uri.toString().endsWith("mp4")) View.VISIBLE else View.GONE
+                val mimeType = holder.itemView.context.contentResolver.getType(uri)
+                visibility = if (mimeType?.startsWith("video") == true) View.VISIBLE else View.GONE
+
                 setImageResource(R.drawable.clapper)
             }
 

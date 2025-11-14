@@ -136,33 +136,30 @@ class HomeFragment : Fragment() {
         }
     }
 
-
     private fun observeNotificationBadge() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val database = FirebaseDatabase.getInstance().getReference("notifications")
 
-        // Lắng nghe realtime thông báo mới của user
         database.orderByChild("userId").equalTo(currentUserId)
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    var hasNew = false
-                    for (child in snapshot.children) {
-                        val isRead = child.child("isRead").getValue(Boolean::class.java) ?: false
-                        if (!isRead) {
-                            hasNew = true
-                            break
+                    // ⚠️ Kiểm tra Fragment còn attach không
+                    _binding?.let { binding ->
+                        var hasNew = false
+                        for (child in snapshot.children) {
+                            val isRead = child.child("isRead").getValue(Boolean::class.java) ?: false
+                            if (!isRead) {
+                                hasNew = true
+                                break
+                            }
                         }
+                        binding.badgeNotification.visibility = if (hasNew) View.VISIBLE else View.GONE
                     }
-                    binding.badgeNotification.visibility = if (hasNew) View.VISIBLE else View.GONE
                 }
 
-                override fun onCancelled(error: DatabaseError) {
-                    // Không cần xử lý đặc biệt
-                }
+                override fun onCancelled(error: DatabaseError) {}
             })
     }
-
-
 
     override fun onDestroyView() {
         super.onDestroyView()

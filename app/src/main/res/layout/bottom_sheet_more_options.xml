@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tvDelete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Xóa tin"
+        android:textColor="@android:color/holo_red_dark"
+        android:padding="16dp"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/tvArchive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Lưu trữ"
+        android:padding="16dp"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/tvCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hủy"
+        android:padding="16dp"
+        android:textSize="16sp"/>
+</LinearLayout>
