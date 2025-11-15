@@ -18,10 +18,13 @@ import com.example.socialmedia.databinding.FragmentStoryViewerBinding
 import com.example.socialmedia.project.Adapter.StoryViewerAdapter
 import com.example.socialmedia.project.Adapter.StoryViewerBottomSheetAdapter
 import com.example.socialmedia.project.Domain.Enum.MediaType
+import com.example.socialmedia.project.Domain.Enum.MessageType
+import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.StoryModel
 import com.example.socialmedia.project.Domain.Model.StoryViewerItem
 import com.example.socialmedia.project.Helper.MultiStoryProgressHelper
 import com.example.socialmedia.project.Server.Firebase.FirebaseService
+import com.example.socialmedia.project.ViewModel.ChatViewModel
 import com.example.socialmedia.project.ViewModel.StoryViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.database.*
@@ -39,7 +42,8 @@ class StoryViewerFragment : Fragment() {
     private var currentStoryIndex = 0
     private var progressHelper: MultiStoryProgressHelper? = null
 
-    // Lưu progress và vị trí hiện tại của từng user
+    private val chatViewModel: ChatViewModel by viewModels()
+
     private val userStoryPositions = mutableMapOf<String, Int>()
     private val userSegmentProgressMap = mutableMapOf<String, MutableMap<Int, Float>>()
 
@@ -97,12 +101,43 @@ class StoryViewerFragment : Fragment() {
         }
 
         binding.btnSendReply.setOnClickListener {
-            val msg = binding.etReplyMessage.text.toString().trim()
-            if (msg.isNotEmpty()) {
-                Toast.makeText(requireContext(), "Đã gửi: $msg", Toast.LENGTH_SHORT).show()
-                binding.etReplyMessage.text.clear()
-                binding.etReplyMessage.clearFocus()
-            } else Toast.makeText(requireContext(), "❤️", Toast.LENGTH_SHORT).show()
+            val messageText = binding.etReplyMessage.text.toString().trim()
+            val story = stories.getOrNull(currentStoryIndex) ?: return@setOnClickListener
+            val senderId = firebaseService.getCurrentUserId() ?: return@setOnClickListener
+            val receiverId = story.userId
+
+            if (messageText.isEmpty()) {
+                Toast.makeText(requireContext(), "Tin nhắn trống!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val message = MessageModel(
+                senderId = senderId,
+                content = messageText,
+                createdAt = System.currentTimeMillis(),
+                messageType = MessageType.STORY_REPLY,
+                isStoryReply = true,
+                storyId = story.storyId,
+                storyThumbnail = story.thumbnailUrl ?: story.mediaUrl, // ưu tiên thumbnail nếu có
+                storyOwnerId = story.userId
+            )
+
+            Log.d("StoryViewerFragment", "Gửi tin nhắn story reply: sender=$senderId, receiver=$receiverId, content=$messageText")
+
+            // ✅ Sử dụng ChatRepository để gửi tin nhắn, tự tạo conversation nếu chưa có
+            chatViewModel.sendMessage(
+                conversationId = null, // null là ok, ChatRepository sẽ tự tạo
+                participants = listOf(senderId, receiverId),
+                message = message
+            ) { success ->
+                Log.d("StoryViewerFragment", "Kết quả gửi tin nhắn: $success")
+                if (success) {
+                    binding.etReplyMessage.text.clear()
+                    Toast.makeText(requireContext(), "Đã gửi tin nhắn!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Gửi tin nhắn thất bại!", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         binding.tvViewerInfo.setOnClickListener {
@@ -124,9 +159,21 @@ class StoryViewerFragment : Fragment() {
                 if (liked) showHeartAnimation()
             }
         }
-
-
     }
+
+//    private fun openChatFragment(receiverId: String) {
+//        val bundle = Bundle()
+//        bundle.putString("receiverId", receiverId)
+//
+//        val chatFragment = ChatFragment()
+//        chatFragment.arguments = bundle
+//
+//        parentFragmentManager.beginTransaction()
+//            .replace(R.id.storyRootContainer, chatFragment)
+//            .addToBackStack(null)
+//            .commit()
+//    }
+
 
     private fun setupProgressHelper() {
         val durations = stories.map { story ->

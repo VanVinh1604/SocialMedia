@@ -24,18 +24,25 @@ class UserOnlineAdapter(
         fun bind(user: UserModel) {
             binding.tvUserName.text = user.fullName.ifBlank { "Ẩn danh" }
 
-            // Remove old listener nếu có
+            // Remove old listener
             userRef?.removeEventListener(listener ?: return)
 
-            userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(user.userId)
+            userRef = FirebaseDatabase.getInstance()
+                .getReference("InfoUser")
+                .child(user.userId)
+
             listener = object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
+
+                    // Ngăn load ảnh khi ViewHolder đã tách khỏi RecyclerView
+                    if (!binding.root.isAttachedToWindow) return
+
                     val profileUrl = snapshot.child("profilePictureUrl").getValue(String::class.java)
                     val isOnline = snapshot.child("isOnline").getValue(Boolean::class.java) ?: false
                     val lastLogin = snapshot.child("lastLogin").getValue(Long::class.java)
 
-                    // Update avatar
-                    Glide.with(binding.root.context)
+                    // **SỬA LÕI 100% AN TOÀN**
+                    Glide.with(binding.root)
                         .load(profileUrl ?: user.profilePictureUrl ?: R.drawable.image_avata_user)
                         .placeholder(R.drawable.image_avata_user)
                         .error(R.drawable.image_avata_user)
@@ -52,7 +59,7 @@ class UserOnlineAdapter(
                             if (lastLogin != null) getTimeAgo(lastLogin) else "Ngoại tuyến"
                     }
 
-                    // Update internal model
+                    // Internal model update
                     val index = users.indexOfFirst { it.userId == user.userId }
                     if (index != -1) {
                         users[index] = users[index].copy(
@@ -67,18 +74,30 @@ class UserOnlineAdapter(
             }
 
             userRef?.addValueEventListener(listener!!)
-
             binding.root.setOnClickListener { onClick(user) }
+        }
+
+        fun cleanup() {
+            userRef?.removeEventListener(listener ?: return)
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
-        val binding = ItemUserOnlineBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding = ItemUserOnlineBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
         return UserViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         holder.bind(users[position])
+    }
+
+    override fun onViewRecycled(holder: UserViewHolder) {
+        holder.cleanup()
+        super.onViewRecycled(holder)
     }
 
     override fun getItemCount(): Int = users.size
@@ -89,3 +108,4 @@ class UserOnlineAdapter(
         notifyDataSetChanged()
     }
 }
+

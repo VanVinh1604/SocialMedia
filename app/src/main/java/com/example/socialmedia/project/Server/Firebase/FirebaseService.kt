@@ -9,10 +9,12 @@ import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import com.google.firebase.firestore.FirebaseFirestore
 
 class FirebaseService {
 
     val database = FirebaseDatabase.getInstance().reference
+    val firestore = FirebaseFirestore.getInstance()
     private val viewCountListenerMap = mutableMapOf<String, ValueEventListener>()
 
     fun getCurrentUserId(): String? {
@@ -291,20 +293,6 @@ class FirebaseService {
             }
     }
 
-//    fun getUserStatus(userId: String, callback: (exists: Boolean, isBanned: Boolean) -> Unit) {
-//        val infoRef = database.child("InfoUser").child(userId)
-//        infoRef.get().addOnSuccessListener { snapshot ->
-//            if (snapshot.exists()) {
-//                val isBanned = snapshot.child("isBanned").getValue(Boolean::class.java) ?: false
-//                callback(true, isBanned)
-//            } else {
-//                callback(false, false) // Không tồn tại
-//            }
-//        }.addOnFailureListener {
-//            callback(false, false)
-//        }
-//    }
-
 
     fun unfollowUser(
         currentUserId: String,
@@ -462,13 +450,6 @@ class FirebaseService {
     }
 
 
-    fun removeAllStoryViewListeners() {
-        for ((storyId, listener) in viewCountListenerMap) {
-            database.child("storyViews").child(storyId).removeEventListener(listener)
-        }
-        viewCountListenerMap.clear()
-    }
-
 
     // Thêm vào FirebaseService.kt
     // Kiểm tra user trước khi thao tác
@@ -525,6 +506,52 @@ class FirebaseService {
     }
 
     // Upload story cũng nên kiểm tra userId trước khi push
+//    fun uploadStoryToFirebase(
+//        userId: String,
+//        mediaUrl: String,
+//        isVideo: Boolean,
+//        duration: Long? = null,
+//        thumbnailUrl: String? = null,
+//        saveToDatabase: Boolean = true,
+//        onComplete: (success: Boolean) -> Unit
+//    ) {
+//        if (getCurrentUserId() != userId) {
+//            Log.e("FirebaseService", "❌ Không có quyền upload story cho user khác")
+//            onComplete(false)
+//            return
+//        }
+//
+//        if (!saveToDatabase) {
+//            onComplete(true)
+//            return
+//        }
+//
+//        val storyRef = database.child("stories").push()
+//        val storyId = storyRef.key ?: return onComplete(false)
+//        val storyType = if (isVideo) "video" else "image"
+//
+//        val storyData = mutableMapOf(
+//            "storyId" to storyId,
+//            "userId" to userId,
+//            "mediaUrl" to mediaUrl,
+//            "type" to storyType,
+//            "createdAt" to System.currentTimeMillis(),
+//            "expiresAt" to (System.currentTimeMillis() + 24 * 60 * 60 * 1000),
+//            "viewCount" to 0,
+//            "views" to mapOf<String, Boolean>(),
+//            "isExpired" to false
+//        )
+//
+//        if (isVideo) {
+//            thumbnailUrl?.let { storyData["thumbnailUrl"] = it }
+//            duration?.let { storyData["duration"] = it }
+//        }
+//
+//        storyRef.setValue(storyData)
+//            .addOnSuccessListener { onComplete(true) }
+//            .addOnFailureListener { onComplete(false) }
+//    }
+
     fun uploadStoryToFirebase(
         userId: String,
         mediaUrl: String,
@@ -537,11 +564,6 @@ class FirebaseService {
         if (getCurrentUserId() != userId) {
             Log.e("FirebaseService", "❌ Không có quyền upload story cho user khác")
             onComplete(false)
-            return
-        }
-
-        if (!saveToDatabase) {
-            onComplete(true)
             return
         }
 
@@ -567,24 +589,44 @@ class FirebaseService {
         }
 
         storyRef.setValue(storyData)
-            .addOnSuccessListener { onComplete(true) }
+            .addOnSuccessListener {
+                syncStoryToFirestore(storyId) // ✅ đồng bộ sang Firestore ngay sau khi upload
+                onComplete(true)
+            }
             .addOnFailureListener { onComplete(false) }
     }
 
 
+    private fun syncStoryToFirestore(storyId: String) {
+        val ref = database.child("stories").child(storyId)
+        ref.get().addOnSuccessListener { snapshot ->
+            val story = snapshot.getValue(StoryModel::class.java) ?: return@addOnSuccessListener
+            val storyData = hashMapOf<String, Any>(
+                "storyId" to story.storyId,
+                "userId" to story.userId,
+                "mediaUrl" to story.mediaUrl,
+                "type" to story.mediaType,
+                "createdAt" to story.createdAt,
+                "expiresAt" to story.expiresAt,
+//                "viewCount" to snapshot.child("viewCount").getValue(Long::class.java) ?: 0,
+//                "views" to snapshot.child("views").value as? Map<String, Boolean> ?: emptyMap<String, Boolean>(),
+                "isExpired" to story.isExpired
+            )
 
-//    fun updateStoryDuration(storyId: String, durationMs: Long) {
-//        val database = FirebaseDatabase.getInstance()
-//        val storyRef = database.getReference("stories").child(storyId)
-//
-//        storyRef.child("duration").setValue(durationMs)
-//            .addOnSuccessListener {
-//                Log.d("FirebaseService", "✅ Duration cập nhật thành công cho storyId=$storyId ($durationMs ms)")
-//            }
-//            .addOnFailureListener { e ->
-//                Log.e("FirebaseService", "❌ Cập nhật duration thất bại: ${e.message}")
-//            }
-//    }
+            firestore.collection("stories").document(story.storyId)
+                .set(storyData)
+        }
+    }
+
+
+    fun syncAllStoriesToFirestore() {
+        database.child("stories").get().addOnSuccessListener { snapshot ->
+            for (child in snapshot.children) {
+                val storyId = child.key ?: continue
+                syncStoryToFirestore(storyId)
+            }
+        }
+    }
 
 
     fun getStoriesByUserId(userId: String, onResult: (List<StoryModel>) -> Unit) {
@@ -655,6 +697,7 @@ class FirebaseService {
             onComplete(false)
         }
     }
+
 
 
 

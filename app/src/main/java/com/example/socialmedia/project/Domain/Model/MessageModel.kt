@@ -15,8 +15,15 @@ data class MessageModel(
     val mediaUrl: String? = null,
     val replyToMessageId: String? = null,
     val postId: String? = null,           // For shared posts
+    val story: StoryModel? = null,
     val isDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val editedAt: Long? = null,
-    val readBy: List<String> = emptyList()
+    val readBy: List<String> = emptyList(),
+
+
+    val isStoryReply: Boolean = false,
+    val storyId: String? = null,
+    val storyThumbnail: String? = null,
+    val storyOwnerId: String? = null
 )

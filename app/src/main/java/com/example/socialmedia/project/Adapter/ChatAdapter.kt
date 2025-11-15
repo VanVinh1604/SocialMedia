@@ -32,6 +32,10 @@ class ChatAdapter(
     private val TYPE_IMAGE_OUTGOING = 5
     private val TYPE_IMAGE_INCOMING = 6
 
+    private val TYPE_STORY_OUTGOING = 7
+    private val TYPE_STORY_INCOMING = 8
+
+
     private var mediaPlayer: MediaPlayer? = null
     private var currentlyPlayingUrl: String? = null
     private var currentlyPlayingHolder: RecyclerView.ViewHolder? = null
@@ -40,6 +44,13 @@ class ChatAdapter(
 
     override fun getItemViewType(position: Int): Int {
         val msg = getValidMessages()[position]
+
+        // Xử lý Story Reply
+        if (msg.messageType == MessageType.STORY_REPLY) {
+            return if (msg.senderId == currentUserId) TYPE_STORY_OUTGOING
+            else TYPE_STORY_INCOMING
+        }
+
         return when {
             msg.senderId == currentUserId && msg.messageType == MessageType.VOICE -> TYPE_AUDIO_OUTGOING
             msg.senderId != currentUserId && msg.messageType == MessageType.VOICE -> TYPE_AUDIO_INCOMING
@@ -49,6 +60,68 @@ class ChatAdapter(
             else -> TYPE_INCOMING
         }
     }
+
+    inner class OutgoingStoryViewHolder(
+        private val binding: ItemChatStoryOutgoingBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(message: MessageModel, currentUser: UserModel) {
+            val story = message.story
+
+            // Nội dung hiển thị
+            binding.tvMessage.text = message.content.ifBlank { story?.textOverlay?.text ?: "" }
+
+            // Thời gian gửi
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                .format(Date(message.createdAt))
+
+            // Ảnh story
+            Glide.with(binding.root.context)
+                .load(message.storyThumbnail ?: story?.thumbnailUrl ?: R.drawable.image_placeholder)
+                .placeholder(R.drawable.image_placeholder)
+                .error(R.drawable.image_placeholder)
+                .into(binding.ivImage)
+
+            // Avatar người gửi (nếu muốn hiển thị)
+            Glide.with(binding.root.context)
+                .load(currentUser.profilePictureUrl ?: R.drawable.image_avata_user)
+                .circleCrop()
+                .placeholder(R.drawable.image_avata_user)
+                .into(binding.ivAvatar)
+        }
+    }
+
+
+    inner class IncomingStoryViewHolder(
+        private val binding: ItemChatStoryIncomingBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(message: MessageModel, sender: UserModel) {
+            val story = message.story
+
+            // Nội dung hiển thị
+            binding.tvMessage.text = message.content.ifBlank { story?.textOverlay?.text ?: "" }
+
+            // Thời gian gửi
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                .format(Date(message.createdAt))
+
+            // Ảnh story
+            Glide.with(binding.root.context)
+                .load(message.storyThumbnail ?: story?.thumbnailUrl ?: R.drawable.image_placeholder)
+                .placeholder(R.drawable.image_placeholder)
+                .error(R.drawable.image_placeholder)
+                .into(binding.ivImage)
+
+            // Avatar người gửi
+            Glide.with(binding.root.context)
+                .load(sender.profilePictureUrl ?: message.senderAvatar ?: R.drawable.image_avata_user)
+                .circleCrop()
+                .placeholder(R.drawable.image_avata_user)
+                .into(binding.ivAvatar)
+        }
+    }
+
 
     // --- ViewHolder cho ảnh ---
     inner class OutgoingImageViewHolder(private val binding: ItemChatImageOutgoingBinding) :
@@ -199,6 +272,8 @@ class ChatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
+            TYPE_STORY_OUTGOING -> OutgoingStoryViewHolder(ItemChatStoryOutgoingBinding.inflate(inflater, parent, false))
+            TYPE_STORY_INCOMING -> IncomingStoryViewHolder(ItemChatStoryIncomingBinding.inflate(inflater, parent, false))
             TYPE_OUTGOING -> OutgoingViewHolder(ItemChatMessageOutgoingBinding.inflate(inflater, parent, false))
             TYPE_INCOMING -> IncomingViewHolder(ItemChatMessageIncomingBinding.inflate(inflater, parent, false))
             TYPE_AUDIO_OUTGOING -> OutgoingAudioViewHolder(ItemChatAudioOutgoingBinding.inflate(inflater, parent, false))
@@ -223,6 +298,8 @@ class ChatAdapter(
 
 
         when (holder) {
+            is OutgoingStoryViewHolder -> holder.bind(message, sender)
+            is IncomingStoryViewHolder -> holder.bind(message, sender)
             is OutgoingViewHolder -> holder.bind(message, sender)
             is IncomingViewHolder -> holder.bind(message, sender)
             is OutgoingAudioViewHolder -> holder.bind(message, sender)
@@ -237,19 +314,6 @@ class ChatAdapter(
     fun updateMessages(newMessages: List<MessageModel>) {
         messages = newMessages
         notifyDataSetChanged()
-    }
-
-    fun getAudioDuration(context: Context, url: String): String {
-        return try {
-            val mmr = MediaMetadataRetriever()
-            mmr.setDataSource(context, Uri.parse(url))
-            val durationMs = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
-            val minutes = (durationMs / 1000) / 60
-            val seconds = (durationMs / 1000) % 60
-            String.format("%d:%02d", minutes, seconds)
-        } catch (e: Exception) {
-            "0:00"
-        }
     }
 
     fun releasePlayer() {
