@@ -10,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.DialogFragment
@@ -22,8 +23,9 @@ import kotlinx.coroutines.*
 class ImagePickerDialogFragment : DialogFragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var btnConfirm: Button
-    private lateinit var btnCancel: Button
+    private lateinit var btnConfirm: FrameLayout
+
+    private lateinit var btnCancel: TextView
     private lateinit var txtSelectedCount: TextView
 
     private val allImages = mutableListOf<Uri>()

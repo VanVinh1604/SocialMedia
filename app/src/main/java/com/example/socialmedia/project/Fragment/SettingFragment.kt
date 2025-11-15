@@ -7,23 +7,26 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.fragment.app.viewModels // <-- THÊM IMPORT NÀY
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.example.socialmedia.R
-import com.example.socialmedia.databinding.FragmentSettingBinding // <-- Import ViewBinding
-import com.google.firebase.auth.FirebaseAuth // <-- THÊM IMPORT FIREBASE
+import com.example.socialmedia.databinding.FragmentSettingBinding
+import com.example.socialmedia.project.ViewModel.SettingMenuViewModel // <-- SỬA IMPORT NÀY
+import com.google.firebase.auth.FirebaseAuth
 
 class SettingFragment : Fragment() {
 
-    // Sử dụng ViewBinding
     private var _binding: FragmentSettingBinding? = null
     private val binding get() = _binding!!
+
+    // === SỬA LỖI: Khởi tạo SettingMenuViewModel (tên mới) ===
+    private val viewModel: SettingMenuViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate layout bằng ViewBinding
         _binding = FragmentSettingBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -31,8 +34,24 @@ class SettingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Gọi hàm thiết lập các nút bấm
         setupListeners()
+        setupObservers() // <-- GỌI HÀM OBSERVER MỚI
+
+        // Yêu cầu ViewModel tải số lượng
+        viewModel.loadBlockCount()
+    }
+
+    // === MỚI: Hàm lắng nghe LiveData từ ViewModel ===
+    private fun setupObservers() {
+        viewModel.blockCount.observe(viewLifecycleOwner) { count ->
+            if (count > 0) {
+                // Đảm bảo bạn đã thêm tv_block_count vào XML
+                binding.tvBlockCount.text = count.toString()
+                binding.tvBlockCount.visibility = View.VISIBLE
+            } else {
+                binding.tvBlockCount.visibility = View.GONE
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -41,57 +60,56 @@ class SettingFragment : Fragment() {
             findNavController().popBackStack()
         }
 
-        // Nút Account Center (như bạn yêu cầu)
+        // Nút Account Center
         binding.cvAccountCenter.setOnClickListener {
             try {
-                // Điều hướng đến EditProfileFragment
                 findNavController().navigate(R.id.action_settingFragment_to_editProfileFragment)
             } catch (e: Exception) {
-                Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
+                showToast("Lỗi NavGraph: " + e.message)
             }
         }
 
-        // === SỬA LỖI NÚT LOG OUT ===
+        // Nút Log Out
         binding.cvLogout.setOnClickListener {
-            // 1. Đăng xuất khỏi Firebase
             FirebaseAuth.getInstance().signOut()
-
-            // 2. Điều hướng về LoginFragment và XÓA SẠCH back stack
             try {
-                // Cấu hình NavOptions để xóa tất cả các fragment trước đó
                 val navOptions = NavOptions.Builder()
-                    .setPopUpTo(R.id.nav_graph, true) // Xóa back stack đến tận gốc của nav_graph
+                    .setPopUpTo(R.id.nav_graph, true)
                     .build()
-
-                // (Bạn cần đảm bảo đã tạo action này trong nav_graph)
                 findNavController().navigate(R.id.action_settingFragment_to_loginFragment, null, navOptions)
 
             } catch (e: Exception) {
-                Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
-
-                // === SỬA LỖI Ở ĐÂY ===
-                // Truyền 'e' (Throwable) chứ không phải 'e.message' (String)
+                showToast("Lỗi NavGraph: " + e.message)
                 Log.e("SettingFragment", "Lỗi điều hướng logout: ", e)
-                // === KẾT THÚC SỬA LỖI ===
             }
         }
-        // === KẾT THÚC SỬA LỖI ===
 
-        // Các nút khác (hiển thị Toast tạm thời)
+        // Nút Block
+        binding.llBlock.setOnClickListener {
+            try {
+                findNavController().navigate(R.id.action_settingFragment_to_blockListFragment)
+            } catch (e: Exception) {
+                showToast("Lỗi NavGraph: " + e.message)
+            }
+        }
+
+        // Các nút khác
         binding.llSaved.setOnClickListener {
             showToast("Chức năng 'Saved' đang phát triển")
         }
         binding.llHistory.setOnClickListener {
-            showToast("ChứcACY 'History' đang phát triển")
+            showToast("Chức năng 'History' đang phát triển")
         }
         binding.llStoriesStorage.setOnClickListener {
             showToast("Chức năng 'Stories storage' đang phát triển")
         }
         binding.llPrivacy.setOnClickListener {
-            showToast("Chức năng 'Privacy' đang phát triển")
-        }
-        binding.llBlock.setOnClickListener {
-            showToast("Chức năng 'Block' đang phát triển")
+            try {
+                // Điều hướng đến màn hình PrivacySettingsFragment bạn vừa tạo
+                findNavController().navigate(R.id.action_settingFragment_to_privacySettingsFragment)
+            } catch (e: Exception) {
+                showToast("Lỗi NavGraph: " + e.message)
+            }
         }
         binding.cvAddAccount.setOnClickListener {
             showToast("Chức năng 'Add account' đang phát triển")
@@ -107,5 +125,3 @@ class SettingFragment : Fragment() {
         _binding = null // Tránh memory leak
     }
 }
-
-

@@ -13,7 +13,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- ... (Phần Header, ivBackButton, ivMenuButton giữ nguyên) ... -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="220dp">
@@ -52,9 +51,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-50dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="24dp"
+            android:clickable="true">
 
-            <!-- ... (ivProfileImage giữ nguyên) ... -->
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivProfileImage"
                 android:layout_width="100dp"
@@ -68,7 +67,6 @@
                 app:strokeColor="#FFFFFF"
                 app:strokeWidth="4dp" />
 
-            <!-- === KHỐI STATS ĐÃ SỬA LẠI THỨ TỰ === -->
             <LinearLayout
                 android:id="@+id/llStats"
                 android:layout_width="0dp"
@@ -82,7 +80,6 @@
                 app:layout_constraintBottom_toBottomOf="@id/ivProfileImage"
                 app:layout_constraintVertical_bias="2">
 
-                <!-- 1. Posts -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -90,16 +87,15 @@
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="8dp">
-
                     <TextView
                         android:id="@+id/tvPostCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="10"
                         android:textSize="20sp"
                         android:textColor="#333333"
                         android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium" />
+                        android:fontFamily="sans-serif-medium"
+                        tools:text="10" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -108,8 +104,6 @@
                         android:textColor="#777777"
                         android:layout_marginTop="2dp" />
                 </LinearLayout>
-
-                <!-- 2. Followers (Thay thế "Likes") -->
                 <LinearLayout
                     android:id="@+id/llFollowersWrapper"
                     android:layout_width="0dp"
@@ -119,16 +113,15 @@
                     android:gravity="center"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
-
                     <TextView
                         android:id="@+id/tvFollowersCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="190k"
                         android:textSize="20sp"
                         android:textColor="#333333"
                         android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium" />
+                        android:fontFamily="sans-serif-medium"
+                        tools:text="190k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -137,8 +130,6 @@
                         android:textColor="#777777"
                         android:layout_marginTop="2dp" />
                 </LinearLayout>
-
-                <!-- 3. Following -->
                 <LinearLayout
                     android:id="@+id/llFollowingWrapper"
                     android:layout_width="0dp"
@@ -148,16 +139,15 @@
                     android:gravity="center"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
-
                     <TextView
                         android:id="@+id/tvFollowingCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="15k"
                         android:textSize="20sp"
                         android:textColor="#333333"
                         android:textStyle="bold"
-                        android:fontFamily="sans-serif-medium" />
+                        android:fontFamily="sans-serif-medium"
+                        tools:text="15k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -166,30 +156,37 @@
                         android:textColor="#777777"
                         android:layout_marginTop="2dp" />
                 </LinearLayout>
-
             </LinearLayout>
-            <!-- === KẾT THÚC SỬA LỖI === -->
 
-            <!-- ... (llUserInfo và llActionButtons giữ nguyên) ... -->
             <LinearLayout
                 android:id="@+id/llUserInfo"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="12dp"
                 app:layout_constraintStart_toStartOf="@id/ivProfileImage"
+                app:layout_constraintEnd_toEndOf="@id/llStats"
                 app:layout_constraintTop_toBottomOf="@id/ivProfileImage">
-
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Van Vinh"
                     android:textSize="22sp"
                     android:textColor="#1A1A1A"
                     android:textStyle="bold"
-                    android:fontFamily="sans-serif-medium" />
-                <!-- (XML của bạn không có tvBio, nên tôi giữ nguyên) -->
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="Van Vinh" />
+                <TextView
+                    android:id="@+id/tvBio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="#666666"
+                    android:textSize="14sp"
+                    android:visibility="gone"
+                    tools:text="Đây là ghi chú của người khác 📸"
+                    tools:visibility="visible" />
             </LinearLayout>
 
             <LinearLayout
@@ -201,14 +198,14 @@
                 app:layout_constraintEnd_toEndOf="@id/llStats"
                 app:layout_constraintStart_toStartOf="@id/llUserInfo"
                 app:layout_constraintTop_toBottomOf="@id/llUserInfo">
-                <!-- ... (btnFollow, btnShareProfile giữ nguyên) ... -->
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnFollow"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    android.text="Follow"
+                    android:text="Follow"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp"
                     android:textAllCaps="false"
@@ -221,7 +218,6 @@
                     app:iconGravity="textStart"
                     app:iconTint="#FFFFFF"
                     app:iconSize="20dp" />
-
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShareProfile"
                     android:layout_width="0dp"
@@ -241,95 +237,78 @@
                     app:iconTint="#B084CC"
                     app:iconSize="20dp" />
             </LinearLayout>
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- ... (HorizontalScrollView và rvPhotos giữ nguyên) ... -->
-        <HorizontalScrollView
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:clipToPadding="false"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
+            android:layout_marginTop="24dp"
+            app:tabGravity="fill"
+            app:tabMode="fixed"
+            app:tabIndicatorColor="@color/purple_main"
+            app:tabSelectedTextColor="@color/purple_main"
+            app:tabTextColor="#888888">
 
-            <LinearLayout
+            <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:text="Bài đăng"
+                android:icon="@drawable/ic_grid" />
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:layout_marginEnd="20dp"
-                    android:background="?attr/selectableItemBackground">
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reels"
+                android:icon="@drawable/ic_reels" />
 
-                    <FrameLayout
-                        android:layout_width="80dp"
-                        android:layout_height="80dp"
-                        android:background="@drawable/circle_dashed_border">
-
-                        <ImageView
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_add"
-                            app:tint="#B084CC" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="New"
-                        android:textSize="13sp"
-                        android:textColor="#666666"
-                        android:fontFamily="sans-serif" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:layout_marginEnd="20dp"
-                    android:background="?attr/selectableItemBackground">
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:layout_width="80dp"
-                        android:layout_height="80dp"
-                        android:src="@drawable/background_header"
-                        android:scaleType="centerCrop"
-                        app:shapeAppearanceOverlay="@style/CircularImageView"
-                        app:strokeColor="#E0E0E0"
-                        app:strokeWidth="2dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Travel"
-                        android:textSize="13sp"
-                        android:textColor="#666666"
-                        android:fontFamily="sans-serif" />
-                </LinearLayout>
-
-            </LinearLayout>
-        </HorizontalScrollView>
-
+        </com.google.android.material.tabs.TabLayout>
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPhotos"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
+            android:paddingTop="8dp"
             android:paddingBottom="16dp"
             android:nestedScrollingEnabled="false"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
             app:spanCount="3" />
+
+        <LinearLayout
+            android:id="@+id/llEmptyPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone"
+            tools:visibility="gone">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_lock"
+                app:tint="#888888" />
+            <TextView
+                android:id="@+id/tvEmptyMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Tài khoản riêng tư"
+                android:textColor="#1A1A1A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvEmptySubMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Chỉ những người theo dõi mới có thể xem ảnh."
+                android:textColor="#666666"
+                android:textSize="14sp" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

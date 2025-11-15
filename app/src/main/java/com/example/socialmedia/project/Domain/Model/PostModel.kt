@@ -32,5 +32,6 @@ data class PostModel(
     var isLikedByCurrentUser: Boolean = false,
     var commentCount: Int = 0,
     var shareCount: Int = 0,
+    val isReel: Boolean = false,
     var viewCount: Int = 0
 )
