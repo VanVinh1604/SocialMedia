@@ -16,10 +16,14 @@ data class MessageModel(
     val replyToMessageId: String? = null,
     val postId: String? = null,           // For shared posts
     val story: StoryModel? = null,
-    val isDeleted: Boolean = false,
+    var isDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val editedAt: Long? = null,
     val readBy: List<String> = emptyList(),
+
+    val isEdited: Boolean = false,       // Đánh dấu đã sửa
+    val originalContent: String? = null, // Lưu nội dung cũ
+    var editHistory: MutableList<String> = mutableListOf(), // ✅ Lịch sử sửa
 
 
     val isStoryReply: Boolean = false,

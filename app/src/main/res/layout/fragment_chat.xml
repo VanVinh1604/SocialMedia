@@ -136,6 +136,37 @@
             android:layout_marginStart="8dp"/>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/llEditingMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3E0"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvEditingContent"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Nội dung tin nhắn đang sửa"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:ellipsize="end"
+            android:singleLine="true"/>
+
+        <ImageView
+            android:id="@+id/ivCancelEditing"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Huỷ chỉnh sửa"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+    </LinearLayout>
+
     <!-- Input Bar -->
     <LinearLayout
         android:id="@+id/inputBar"

@@ -1,5 +1,6 @@
 package com.example.socialmedia.project.Adapter
 
+import android.R.attr.fragment
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
@@ -7,6 +8,10 @@ import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.socialmedia.R
@@ -14,6 +19,8 @@ import com.example.socialmedia.databinding.*
 import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Fragment.ChatMessageBottomSheet
+import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,7 +28,12 @@ import java.util.*
 class ChatAdapter(
     private var messages: List<MessageModel>,
     private val currentUserId: String,
-    private val userMap: Map<String, UserModel>
+    private val userMap: Map<String, UserModel>,
+    private val onMessageClick: ((message: MessageModel) -> Unit)? = null, // ✅ callback
+    private val onReply: ((MessageModel) -> Unit)? = null,
+    private val onEdit: ((MessageModel) -> Unit)? = null,
+    private val onDelete: ((MessageModel) -> Unit)? = null
+
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
 
@@ -35,6 +47,9 @@ class ChatAdapter(
     private val TYPE_STORY_OUTGOING = 7
     private val TYPE_STORY_INCOMING = 8
 
+    private val TYPE_DELETED_OUTGOING = 100
+    private val TYPE_DELETED_INCOMING = 101
+
 
     private var mediaPlayer: MediaPlayer? = null
     private var currentlyPlayingUrl: String? = null
@@ -43,23 +58,76 @@ class ChatAdapter(
     private fun getValidMessages() = messages.filter { (!it.content.isNullOrBlank() || it.mediaUrl != null) && !it.isDeleted }
 
     override fun getItemViewType(position: Int): Int {
-        val msg = getValidMessages()[position]
+        val msg = messages[position]
 
-        // Xử lý Story Reply
+        // ===== 🎯 ƯU TIÊN XỬ LÝ MESSAGE ĐÃ XOÁ =====
+        if (msg.isDeleted) {
+            return if (msg.senderId == currentUserId)
+                TYPE_DELETED_OUTGOING
+            else
+                TYPE_DELETED_INCOMING
+        }
+
+        // ===== story =====
         if (msg.messageType == MessageType.STORY_REPLY) {
             return if (msg.senderId == currentUserId) TYPE_STORY_OUTGOING
             else TYPE_STORY_INCOMING
         }
 
-        return when {
-            msg.senderId == currentUserId && msg.messageType == MessageType.VOICE -> TYPE_AUDIO_OUTGOING
-            msg.senderId != currentUserId && msg.messageType == MessageType.VOICE -> TYPE_AUDIO_INCOMING
-            msg.senderId == currentUserId && msg.messageType == MessageType.IMAGE -> TYPE_IMAGE_OUTGOING
-            msg.senderId != currentUserId && msg.messageType == MessageType.IMAGE -> TYPE_IMAGE_INCOMING
-            msg.senderId == currentUserId -> TYPE_OUTGOING
-            else -> TYPE_INCOMING
+        // ===== audio =====
+        if (msg.messageType == MessageType.VOICE) {
+            return if (msg.senderId == currentUserId) TYPE_AUDIO_OUTGOING
+            else TYPE_AUDIO_INCOMING
+        }
+
+        // ===== image =====
+        if (msg.messageType == MessageType.IMAGE) {
+            return if (msg.senderId == currentUserId) TYPE_IMAGE_OUTGOING
+            else TYPE_IMAGE_INCOMING
+        }
+
+        // ===== text =====
+        return if (msg.senderId == currentUserId) TYPE_OUTGOING
+        else TYPE_INCOMING
+    }
+
+
+    inner class DeletedOutgoingHolder(private val binding: ItemChatDeletedOutgoingBinding)
+        : RecyclerView.ViewHolder(binding.root){
+            fun bind(msg: MessageModel, sender: UserModel) {
+
+//        // Load avatar đúng người gửi
+//        Glide.with(binding.root.context)
+//            .load(sender.profilePictureUrl ?: msg.senderAvatar)
+//            .placeholder(R.drawable.image_avata_user)
+//            .error(R.drawable.image_avata_user)
+//            .circleCrop()
+//            .into(binding.ivAvatar)
+
+        binding.tvDeleted.text = "Tin nhắn đã bị thu hồi"
+    }}
+
+
+
+    inner class DeletedIncomingHolder(private val binding: ItemChatDeletedIncomingBinding)
+        : RecyclerView.ViewHolder(binding.root){
+        private val ivAvatar = itemView.findViewById<ShapeableImageView>(R.id.ivAvatar)
+        private val tvDeleted = itemView.findViewById<TextView>(R.id.tvDeleted)
+
+        fun bind(msg: MessageModel, sender: UserModel) {
+
+            // Load avatar đúng người gửi
+            Glide.with(binding.root.context)
+                .load(sender.profilePictureUrl ?: msg.senderAvatar)
+                .placeholder(R.drawable.image_avata_user)
+                .error(R.drawable.image_avata_user)
+                .circleCrop()
+                .into(binding.ivAvatar)
+
+            binding.tvDeleted.text = "Tin nhắn đã bị thu hồi"
         }
     }
+
 
     inner class OutgoingStoryViewHolder(
         private val binding: ItemChatStoryOutgoingBinding
@@ -81,13 +149,6 @@ class ChatAdapter(
                 .placeholder(R.drawable.image_placeholder)
                 .error(R.drawable.image_placeholder)
                 .into(binding.ivImage)
-
-            // Avatar người gửi (nếu muốn hiển thị)
-            Glide.with(binding.root.context)
-                .load(currentUser.profilePictureUrl ?: R.drawable.image_avata_user)
-                .circleCrop()
-                .placeholder(R.drawable.image_avata_user)
-                .into(binding.ivAvatar)
         }
     }
 
@@ -135,13 +196,6 @@ class ChatAdapter(
                     .into(binding.ivImage)
             }
             binding.tvTime.text = SimpleDateFormat("hh a", Locale.getDefault()).format(Date(item.createdAt))
-
-            Glide.with(binding.root.context)
-                .load(sender.profilePictureUrl ?: item.senderAvatar)
-                .placeholder(R.drawable.image_avata_user)
-                .error(R.drawable.image_avata_user)
-                .circleCrop()
-                .into(binding.ivAvatar)
         }
     }
 
@@ -171,12 +225,6 @@ class ChatAdapter(
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvDuration.text = item.duration ?: "0:00"
 
-            Glide.with(binding.root.context)
-                .load(sender.profilePictureUrl ?: item.senderAvatar)
-                .placeholder(R.drawable.image_avata_user)
-                .error(R.drawable.image_avata_user)
-                .circleCrop()
-                .into(binding.ivAvatar)
 
             binding.ivPlay.setOnClickListener { item.mediaUrl?.let { url -> playAudio(url, this) } }
         }
@@ -198,10 +246,12 @@ class ChatAdapter(
                 .into(binding.ivAvatar)
 
             binding.ivPlay.setOnClickListener { item.mediaUrl?.let { url -> playAudio(url, this) } }
+
         }
         fun updatePlayButton(isPlaying: Boolean) {
             binding.ivPlay.setImageResource(if (isPlaying) R.drawable.ic_stop else R.drawable.ic_play)
         }
+
     }
 
     // --- ViewHolder cho text ---
@@ -210,25 +260,16 @@ class ChatAdapter(
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvMessage.text = item.content.trim()
             binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
-            Glide.with(binding.root.context)
-                .load(sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user)
-                .placeholder(R.drawable.image_avata_user)
-                .error(R.drawable.image_avata_user)
-                .circleCrop()
-                .into(binding.ivAvatar)
         }
     }
 
     inner class IncomingViewHolder(private val binding: ItemChatMessageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        private val defaultAvatar = R.drawable.image_avata_user
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvMessage.text = item.content.trim()
             binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
             Glide.with(binding.root.context)
-                .load(sender.profilePictureUrl ?: item.senderAvatar ?: defaultAvatar)
-                .placeholder(defaultAvatar)
-                .error(defaultAvatar)
+                .load(sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user)
                 .circleCrop()
                 .into(binding.ivAvatar)
         }
@@ -272,6 +313,11 @@ class ChatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
+            TYPE_DELETED_OUTGOING ->
+                DeletedOutgoingHolder(ItemChatDeletedOutgoingBinding.inflate(inflater, parent, false))
+
+            TYPE_DELETED_INCOMING ->
+                DeletedIncomingHolder(ItemChatDeletedIncomingBinding.inflate(inflater, parent, false))
             TYPE_STORY_OUTGOING -> OutgoingStoryViewHolder(ItemChatStoryOutgoingBinding.inflate(inflater, parent, false))
             TYPE_STORY_INCOMING -> IncomingStoryViewHolder(ItemChatStoryIncomingBinding.inflate(inflater, parent, false))
             TYPE_OUTGOING -> OutgoingViewHolder(ItemChatMessageOutgoingBinding.inflate(inflater, parent, false))
@@ -285,34 +331,64 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val message = getValidMessages()[position]
-        val sender = if (message.senderId == currentUserId) {
-            UserModel(
-                userId = currentUserId,
-                fullName = "Bạn",
-                profilePictureUrl = FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
-            )
-        } else {
-            userMap[message.senderId] ?: UserModel(userId = message.senderId, fullName = "Người dùng", profilePictureUrl = null)
+        val msg = messages[position]
+
+        if (msg.isDeleted) {
+
+            val sender = if (msg.senderId == currentUserId)
+                UserModel(currentUserId, "Bạn", null)
+            else
+                userMap[msg.senderId] ?: UserModel(msg.senderId, "Người dùng", null)
+
+            when (holder) {
+                is DeletedOutgoingHolder -> holder.bind(msg,sender)
+                is DeletedIncomingHolder -> holder.bind(msg, sender)
+            }
+
+            // Tắt long click cho message đã xoá
+            holder.itemView.setOnLongClickListener { true }
+            return
         }
 
+
+        // Bind bình thường các loại message
+        val sender = if (msg.senderId == currentUserId) {
+            UserModel(currentUserId, "Bạn", null)
+        } else {
+            userMap[msg.senderId] ?: UserModel(msg.senderId, "Người dùng", null)
+        }
 
         when (holder) {
-            is OutgoingStoryViewHolder -> holder.bind(message, sender)
-            is IncomingStoryViewHolder -> holder.bind(message, sender)
-            is OutgoingViewHolder -> holder.bind(message, sender)
-            is IncomingViewHolder -> holder.bind(message, sender)
-            is OutgoingAudioViewHolder -> holder.bind(message, sender)
-            is IncomingAudioViewHolder -> holder.bind(message, sender)
-            is OutgoingImageViewHolder -> holder.bind(message, sender)
-            is IncomingImageViewHolder -> holder.bind(message, sender)
+            is OutgoingViewHolder -> holder.bind(msg, sender)
+            is IncomingViewHolder -> holder.bind(msg, sender)
+            is OutgoingAudioViewHolder -> holder.bind(msg, sender)
+            is IncomingAudioViewHolder -> holder.bind(msg, sender)
+            is OutgoingImageViewHolder -> holder.bind(msg, sender)
+            is IncomingImageViewHolder -> holder.bind(msg, sender)
+            is OutgoingStoryViewHolder -> holder.bind(msg, sender)
+            is IncomingStoryViewHolder -> holder.bind(msg, sender)
         }
+
+        holder.itemView.setOnLongClickListener {
+            val bottomSheet = ChatMessageBottomSheet(
+                message = msg,
+                onReply = { onReply?.invoke(it) },
+                onEdit = { onEdit?.invoke(it) }, // ✅ chỉ gọi callback fragment
+                onDelete = { onDelete?.invoke(it) }
+            )
+            bottomSheet.show(
+                (holder.itemView.context as FragmentActivity).supportFragmentManager,
+                "ChatMessageOptions"
+            )
+            true
+        }
+
     }
 
-    override fun getItemCount(): Int = getValidMessages().size
 
+    override fun getItemCount(): Int = messages.size
     fun updateMessages(newMessages: List<MessageModel>) {
-        messages = newMessages
+        messages = newMessages.map { it.copy() } // tạo copy để tránh tham chiếu cũ
         notifyDataSetChanged()
     }
 

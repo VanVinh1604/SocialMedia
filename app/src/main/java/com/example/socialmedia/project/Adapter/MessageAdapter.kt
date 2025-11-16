@@ -34,6 +34,7 @@ class MessageAdapter(
 
             // Tạo preview tin nhắn
             val preview = buildPreviewText(conv)
+
             binding.tvLastMessage.text = preview
             binding.tvTime.text = getRelativeTime(conv.lastMessageAt)
 
@@ -59,17 +60,26 @@ class MessageAdapter(
                 conversationViewModel.markConversationAsRead(conv.conversationId, currentUserId)
                 onClick(conv)
             }
+
+            binding.root.setOnLongClickListener {
+                conversationViewModel.deleteMessage(conv.conversationId, conv.lastMessageSenderId ?: "")
+                true
+            }
         }
 
         private fun buildPreviewText(conv: ConversationModel): String {
             val preview = conv.lastMessagePreview ?: ""
             val senderId = conv.lastMessageSenderId ?: ""
+            val isDeleted = conv.lastMessageIsDeleted ?: false // thêm trường này trong ConversationModel
+
             return when {
                 preview.isEmpty() -> "Bắt đầu cuộc trò chuyện"
+                isDeleted -> "Tin nhắn đã bị thu hồi"
                 senderId == currentUserId -> "Bạn: $preview"
                 else -> preview
             }
         }
+
 
         private fun getRelativeTime(timestamp: Long?): String {
             if (timestamp == null) return ""

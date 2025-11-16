@@ -7,15 +7,6 @@
     android:padding="6dp">
 
     <!-- Avatar bên phải -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/ivAvatar"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:src="@drawable/image_avata_user"
-        app:shapeAppearanceOverlay="@style/CircleImageView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <!-- Bubble tin nhắn -->
     <TextView
@@ -29,10 +20,9 @@
         android:textColor="@android:color/white"
         android:background="@drawable/bg_message_outgoing"
         android:layout_marginEnd="8dp"
-        app:layout_constraintEnd_toStartOf="@id/ivAvatar"
-        app:layout_constraintTop_toTopOf="@id/ivAvatar"
-        app:layout_constraintBottom_toBottomOf="@id/ivAvatar" />
-
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
     <!-- Thời gian -->
     <TextView
         android:id="@+id/tvTime"
@@ -44,4 +34,17 @@
         android:layout_marginTop="2dp"
         app:layout_constraintTop_toBottomOf="@id/tvMessage"
         app:layout_constraintEnd_toEndOf="@id/tvMessage" />
+
+    <TextView
+        android:id="@+id/tvEdited"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Đã sửa"
+        android:textColor="@color/gray"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tvMessage"
+        app:layout_constraintEnd_toEndOf="@id/tvMessage"/>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

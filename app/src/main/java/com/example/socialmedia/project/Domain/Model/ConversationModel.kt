@@ -18,5 +18,7 @@ data class ConversationModel(
 
     val lastMessageSenderId: String? = null,
     val lastMessageSenderName: String? = null,
-    val lastMessageSenderAvatar: String? = null
+    val lastMessageSenderAvatar: String? = null,
+    val lastMessageIsDeleted: Boolean? = false // ✅ thêm
+
 )

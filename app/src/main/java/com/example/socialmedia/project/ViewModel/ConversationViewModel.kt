@@ -36,13 +36,10 @@ class ConversationViewModel : ViewModel() {
         }
     }
 
-    fun openConversation(conversationId: String) {
-        // Khi mở conversation, reset unreadCount cho currentUser
-        chatRepository.markMessagesAsRead(conversationId, currentUserId)
 
-        // Load lại conversation realtime
-        chatRepository.loadAllConversations(currentUserId) { list ->
-            _conversations.postValue(list)
+    fun deleteMessage(conversationId: String, messageId: String) {
+        chatRepository.deleteMessage(conversationId, messageId) { success ->
+            if (success) listenConversationsRealtime(currentUserId)
         }
     }
 

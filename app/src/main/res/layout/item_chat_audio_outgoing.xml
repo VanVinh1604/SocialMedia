@@ -7,37 +7,29 @@
     android:padding="6dp">
 
     <!-- Avatar bên phải -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/ivAvatar"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:src="@drawable/image_avata_user"
-        app:shapeAppearanceOverlay="@style/CircleImageView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+
 
     <!-- Bubble audio -->
     <LinearLayout
         android:id="@+id/audioBubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_message_outgoing"
+        android:clickable="false"
+        android:descendantFocusability="blocksDescendants"
+        android:focusable="false"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:clickable="false"
-        android:focusable="false"
-        android:descendantFocusability="blocksDescendants"
-        android:background="@drawable/bg_message_outgoing"
-        android:gravity="center_vertical"
-        app:layout_constraintEnd_toStartOf="@id/ivAvatar"
-        app:layout_constraintTop_toTopOf="@id/ivAvatar"
-        app:layout_constraintBottom_toBottomOf="@id/ivAvatar">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/ivPlay"
             android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@drawable/ic_play"/>
+            android:layout_height="37dp"
+            android:src="@drawable/ic_play" />
 
         <TextView
             android:id="@+id/tvDuration"
@@ -46,7 +38,7 @@
             android:layout_marginStart="8dp"
             android:text="0:10"
             android:textColor="#FFF"
-            android:textSize="14sp"/>
+            android:textSize="14sp" />
     </LinearLayout>
 
     <!-- Thời gian audio -->

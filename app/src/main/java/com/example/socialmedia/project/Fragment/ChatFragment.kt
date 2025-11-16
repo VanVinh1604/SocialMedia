@@ -15,6 +15,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -70,6 +73,14 @@ class ChatFragment : Fragment() {
     private var mediaRecorder: MediaRecorder? = null
     private var audioFilePath: String? = null
     private var isRecording = false
+
+    private var editingMessage: MessageModel? = null
+
+    private lateinit var llEditPreview: LinearLayout
+    private lateinit var tvEditingMessage: TextView
+    private lateinit var ivCancelEdit: ImageView
+
+
     private var recordingStartTime: Long = 0L
     private var recordingTimer: Runnable? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -110,6 +121,52 @@ class ChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupUI()
+        chatAdapter = ChatAdapter(
+            messages,
+            currentUserId,
+            userMap,
+            onReply = { msg ->
+                // logic reply
+            },
+            onEdit = { msg ->
+                onEditMessageSelected(msg) // ✅ gọi hàm show input edit
+            },
+            onDelete = { msg ->
+                conversationId?.let { convId ->
+                    viewModel.deleteMessage(convId, msg.messageId) { success ->
+                        if (!success) Toast.makeText(requireContext(), "Xoá tin nhắn thất bại", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+        binding.rvChat.adapter = chatAdapter
+
+
+        binding.rvChat.adapter = chatAdapter
+
+// Observe LiveData
+        viewModel.messages.observe(viewLifecycleOwner) { newMessages ->
+            messages.clear()
+            messages.addAll(newMessages.sortedBy { it.createdAt })
+            chatAdapter.updateMessages(messages)
+            binding.rvChat.post {
+                binding.rvChat.scrollToPosition(messages.size - 1)
+            }
+        }
+
+
+
+        binding.rvChat.adapter = chatAdapter
+
+        llEditPreview = binding.llEditingMessage
+        tvEditingMessage = binding.tvEditingContent
+        ivCancelEdit = binding.ivCancelEditing
+
+        ivCancelEdit.setOnClickListener {
+            cancelEditingMessage()
+        }
+
+
         initMessages()
         initSendMessage()
         initRecordingButtons()
@@ -180,7 +237,23 @@ class ChatFragment : Fragment() {
                 override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
             })
         }
+
     }
+    private fun cancelEditingMessage() {
+        editingMessage = null
+        llEditPreview.visibility = View.GONE
+        binding.etMessage.setText("")
+    }
+
+
+    private fun onEditMessageSelected(message: MessageModel) {
+        editingMessage = message
+        tvEditingMessage.text = message.content
+        llEditPreview.visibility = View.VISIBLE
+        binding.etMessage.setText(message.content)
+        binding.etMessage.requestFocus()
+    }
+
 
     private fun sendImageMessage(uri: Uri) {
         if (conversationId.isNullOrEmpty()) return
@@ -224,17 +297,23 @@ class ChatFragment : Fragment() {
 
     private fun initMessages() {
         if (conversationId.isNullOrEmpty()) return
-        val layoutManager = binding.rvChat.layoutManager as LinearLayoutManager
+        val layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
+        binding.rvChat.layoutManager = layoutManager
 
-        chatAdapter = ChatAdapter(messages, currentUserId, userMap)
-        binding.rvChat.adapter = chatAdapter
-
+        // ✅ Observe LiveData
         viewModel.messages.observe(viewLifecycleOwner) { newMessages ->
             if (newMessages.isEmpty()) return@observe
+
+            Log.d("ChatFragment", "📩 Received ${newMessages.size} messages from LiveData")
+            newMessages.forEachIndexed { index, msg ->
+                Log.d("ChatFragment", "  [$index] ${msg.messageId.take(8)}: isDeleted=${msg.isDeleted}, content=${msg.content.take(20)}")
+            }
+
             val oldSize = messages.size
             messages.clear()
             messages.addAll(newMessages.sortedBy { it.createdAt })
 
+            // Fetch user info
             messages.forEach { msg ->
                 if (!userMap.containsKey(msg.senderId)) {
                     fetchUserInfo(msg.senderId) { user ->
@@ -246,8 +325,10 @@ class ChatFragment : Fragment() {
                 }
             }
 
+            // ✅ Update adapter
             chatAdapter.updateMessages(messages)
 
+            // Auto scroll
             binding.rvChat.post {
                 val lastVisible = layoutManager.findLastCompletelyVisibleItemPosition()
                 if (lastVisible == oldSize - 1 || oldSize == 0)
@@ -255,20 +336,24 @@ class ChatFragment : Fragment() {
             }
         }
 
-        viewModel.loadLatestMessages(conversationId!!, 20) {
-            viewModel.listenNewMessages(conversationId!!)
-        }
+        // ✅ Load initial messages (sẽ tự động listen changes)
+        viewModel.loadLatestMessages(conversationId!!, 20) {}
 
+        // Scroll listener cho load more
         binding.rvChat.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val firstVisible = layoutManager.findFirstVisibleItemPosition()
                 if (firstVisible == 0 && messages.isNotEmpty() && !isLoadingMore) {
                     isLoadingMore = true
                     val oldestTimestamp = messages.first().createdAt
-                    viewModel.loadMoreMessages(conversationId!!, oldestTimestamp) { _ -> isLoadingMore = false }
+                    viewModel.loadMoreMessages(conversationId!!, oldestTimestamp) { _ ->
+                        isLoadingMore = false
+                    }
                 }
             }
         })
+
+
     }
 
     private fun fetchUserInfo(userId: String, callback: (UserModel?) -> Unit) {
@@ -287,8 +372,32 @@ class ChatFragment : Fragment() {
         binding.etMessage.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) { sendTextMessage(); true } else false
         }
-        binding.ivSend.setOnClickListener { sendTextMessage() }
-    }
+        binding.ivSend.setOnClickListener {
+            val text = binding.etMessage.text.toString().trim()
+            if (text.isEmpty()) return@setOnClickListener
+
+            binding.ivSend.setOnClickListener {
+                val text = binding.etMessage.text.toString().trim()
+                if (text.isEmpty()) return@setOnClickListener
+
+                if (editingMessage != null) {
+                    val msg = editingMessage!!
+                    val updatedMessage = msg.copy(
+                        content = text,
+                        isEdited = true,
+                        editedAt = System.currentTimeMillis(),
+                        editHistory = (msg.editHistory.toMutableList().apply { add(msg.content) })
+                    )
+                    conversationId?.let { convId ->
+                        viewModel.editMessage(convId, updatedMessage)
+                    }
+                    cancelEditingMessage()
+                } else {
+                    sendTextMessage()
+                }
+            }
+        }
+        }
 
     private fun sendTextMessage() {
         val text = binding.etMessage.text.toString().trim()
