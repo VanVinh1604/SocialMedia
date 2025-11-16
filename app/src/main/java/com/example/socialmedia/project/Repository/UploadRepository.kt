@@ -3,6 +3,7 @@ package com.example.socialmedia.project.Repository
 import android.content.Context
 import android.net.Uri
 import com.example.socialmedia.project.Domain.Enum.MediaType
+import com.example.socialmedia.project.Domain.Model.MediaItem
 import com.example.socialmedia.project.Domain.Model.MusicModel
 import com.example.socialmedia.project.Domain.Model.PostMediaModel
 import com.example.socialmedia.project.Domain.Model.PostModel
@@ -33,38 +34,58 @@ class UploadRepository {
     }
 
     /**
-     * ☁️ Upload danh sách ảnh lên Cloudinary
+     * ☁️ Upload danh sách media (ảnh + video) lên Cloudinary
      */
+    suspend fun uploadMediaToCloudinary(
+        context: Context,
+        postId: String,
+        mediaItems: List<MediaItem>,  // ← Nhận List<MediaItem> thay vì List<Uri>
+        onProgress: (current: Int, total: Int) -> Unit
+    ): List<PostMediaModel> = withContext(Dispatchers.IO) {
+        val mediaModels = mutableListOf<PostMediaModel>()
+
+        mediaItems.forEachIndexed { index, mediaItem ->
+            onProgress(index + 1, mediaItems.size)
+            try {
+                // Upload tùy theo loại media
+                val mediaUrl = when (mediaItem.type) {
+                    MediaType.IMAGE -> CloudinaryHelper.uploadImage(context, mediaItem.uri)
+                    MediaType.VIDEO -> CloudinaryHelper.uploadVideo(context, mediaItem.uri)
+                }
+
+                mediaModels.add(
+                    PostMediaModel(
+                        mediaId = UUID.randomUUID().toString(),
+                        postId = postId,
+                        mediaType = mediaItem.type,
+                        mediaUrl = mediaUrl,
+                        mediaOrder = index,
+                        width = 1080,
+                        height = 1080,
+                        duration = mediaItem.duration?.toInt()  // Duration cho video
+                    )
+                )
+            } catch (e: Exception) {
+                val mediaTypeName = if (mediaItem.type == MediaType.IMAGE) "ảnh" else "video"
+                throw Exception("Lỗi upload $mediaTypeName ${index + 1}: ${e.message}")
+            }
+        }
+
+        return@withContext mediaModels
+    }
+
+    /**
+     * ☁️ Upload danh sách ảnh lên Cloudinary (Giữ lại để tương thích ngược)
+     */
+    @Deprecated("Use uploadMediaToCloudinary instead", ReplaceWith("uploadMediaToCloudinary"))
     suspend fun uploadImagesToCloudinary(
         context: Context,
         postId: String,
         imageUris: List<Uri>,
         onProgress: (current: Int, total: Int) -> Unit
     ): List<PostMediaModel> = withContext(Dispatchers.IO) {
-        val mediaModels = mutableListOf<PostMediaModel>()
-
-        imageUris.forEachIndexed { index, uri ->
-            onProgress(index + 1, imageUris.size)
-            try {
-                val imageUrl = CloudinaryHelper.uploadImage(context, uri)
-
-                mediaModels.add(
-                    PostMediaModel(
-                        mediaId = UUID.randomUUID().toString(),
-                        postId = postId,
-                        mediaType = MediaType.IMAGE,
-                        mediaUrl = imageUrl,
-                        mediaOrder = index,
-                        width = 1080,
-                        height = 1080
-                    )
-                )
-            } catch (e: Exception) {
-                throw Exception("Lỗi upload ảnh ${index + 1}: ${e.message}")
-            }
-        }
-
-        return@withContext mediaModels
+        val mediaItems = imageUris.map { MediaItem(it, MediaType.IMAGE) }
+        return@withContext uploadMediaToCloudinary(context, postId, mediaItems, onProgress)
     }
 
     /**
@@ -87,7 +108,6 @@ class UploadRepository {
         ref.child("posts").child(updatedPost.postId).setValue(updatedPost).await()
     }
 
-
     /**
      * 💾 Lưu bài viết dạng NHÁP (draft)
      */
@@ -107,5 +127,4 @@ class UploadRepository {
 
         ref.child("drafts").child(updatedDraft.postId).setValue(updatedDraft).await()
     }
-
 }

@@ -16,4 +16,5 @@ data class CommentModel(
     var likeCount: Int = 0,
     val replyCount: Int = 0,
     val isPinned: Boolean = false
+
 )

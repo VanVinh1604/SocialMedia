@@ -29,6 +29,43 @@
             android:layout_marginTop="30dp"
             android:elevation="20dp"/>
 
+        <!-- Upload Type Indicator -->
+        <TextView
+            android:id="@+id/txtUploadType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Đăng bài viết"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:background="@drawable/rounded_dark_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:elevation="20dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="30dp" />
+
+        <!-- Change Upload Type Button -->
+        <Button
+            android:id="@+id/btnChangeUploadType"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Đổi loại"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/rounded_dark_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:elevation="20dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="30dp"
+            android:layout_marginEnd="16dp" />
+
         <!-- MAIN IMAGE -->
         <ImageView
             android:id="@+id/previewImage"
@@ -42,6 +79,47 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- VIDEO PLAYER (Hidden by default) -->
+        <VideoView
+            android:id="@+id/previewVideo"
+            android:layout_width="0dp"
+            android:layout_height="450dp"
+            android:elevation="10dp"
+            android:layout_marginBottom="-40dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- VIDEO CONTROLS (Hidden by default) -->
+        <LinearLayout
+            android:id="@+id/videoControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/rounded_dark_bg"
+            android:padding="8dp"
+            android:elevation="15dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/imageCounter"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginBottom="16dp">
+
+            <ImageButton
+                android:id="@+id/btnPlayPause"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_play"
+                android:contentDescription="Play/Pause"
+
+                android:padding="8dp" />
+
+
+        </LinearLayout>
 
         <!-- IMAGE COUNTER -->
         <TextView
@@ -74,7 +152,6 @@
             android:scrollbars="none"
             app:layout_constraintBottom_toBottomOf="parent"
             android:elevation="20dp"
-
             android:clipToPadding="false">
 
             <LinearLayout
@@ -107,7 +184,6 @@
             android:paddingBottom="16dp"
             android:paddingLeft="20dp"
             android:paddingRight="20dp"
-
             android:elevation="8dp">
 
             <!-- Caption input with emoji picker -->
@@ -251,222 +327,20 @@
                     android:contentDescription="Arrow icon" />
             </LinearLayout>
 
-            <!-- Tag people -->
+            <!-- POST SETTINGS (visible only when uploadType = POST) -->
             <LinearLayout
-                android:id="@+id/btnTagPeople"
+                android:id="@+id/layoutPostSettings"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="48dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="0dp">
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center_vertical"
-                    android:src="@drawable/ic_friends"
-                    android:contentDescription="Tag people" />
-
-                <TextView
-                    android:id="@+id/txtTagPeople"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:layout_gravity="center_vertical"
-                    android:text="Tag others"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/black" />
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center_vertical"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/arrow"
-                    android:contentDescription="Arrow icon" />
-            </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:background="#EEEEEE" />
-
-            <!-- Add location -->
-            <LinearLayout
-                android:id="@+id/btnAddLocation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="48dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="0dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center_vertical"
-                    android:src="@drawable/ic_location"
-                    android:contentDescription="Add location" />
-
-                <TextView
-                    android:id="@+id/txtLocation"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:layout_gravity="center_vertical"
-                    android:text="Add location"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/black" />
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center_vertical"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/arrow"
-                    android:contentDescription="Arrow icon" />
-            </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:background="#EEEEEE" />
-
-            <!-- Advanced settings -->
-            <LinearLayout
-                android:id="@+id/btnAdvancedSettings"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="48dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="0dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center_vertical"
-                    android:src="@drawable/ic_settings"
-                    android:contentDescription="Advanced settings" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:layout_gravity="center_vertical"
-                    android:text="Advanced settings"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/black" />
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_gravity="center_vertical"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/arrow"
-                    android:contentDescription="Arrow icon" />
-            </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="8dp"
-                android:background="#EEEEEE" />
-
-            <!-- Privacy settings -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Privacy"
-                    android:textSize="14sp"
-                    android:textColor="#888888"
-                    android:textStyle="bold" />
-
-                <!-- Toggle: Disable comments -->
+                <!-- Tag people -->
                 <LinearLayout
+                    android:id="@+id/btnTagPeople"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:minHeight="48dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_gravity="center_vertical"
-                        android:text="Disable comments"
-                        android:textSize="16sp"
-                        android:textColor="@android:color/black" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchDisableComments"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:checked="false" />
-                </LinearLayout>
-
-                <!-- Toggle: Hide like count -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:minHeight="48dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_gravity="center_vertical"
-                        android:text="Hide like count"
-                        android:textSize="16sp"
-                        android:textColor="@android:color/black" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchHideLikes"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:checked="false" />
-                </LinearLayout>
-
-                <!-- Audience selector -->
-                <LinearLayout
-                    android:id="@+id/btnAudienceSelector"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="8dp"
                     android:minHeight="48dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
@@ -479,17 +353,17 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_gravity="center_vertical"
-                        android:src="@drawable/ic_public"
-                        android:contentDescription="Audience" />
+                        android:src="@drawable/ic_friends"
+                        android:contentDescription="Tag people" />
 
                     <TextView
-                        android:id="@+id/txtAudience"
+                        android:id="@+id/txtTagPeople"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:layout_gravity="center_vertical"
-                        android:text="Public"
+                        android:text="Tag others"
                         android:textSize="16sp"
                         android:textColor="@android:color/black" />
 
@@ -499,7 +373,321 @@
                         android:layout_gravity="center_vertical"
                         android:scaleType="centerInside"
                         android:src="@drawable/arrow"
-                        android:contentDescription="Dropdown" />
+                        android:contentDescription="Arrow icon" />
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#EEEEEE" />
+
+                <!-- Add location -->
+                <LinearLayout
+                    android:id="@+id/btnAddLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="0dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center_vertical"
+                        android:src="@drawable/ic_location"
+                        android:contentDescription="Add location" />
+
+                    <TextView
+                        android:id="@+id/txtLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:layout_gravity="center_vertical"
+                        android:text="Add location"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center_vertical"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/arrow"
+                        android:contentDescription="Arrow icon" />
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#EEEEEE" />
+
+                <!-- Advanced settings -->
+                <LinearLayout
+                    android:id="@+id/btnAdvancedSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="0dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center_vertical"
+                        android:src="@drawable/ic_settings"
+                        android:contentDescription="Advanced settings" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:layout_gravity="center_vertical"
+                        android:text="Advanced settings"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_gravity="center_vertical"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/arrow"
+                        android:contentDescription="Arrow icon" />
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#EEEEEE" />
+
+                <!-- Privacy settings for POST -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy"
+                        android:textSize="14sp"
+                        android:textColor="#888888"
+                        android:textStyle="bold" />
+
+                    <!-- Toggle: Disable comments -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_gravity="center_vertical"
+                            android:text="Disable comments"
+                            android:textSize="16sp"
+                            android:textColor="@android:color/black" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switchDisableComments"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:checked="false" />
+                    </LinearLayout>
+
+                    <!-- Toggle: Hide like count -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_gravity="center_vertical"
+                            android:text="Hide like count"
+                            android:textSize="16sp"
+                            android:textColor="@android:color/black" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switchHideLikes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:checked="false" />
+                    </LinearLayout>
+
+                    <!-- Audience selector -->
+                    <LinearLayout
+                        android:id="@+id/btnAudienceSelector"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="0dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center_vertical"
+                            android:src="@drawable/ic_public"
+                            android:contentDescription="Audience" />
+
+                        <TextView
+                            android:id="@+id/txtAudience"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="12dp"
+                            android:layout_gravity="center_vertical"
+                            android:text="Public"
+                            android:textSize="16sp"
+                            android:textColor="@android:color/black" />
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_gravity="center_vertical"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/arrow"
+                            android:contentDescription="Dropdown" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- REEL SETTINGS (visible only when uploadType = REEL) -->
+            <LinearLayout
+                android:id="@+id/layoutReelSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="#EEEEEE" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Reel Settings"
+                    android:textSize="14sp"
+                    android:textColor="#888888"
+                    android:textStyle="bold" />
+
+                <!-- Toggle: Allow comments -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_vertical"
+                        android:text="Allow comments"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchAllowComments"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Toggle: Allow Duet -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_vertical"
+                        android:text="Allow Duet"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchAllowDuet"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <!-- Toggle: Allow Remix -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_vertical"
+                        android:text="Allow Remix"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/black" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchAllowRemix"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:checked="true" />
                 </LinearLayout>
             </LinearLayout>
 
