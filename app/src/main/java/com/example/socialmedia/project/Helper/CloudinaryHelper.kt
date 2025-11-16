@@ -39,7 +39,7 @@ object CloudinaryHelper {
                 initialize(context)
             }
 
-            Log.d(TAG, "📤 Starting upload for: $imageUri")
+            Log.d(TAG, "📤 Starting image upload for: $imageUri")
 
             val requestId = MediaManager.get().upload(imageUri)
                 .unsigned(CloudinaryConfig.UPLOAD_PRESET)
@@ -48,47 +48,108 @@ object CloudinaryHelper {
                 .option("quality", "auto")
                 .callback(object : UploadCallback {
                     override fun onStart(requestId: String) {
-                        Log.d(TAG, "🚀 Upload started: $requestId")
+                        Log.d(TAG, "🚀 Image upload started: $requestId")
                     }
 
                     override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
                         val progress = (bytes.toDouble() / totalBytes.toDouble() * 100).toInt()
-                        Log.d(TAG, "📊 Upload progress: $progress% ($bytes/$totalBytes bytes)")
+                        Log.d(TAG, "📊 Image upload progress: $progress% ($bytes/$totalBytes bytes)")
                     }
 
                     override fun onSuccess(requestId: String, resultData: Map<*, *>) {
                         val url = resultData["secure_url"] as? String
                         if (url != null) {
-                            Log.d(TAG, "✅ Upload successful!")
+                            Log.d(TAG, "✅ Image upload successful!")
                             Log.d(TAG, "🔗 Image URL: $url")
                             continuation.resume(url)
                         } else {
                             val error = Exception("URL not found in response")
-                            Log.e(TAG, "❌ Upload failed: URL not found in response")
+                            Log.e(TAG, "❌ Image upload failed: URL not found in response")
                             continuation.resumeWithException(error)
                         }
                     }
 
                     override fun onError(requestId: String, error: ErrorInfo) {
-                        val exception = Exception("Upload failed: ${error.description} (Code: ${error.code})")
-                        Log.e(TAG, "❌ Upload error: ${error.description}")
+                        val exception = Exception("Image upload failed: ${error.description} (Code: ${error.code})")
+                        Log.e(TAG, "❌ Image upload error: ${error.description}")
                         Log.e(TAG, "Error code: ${error.code}")
                         continuation.resumeWithException(exception)
                     }
 
                     override fun onReschedule(requestId: String, error: ErrorInfo) {
-                        Log.w(TAG, "⏰ Upload rescheduled: ${error.description}")
+                        Log.w(TAG, "⏰ Image upload rescheduled: ${error.description}")
                     }
                 })
                 .dispatch()
 
             continuation.invokeOnCancellation {
                 MediaManager.get().cancelRequest(requestId)
-                Log.d(TAG, "🚫 Upload cancelled: $requestId")
+                Log.d(TAG, "🚫 Image upload cancelled: $requestId")
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error in uploadImage", e)
+            continuation.resumeWithException(e)
+        }
+    }
+
+    // ===== THÊM HÀM UPLOAD VIDEO =====
+    suspend fun uploadVideo(context: Context, videoUri: Uri): String = suspendCancellableCoroutine { continuation ->
+        try {
+            if (!isInitialized) {
+                initialize(context)
+            }
+
+            Log.d(TAG, "📤 Starting video upload for: $videoUri")
+
+            val requestId = MediaManager.get().upload(videoUri)
+                .unsigned(CloudinaryConfig.UPLOAD_PRESET)
+                .option("folder", "social_media_posts")
+                .option("resource_type", "video")  // ← Quan trọng: resource_type là "video"
+                .option("quality", "auto")
+                .callback(object : UploadCallback {
+                    override fun onStart(requestId: String) {
+                        Log.d(TAG, "🚀 Video upload started: $requestId")
+                    }
+
+                    override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
+                        val progress = (bytes.toDouble() / totalBytes.toDouble() * 100).toInt()
+                        Log.d(TAG, "📊 Video upload progress: $progress% ($bytes/$totalBytes bytes)")
+                    }
+
+                    override fun onSuccess(requestId: String, resultData: Map<*, *>) {
+                        val url = resultData["secure_url"] as? String
+                        if (url != null) {
+                            Log.d(TAG, "✅ Video upload successful!")
+                            Log.d(TAG, "🔗 Video URL: $url")
+                            continuation.resume(url)
+                        } else {
+                            val error = Exception("URL not found in response")
+                            Log.e(TAG, "❌ Video upload failed: URL not found in response")
+                            continuation.resumeWithException(error)
+                        }
+                    }
+
+                    override fun onError(requestId: String, error: ErrorInfo) {
+                        val exception = Exception("Video upload failed: ${error.description} (Code: ${error.code})")
+                        Log.e(TAG, "❌ Video upload error: ${error.description}")
+                        Log.e(TAG, "Error code: ${error.code}")
+                        continuation.resumeWithException(exception)
+                    }
+
+                    override fun onReschedule(requestId: String, error: ErrorInfo) {
+                        Log.w(TAG, "⏰ Video upload rescheduled: ${error.description}")
+                    }
+                })
+                .dispatch()
+
+            continuation.invokeOnCancellation {
+                MediaManager.get().cancelRequest(requestId)
+                Log.d(TAG, "🚫 Video upload cancelled: $requestId")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error in uploadVideo", e)
             continuation.resumeWithException(e)
         }
     }

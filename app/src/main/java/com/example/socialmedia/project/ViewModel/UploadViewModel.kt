@@ -2,12 +2,15 @@ package com.example.socialmedia.project.ViewModel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.*
 import com.example.socialmedia.project.Domain.Enum.AudienceType
 import com.example.socialmedia.project.Domain.Enum.PostType
+import com.example.socialmedia.project.Domain.Model.MediaItem
 import com.example.socialmedia.project.Domain.Model.MusicModel
 import com.example.socialmedia.project.Domain.Model.PostModel
 import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Domain.Model.ReelModel
 import com.example.socialmedia.project.Repository.UploadRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
@@ -31,6 +34,10 @@ class UploadViewModel(
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
 
+    companion object {
+        private const val TAG = "UploadViewModel"
+    }
+
     init {
         loadMusicList()
     }
@@ -42,11 +49,11 @@ class UploadViewModel(
     }
 
     /**
-     * 🚀 Upload bài đăng chính thức
+     * 🚀 Upload bài đăng chính thức (Hỗ trợ cả ảnh và video)
      */
     fun uploadPost(
         context: Context,
-        imageUris: List<Uri>,
+        mediaItems: List<MediaItem>,
         caption: String,
         hashtags: String,
         selectedMusic: MusicModel?,
@@ -60,7 +67,6 @@ class UploadViewModel(
             _uploadProgress.value = UploadProgress.GettingUserInfo
             val userId = auth.currentUser?.uid ?: throw Exception("Người dùng chưa đăng nhập")
 
-            // 🔹 Lấy thông tin UserModel hiện tại
             val userSnapshot = database.reference.child("InfoUser").child(userId).get().await()
             val currentUser = userSnapshot.getValue(UserModel::class.java)
                 ?: throw Exception("Không tìm thấy thông tin người dùng")
@@ -80,13 +86,13 @@ class UploadViewModel(
                 isDraft = false
             )
 
-            val mediaModels = uploadRepository.uploadImagesToCloudinary(context, postId, imageUris) { current, total ->
+            val mediaModels = uploadRepository.uploadMediaToCloudinary(context, postId, mediaItems) { current, total ->
                 _uploadProgress.postValue(UploadProgress.UploadingImages(current, total, (current * 100) / total))
             }
 
             _uploadProgress.value = UploadProgress.SavingPost
             uploadRepository.savePostToDatabase(postModel, mediaModels, currentUser)
-            _uploadResult.value = UploadResult.Success(postId)
+            _uploadResult.value = UploadResult.Success
 
         } catch (e: Exception) {
             _uploadResult.value = UploadResult.Error(e.message ?: "Lỗi upload")
@@ -96,11 +102,11 @@ class UploadViewModel(
     }
 
     /**
-     * 💾 Lưu bài viết vào NHÁP
+     * 💾 Lưu bài viết vào NHÁP (Hỗ trợ cả ảnh và video)
      */
     fun saveDraft(
         context: Context,
-        imageUris: List<Uri>,
+        mediaItems: List<MediaItem>,
         caption: String,
         hashtags: String,
         selectedMusic: MusicModel?,
@@ -133,16 +139,127 @@ class UploadViewModel(
                 isDraft = true
             )
 
-            val mediaModels = uploadRepository.uploadImagesToCloudinary(context, draftId, imageUris) { current, total ->
+            val mediaModels = uploadRepository.uploadMediaToCloudinary(context, draftId, mediaItems) { current, total ->
                 _uploadProgress.postValue(UploadProgress.UploadingImages(current, total, (current * 100) / total))
             }
 
             uploadRepository.saveDraftToDatabase(postModel, mediaModels, currentUser)
-            _uploadResult.value = UploadResult.DraftSaved(draftId)
+            _uploadResult.value = UploadResult.DraftSaved
 
         } catch (e: Exception) {
             _uploadResult.value = UploadResult.Error(e.message ?: "Lỗi khi lưu nháp")
         } finally {
+            _uploadProgress.value = UploadProgress.Idle
+        }
+    }
+
+    /**
+     * 🎬 Upload Reel (sử dụng Cloudinary + Firebase Realtime Database)
+     */
+    fun uploadReel(
+        context: Context,
+        videoMedia: MediaItem,
+        caption: String,
+        musicId: String?,
+        allowsComments: Boolean,
+        allowsDuet: Boolean,
+        allowsRemix: Boolean
+    ) = viewModelScope.launch {
+        try {
+            _uploadProgress.value = UploadProgress.GettingUserInfo
+
+            // Get current user
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                _uploadResult.value = UploadResult.Error("Người dùng chưa đăng nhập")
+                _uploadProgress.value = UploadProgress.Idle
+                return@launch
+            }
+
+            val userId = currentUser.uid
+            val timestamp = System.currentTimeMillis()
+            val reelId = UUID.randomUUID().toString()
+
+            Log.d(TAG, "Starting reel upload for user: $userId")
+
+            // Upload video to Cloudinary (giống như upload video trong POST)
+            _uploadProgress.value = UploadProgress.UploadingReel(0)
+
+            val videoList = listOf(videoMedia)
+            val uploadedMediaList = uploadRepository.uploadMediaToCloudinary(
+                context,
+                reelId,
+                videoList
+            ) { current, total ->
+                val progress = (current * 100) / total
+                _uploadProgress.postValue(UploadProgress.UploadingReel(progress))
+                Log.d(TAG, "Upload progress: $progress%")
+            }
+
+            if (uploadedMediaList.isEmpty()) {
+                _uploadResult.value = UploadResult.Error("Không thể upload video")
+                _uploadProgress.value = UploadProgress.Idle
+                return@launch
+            }
+
+            val uploadedVideo = uploadedMediaList[0]
+            val videoUrl = uploadedVideo.mediaUrl
+            val thumbnailUrl = uploadedVideo.mediaUrl // Cloudinary tự động tạo thumbnail cho video
+
+            Log.d(TAG, "Video uploaded to Cloudinary: $videoUrl")
+
+            // Get video duration
+            val duration = (videoMedia.duration?.toInt() ?: 0) / 1000 // Convert to seconds
+
+            // Create Reel model
+            val reel = ReelModel(
+                reelId = reelId,
+                userId = userId,
+                videoUrl = videoUrl,
+                thumbnailUrl = thumbnailUrl,
+                caption = caption,
+                duration = duration,
+                musicId = musicId,
+                allowsComments = allowsComments,
+                allowsDuet = allowsDuet,
+                allowsRemix = allowsRemix,
+                createdAt = timestamp
+            )
+
+            // Save to Firebase Realtime Database
+            _uploadProgress.value = UploadProgress.SavingReel
+
+            Log.d(TAG, "Saving reel to database: $reelId")
+
+            // Lưu vào node "Reels"
+            database.reference
+                .child("Reels")
+                .child(reelId)
+                .setValue(reel)
+                .await()
+
+            // Cập nhật số lượng reels của user
+            val userRef = database.reference.child("InfoUser").child(userId)
+            userRef.child("reelCount").get().await().let { snapshot ->
+                val currentCount = snapshot.getValue(Int::class.java) ?: 0
+                userRef.child("reelCount").setValue(currentCount + 1).await()
+            }
+
+            // Thêm reelId vào danh sách reels của user
+            database.reference
+                .child("UserReels")
+                .child(userId)
+                .child(reelId)
+                .setValue(timestamp)
+                .await()
+
+            Log.d(TAG, "Reel uploaded successfully!")
+            _uploadResult.value = UploadResult.ReelSuccess
+            _uploadProgress.value = UploadProgress.Idle
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error uploading reel", e)
+            _uploadResult.value = UploadResult.Error(e.message ?: "Lỗi không xác định")
             _uploadProgress.value = UploadProgress.Idle
         }
     }

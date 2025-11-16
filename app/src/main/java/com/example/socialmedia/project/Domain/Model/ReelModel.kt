@@ -16,7 +16,8 @@ data class ReelModel(
     val allowsRemix: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val viewCount: Int = 0,
-    val likeCount: Int = 0,
+    var likeCount: Int = 0,
     val commentCount: Int = 0,
-    val shareCount: Int = 0
+    val shareCount: Int = 0,
+    val likedBy: Map<String, Boolean> = emptyMap()
 )
