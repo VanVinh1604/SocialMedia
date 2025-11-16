@@ -1,9 +1,9 @@
 package com.example.socialmedia.project.Fragment
 
-import android.app.Activity // THÊM IMPORT
+import android.app.Activity
 import android.app.DatePickerDialog
-import android.content.Intent // THÊM IMPORT
-import android.net.Uri // THÊM IMPORT
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -11,7 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts // THÊM IMPORT
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
@@ -121,6 +121,10 @@ class EditProfileNameFragment : Fragment() {
      */
     private fun populateData(user: UserModel) {
         binding.etName.setText(user.fullName)
+
+        // === CẬP NHẬT 1: Điền bio (ghi chú) có sẵn ===
+        binding.etBio.setText(user.bio ?: "")
+        // ==========================================
 
         // --- CẬP NHẬT: Điền ảnh bìa ---
         Glide.with(this)
@@ -259,8 +263,13 @@ class EditProfileNameFragment : Fragment() {
         // Lấy ngày sinh (đã lưu trong selectedDateOfBirth)
         val dob = selectedDateOfBirth
 
-        // Gọi ViewModel
-        viewModel.updateProfile(firstName, lastName, dob, gender)
+        // === CẬP NHẬT 2: Lấy text từ ô bio ===
+        val bio = binding.etBio.text.toString().trim()
+        // ======================================
+
+        // === CẬP NHẬT 3: Gọi ViewModel với 'bio' ===
+        viewModel.updateProfile(firstName, lastName, dob, gender, bio)
+        // ========================================
     }
 
     private fun formatDate(milliseconds: Long?): String {
@@ -274,4 +283,3 @@ class EditProfileNameFragment : Fragment() {
         _binding = null // Dọn dẹp binding
     }
 }
-

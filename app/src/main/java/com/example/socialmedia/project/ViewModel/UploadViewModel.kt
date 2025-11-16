@@ -18,6 +18,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.*
 
+// --- CÁC IMPORT CỦA HÀM ĐẾM (Transaction) ---
+
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
+// ------------------------------------
+
 class UploadViewModel(
     private val uploadRepository: UploadRepository = UploadRepository()
 ) : ViewModel() {
@@ -74,6 +82,7 @@ class UploadViewModel(
             val postId = UUID.randomUUID().toString()
             val postModel = PostModel(
                 postId = postId,
+                userId = userId, // Đảm bảo gán userId
                 caption = caption.takeIf { it.isNotBlank() },
                 hashtags = parseHashtags(hashtags),
                 locationName = location,
@@ -91,8 +100,14 @@ class UploadViewModel(
             }
 
             _uploadProgress.value = UploadProgress.SavingPost
+            // 1. Lưu bài đăng
             uploadRepository.savePostToDatabase(postModel, mediaModels, currentUser)
-            _uploadResult.value = UploadResult.Success
+
+
+            // 2. CẬP NHẬT BỘ ĐẾM (Transaction)
+            updatePostCount(userId, 1) // +1
+
+            _uploadResult.value = UploadResult.Success(postId)
 
         } catch (e: Exception) {
             _uploadResult.value = UploadResult.Error(e.message ?: "Lỗi upload")
@@ -127,6 +142,7 @@ class UploadViewModel(
             val draftId = UUID.randomUUID().toString()
             val postModel = PostModel(
                 postId = draftId,
+                userId = userId, // Đảm bảo gán userId
                 caption = caption.takeIf { it.isNotBlank() },
                 hashtags = parseHashtags(hashtags),
                 locationName = location,
@@ -136,13 +152,14 @@ class UploadViewModel(
                 postType = PostType.PHOTO,
                 allowsComments = !disableComments,
                 allowsLikesVisible = !hideLikes,
-                isDraft = true
+                isDraft = true // Quan trọng: Đây là bài nháp
             )
 
             val mediaModels = uploadRepository.uploadMediaToCloudinary(context, draftId, mediaItems) { current, total ->
                 _uploadProgress.postValue(UploadProgress.UploadingImages(current, total, (current * 100) / total))
             }
 
+            // Lưu nháp (Không cần cập nhật postCount)
             uploadRepository.saveDraftToDatabase(postModel, mediaModels, currentUser)
             _uploadResult.value = UploadResult.DraftSaved
 
@@ -152,6 +169,7 @@ class UploadViewModel(
             _uploadProgress.value = UploadProgress.Idle
         }
     }
+
 
     /**
      * 🎬 Upload Reel (sử dụng Cloudinary + Firebase Realtime Database)
@@ -269,5 +287,34 @@ class UploadViewModel(
             .map { it.trim() }
             .filter { it.isNotBlank() && it.startsWith("#") }
             .map { it.removePrefix("#") }
+    }
+
+
+    // ==================================================================
+    // === HÀM ĐẾM (Transaction) ===
+    // ==================================================================
+    private fun updatePostCount(userId: String, delta: Int) {
+        val userPostCountRef = database.reference.child("InfoUser").child(userId).child("postCount")
+
+        userPostCountRef.runTransaction(object : Transaction.Handler {
+            override fun doTransaction(currentData: MutableData): Transaction.Result {
+                val currentCount = currentData.getValue(Int::class.java) ?: 0
+                val newCount = currentCount + delta
+                currentData.value = if (newCount < 0) 0 else newCount
+                return Transaction.success(currentData)
+            }
+
+            override fun onComplete(
+                error: DatabaseError?,
+                committed: Boolean,
+                currentData: DataSnapshot?
+            ) {
+                if (error != null) {
+                    Log.e("UploadViewModel", "Lỗi transaction cập nhật postCount: ${error.message}")
+                } else if (committed) {
+                    Log.d("UploadViewModel", "Cập nhật postCount thành công! Giá trị mới: ${currentData?.value}")
+                }
+            }
+        })
     }
 }

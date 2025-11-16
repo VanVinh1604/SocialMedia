@@ -13,7 +13,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- ... (Phần Header) ... -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="220dp"
@@ -26,13 +25,11 @@
                 android:scaleType="centerCrop"
                 android:src="@drawable/image_backgroud" />
 
-            <!-- === SỬA LỖI Ở ĐÂY: Giảm chiều cao từ 80dp xuống 50dp === -->
             <View
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
+                android:layout_height="0dp"
                 android:layout_alignParentBottom="true"
                 android:background="@drawable/gradient_overlay" />
-            <!-- === KẾT THÚC SỬA LỖI === -->
 
             <ImageView
                 android:id="@+id/ivBackButton"
@@ -63,9 +60,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-50dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="24dp"
+            android:clickable="true">
 
-            <!-- ... (ivProfileImage giữ nguyên) ... -->
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivProfileImage"
                 android:layout_width="100dp"
@@ -80,7 +77,6 @@
                 app:strokeColor="#FFFFFF"
                 app:strokeWidth="4dp" />
 
-            <!-- Stats Container -->
             <LinearLayout
                 android:id="@+id/llStats"
                 android:layout_width="0dp"
@@ -95,7 +91,6 @@
                 app:layout_constraintTop_toTopOf="@id/ivProfileImage"
                 app:layout_constraintVertical_bias="2">
 
-                <!-- 1. Posts (Giữ nguyên) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -109,10 +104,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="10"
                         android:textColor="#333333"
                         android:textSize="20sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        tools:text="10" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -123,7 +118,6 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <!-- 2. Followers (ĐÃ DI CHUYỂN LÊN VÀ SỬA ID) -->
                 <LinearLayout
                     android:id="@+id/llFollowersWrapper"
                     android:layout_width="0dp"
@@ -133,18 +127,15 @@
                     android:orientation="vertical"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
-
-                    <!-- === ID ĐÃ ĐƯỢC SỬA === -->
                     <TextView
                         android:id="@+id/tvFollowersCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="190k"
                         android:textColor="#333333"
                         android:textSize="20sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"
+                        tools:text="190k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -154,7 +145,6 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <!-- 3. Following (ĐÃ DI CHUYỂN XUỐNG) -->
                 <LinearLayout
                     android:id="@+id/llFollowingWrapper"
                     android:layout_width="0dp"
@@ -164,17 +154,15 @@
                     android:orientation="vertical"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
-
                     <TextView
                         android:id="@+id/tvFollowingCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
-                        android:text="15k"
                         android:textColor="#333333"
                         android:textSize="20sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"
+                        tools:text="15k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -185,7 +173,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ... (llUserInfo và llActionButtons giữ nguyên) ... -->
             <LinearLayout
                 android:id="@+id/llUserInfo"
                 android:layout_width="0dp"
@@ -201,10 +188,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Van Vinh"
                     android:textColor="#1A1A1A"
                     android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    tools:text="Huy thui" />
 
                 <TextView
                     android:id="@+id/tvBio"
@@ -212,9 +199,11 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:lineSpacingExtra="2dp"
-                    android:text="Photography enthusiast 📸 | Traveler ✈️"
                     android:textColor="#666666"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:visibility="gone"
+                    tools:text="Photography enthusiast 📸 | Traveler ✈️"
+                    tools:visibility="visible" />
             </LinearLayout>
 
             <LinearLayout
@@ -258,155 +247,12 @@
                     android:textSize="14sp"
                     app:backgroundTint="@null"
                     app:cornerRadius="24dp"
-                    app:icon="@drawable/ic_edit"
+                    app:icon="@drawable/ic_share"
                     app:iconGravity="textStart"
                     app:iconSize="18dp"
                     app:iconTint="#FFFFFF" />
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!-- ... (Phần Collections và Photos (RecyclerView) giữ nguyên) ... -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="Collections"
-                android:textColor="#1A1A1A"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clipToPadding="false"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <LinearLayout
-                        android:id="@+id/btnNewCollection"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="20dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <FrameLayout
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:background="@drawable/circle_dashed_border">
-
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_add"
-                                app:tint="#B084CC" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:text="New"
-                            android:textColor="#666666"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="20dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.imageview.ShapeableImageView
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/background_header"
-                            app:shapeAppearanceOverlay="@style/CircularImageView"
-                            app:strokeColor="#E0E0E0"
-                            app:strokeWidth="2dp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:text="Travel"
-                            android:textColor="#666666"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="20dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.imageview.ShapeableImageView
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/background_header"
-                            app:shapeAppearanceOverlay="@style/CircularImageView"
-                            app:strokeColor="#E0E0E0"
-                            app:strokeWidth="2dp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:text="Nature"
-                            android:textColor="#666666"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="?attr/selectableItemBackground"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <com.google.android.material.imageview.ShapeableImageView
-                            android:layout_width="80dp"
-                            android:layout_height="80dp"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/background_header"
-                            app:shapeAppearanceOverlay="@style/CircularImageView"
-                            app:strokeColor="#E0E0E0"
-                            app:strokeWidth="2dp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:text="Food"
-                            android:textColor="#666666"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </HorizontalScrollView>
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -414,17 +260,29 @@
             android:layout_marginTop="24dp"
             android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayout"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginBottom="12dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="Photos"
-                android:textColor="#1A1A1A"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                app:tabGravity="fill"
+                app:tabMode="fixed"
+                app:tabIndicatorColor="@color/purple_main"
+                app:tabSelectedTextColor="@color/purple_main"
+                app:tabTextColor="#888888">
 
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bài đăng"
+                    android:icon="@drawable/ic_grid" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reels"
+                    android:icon="@drawable/ic_reels" />
+
+            </com.google.android.material.tabs.TabLayout>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvPhotos"
                 android:layout_width="match_parent"
@@ -433,11 +291,46 @@
                 android:nestedScrollingEnabled="false"
                 android:paddingStart="4dp"
                 android:paddingEnd="4dp"
+                android:paddingTop="8dp"
                 android:paddingBottom="16dp"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="3" />
 
+            <LinearLayout
+                android:id="@+id/llEmptyPhotos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_camera"
+                    app:tint="#888888" />
+                <TextView
+                    android:id="@+id/tvEmptyMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Không có nội dung"
+                    android:textColor="#1A1A1A"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvEmptySubMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="Nội dung bạn đăng sẽ xuất hiện ở đây."
+                    android:textColor="#666666"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
-

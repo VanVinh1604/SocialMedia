@@ -236,7 +236,7 @@ class MainActivity : AppCompatActivity() {
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.chatFragment, R.id.callFragment, R.id.messageFragment, R.id.notificationFragment,R.id.addStoryFragment,R.id.storyViewerFragment -> {
+                R.id.chatFragment, R.id.callFragment, R.id.messageFragment, R.id.notificationFragment,R.id.addStoryFragment,R.id.storyViewerFragment,R.id.profileFragment -> {
                     binding.container.visibility = View.GONE
                     binding.navHostFragment.setPadding(0, 0, 0, 0)
                 }
