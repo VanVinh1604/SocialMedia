@@ -51,24 +51,42 @@ class ChatRepository {
                     return@addSnapshotListener
                 }
 
+//                val messages = snapshot.documents.mapNotNull { doc ->
+//                    // Lấy isDeleted từ Firestore, ép Boolean
+//                    val isDeleted = doc.getBoolean("isDeleted") ?: false
+//                    Log.d("ChatRepository", "🔍 Document ${doc.id}: isDeleted from Firestore = $isDeleted")
+//
+//                    // Map object
+//                    val message = doc.toObject(MessageModel::class.java)
+//                    if (message != null) {
+//                        Log.d("ChatRepository", "📦 Mapped message ${doc.id}: isDeleted = $isDeleted")
+//                        message.copy(
+//                            messageId = doc.id,
+//
+//                            isDeleted = isDeleted
+//                        )
+//                    } else {
+//                        Log.e("ChatRepository", "❌ Failed to map document ${doc.id}")
+//                        null
+//                    }
+//                }
                 val messages = snapshot.documents.mapNotNull { doc ->
-                    // Lấy isDeleted từ Firestore, ép Boolean
-                    val isDeleted = doc.getBoolean("isDeleted") ?: false
-                    Log.d("ChatRepository", "🔍 Document ${doc.id}: isDeleted from Firestore = $isDeleted")
 
-                    // Map object
                     val message = doc.toObject(MessageModel::class.java)
+
                     if (message != null) {
-                        Log.d("ChatRepository", "📦 Mapped message ${doc.id}: isDeleted = $isDeleted")
-                        message.copy(
-                            messageId = doc.id,
-                            isDeleted = isDeleted
-                        )
-                    } else {
-                        Log.e("ChatRepository", "❌ Failed to map document ${doc.id}")
-                        null
-                    }
+                        // KHÔNG DÙNG COPY NỮA
+                        message.messageId = doc.id
+
+                        // Firestore luôn override lên var → không bị reset
+                        message.isDeleted = doc.getBoolean("isDeleted") ?: false
+                        message.isEdited = doc.getBoolean("isEdited") ?: false
+//                        message.editHistory = doc.get("editHistory") as? List<String> ?: emptyList()
+
+                        message
+                    } else null
                 }
+
 
                 Log.d("ChatRepository", "✅ Loaded ${messages.size} messages, isDeleted flags: ${messages.map { it.isDeleted }}")
 
@@ -100,11 +118,23 @@ class ChatRepository {
             .limit(20)
             .get()
             .addOnSuccessListener { snapshot ->
-                val messages = snapshot.documents.mapNotNull {
-                    it.toObject(MessageModel::class.java)?.copy(
-                        messageId = it.id
-                    )
+//                val messages = snapshot.documents.mapNotNull {
+//                    it.toObject(MessageModel::class.java)?.copy(
+//                        messageId = it.id
+//                    )
+//                }.sortedBy { it.createdAt }
+                val messages = snapshot.documents.mapNotNull { doc ->
+                    val message = doc.toObject(MessageModel::class.java)
+
+                    if (message != null) {
+                        message.messageId = doc.id
+                        message.isDeleted = doc.getBoolean("isDeleted") ?: false
+                        message.isEdited = doc.getBoolean("isEdited") ?: false
+//                        message.editHistory = doc.get("editHistory") as? List<String> ?: emptyList()
+                        message
+                    } else null
                 }.sortedBy { it.createdAt }
+
                 onLoaded(messages)
             }
             .addOnFailureListener {
@@ -114,24 +144,43 @@ class ChatRepository {
     }
 
     fun editMessage(conversationId: String, message: MessageModel, onComplete: (Boolean) -> Unit) {
-        db.collection("conversations")
+        val msgRef = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
             .document(message.messageId)
-            .update(
-                mapOf(
-                    "content" to message.content,
+
+        // Lấy dữ liệu cũ trước
+        msgRef.get().addOnSuccessListener { snapshot ->
+            val oldMessage = snapshot.toObject(MessageModel::class.java)
+            if (oldMessage != null) {
+                // Tạo danh sách editHistory mới
+                val newHistory = oldMessage.editHistory?.toMutableList() ?: mutableListOf()
+                // Lưu nội dung cũ vào history
+                newHistory.add(oldMessage.content)
+
+                // Cập nhật message
+                val updateMap = mapOf(
+                    "content" to message.content,      // Nội dung mới
                     "isEdited" to true,
-                    "editedAt" to message.editedAt,
-                    "editHistory" to message.editHistory
+                    "editedAt" to System.currentTimeMillis(),
+                    "editHistory" to newHistory
                 )
-            )
-            .addOnSuccessListener { onComplete(true) }
-            .addOnFailureListener { e ->
-                Log.e("ChatRepository", "Failed to edit message", e)
+
+                msgRef.update(updateMap)
+                    .addOnSuccessListener { onComplete(true) }
+                    .addOnFailureListener { e ->
+                        Log.e("ChatRepository", "Failed to edit message", e)
+                        onComplete(false)
+                    }
+            } else {
                 onComplete(false)
             }
+        }.addOnFailureListener {
+            Log.e("ChatRepository", "Failed to get old message", it)
+            onComplete(false)
+        }
     }
+
 
     fun sendMessage(
         conversationId: String?,

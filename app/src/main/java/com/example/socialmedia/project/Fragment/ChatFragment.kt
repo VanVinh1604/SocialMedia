@@ -139,9 +139,8 @@ class ChatFragment : Fragment() {
                 }
             }
         )
-        binding.rvChat.adapter = chatAdapter
-
-
+        val layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
+        binding.rvChat.layoutManager = layoutManager
         binding.rvChat.adapter = chatAdapter
 
 // Observe LiveData
@@ -204,10 +203,10 @@ class ChatFragment : Fragment() {
 
         binding.ivBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
-        chatAdapter = ChatAdapter(messages, currentUserId, mapOf())
+//        chatAdapter = ChatAdapter(messages, currentUserId, mapOf())
         val layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
         binding.rvChat.layoutManager = layoutManager
-        binding.rvChat.adapter = chatAdapter
+//        binding.rvChat.adapter = chatAdapter
 
         binding.ivFile.setOnClickListener {
             pickImageLauncher.launch("image/*")
@@ -307,6 +306,8 @@ class ChatFragment : Fragment() {
             Log.d("ChatFragment", "📩 Received ${newMessages.size} messages from LiveData")
             newMessages.forEachIndexed { index, msg ->
                 Log.d("ChatFragment", "  [$index] ${msg.messageId.take(8)}: isDeleted=${msg.isDeleted}, content=${msg.content.take(20)}")
+                Log.d("ChatFragment", "  [$index] editHistory=${msg.editHistory}")
+
             }
 
             val oldSize = messages.size
@@ -397,7 +398,7 @@ class ChatFragment : Fragment() {
                 }
             }
         }
-        }
+    }
 
     private fun sendTextMessage() {
         val text = binding.etMessage.text.toString().trim()

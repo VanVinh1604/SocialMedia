@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -6,45 +5,59 @@
     android:layout_height="wrap_content"
     android:padding="6dp">
 
-    <!-- Avatar bên phải -->
+    <!-- ĐÃ CHỈNH SỬA -->
+    <TextView
+        android:id="@+id/tvEdited"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ĐÃ CHỈNH SỬA"
+        android:textColor="#0000FF"
+        android:textStyle="bold"
+        android:textSize="11sp"
+        android:visibility="gone"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/tvMessage"/>
 
-    <!-- Bubble tin nhắn -->
+    <!-- Bong bóng tin nhắn -->
     <TextView
         android:id="@+id/tvMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:maxWidth="250dp"
-        android:padding="10dp"
-        android:text="This is my outgoing message!"
-        android:textSize="14sp"
+        android:maxWidth="260dp"
+        android:padding="12dp"
         android:textColor="@android:color/white"
+        android:textSize="15sp"
         android:background="@drawable/bg_message_outgoing"
         android:layout_marginEnd="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
-    <!-- Thời gian -->
+        app:layout_constraintTop_toBottomOf="@id/tvEdited"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Lịch sử sửa -->
+    <LinearLayout
+        android:id="@+id/layoutHistory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/tvMessage"
+        app:layout_constraintStart_toEndOf="@id/tvMessage"
+
+        app:layout_constraintEnd_toEndOf="@id/tvMessage"/>
+
+
+    <!-- TIME -->
     <TextView
         android:id="@+id/tvTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="10:31 AM"
         android:textSize="11sp"
-        android:textColor="#cccccc"
+        android:textColor="#CCCCCC"
         android:layout_marginTop="2dp"
-        app:layout_constraintTop_toBottomOf="@id/tvMessage"
+        app:layout_constraintTop_toBottomOf="@id/layoutHistory"
         app:layout_constraintEnd_toEndOf="@id/tvMessage" />
-
-    <TextView
-        android:id="@+id/tvEdited"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Đã sửa"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/tvMessage"
-        app:layout_constraintEnd_toEndOf="@id/tvMessage"/>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

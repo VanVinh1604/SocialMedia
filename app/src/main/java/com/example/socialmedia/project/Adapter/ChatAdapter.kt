@@ -2,15 +2,19 @@ package com.example.socialmedia.project.Adapter
 
 import android.R.attr.fragment
 import android.content.Context
+import android.graphics.Color
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -255,25 +259,106 @@ class ChatAdapter(
     }
 
     // --- ViewHolder cho text ---
+    // --- ViewHolder cho text ---
     inner class OutgoingViewHolder(private val binding: ItemChatMessageOutgoingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                .format(Date(item.createdAt))
+
+            // ======= HIỂN THỊ ĐÃ SỬA =======
+            binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
+
+            // ======= HIỂN THỊ LỊCH SỬ SỬA =======
+            binding.layoutHistory.removeAllViews()
+
+            if (item.editHistory != null && item.editHistory.isNotEmpty()) {
+                binding.layoutHistory.visibility = View.VISIBLE
+
+                item.editHistory.forEach { oldText ->
+                    val tv = TextView(binding.root.context).apply {
+                        text = oldText
+                        textSize = 13f
+                        setTextColor(Color.parseColor("#555555"))
+                        setPadding(12, 8, 12, 8)
+                        background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 4, 0, 4)
+                        layoutParams = params
+                    }
+
+                    binding.layoutHistory.addView(tv)
+                }
+            } else {
+                binding.layoutHistory.visibility = View.GONE
+            }
+
+
+            // ======= CLICK VÀO ĐỂ MỞ/ĐÓNG HISTORY =======
+            binding.tvMessage.setOnClickListener {
+                if (binding.layoutHistory.visibility == View.VISIBLE)
+                    binding.layoutHistory.visibility = View.GONE
+                else if (!item.editHistory.isNullOrEmpty())
+                    binding.layoutHistory.visibility = View.VISIBLE
+            }
         }
     }
 
+
     inner class IncomingViewHolder(private val binding: ItemChatMessageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                .format(Date(item.createdAt))
+
             Glide.with(binding.root.context)
                 .load(sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user)
                 .circleCrop()
                 .into(binding.ivAvatar)
+
+            // ======= HIỂN THỊ ĐÃ SỬA =======
+            binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
+
+            // ======= HIỂN THỊ LỊCH SỬ SỬA =======
+            binding.layoutHistory.removeAllViews()
+
+            if (item.editHistory != null && item.editHistory.isNotEmpty()) {
+                binding.layoutHistory.visibility = View.VISIBLE
+
+                item.editHistory.forEach { oldText ->
+                    val tv = TextView(binding.root.context).apply {
+                        text = oldText
+                        textSize = 13f
+                        setTextColor(Color.parseColor("#555555"))
+                        setPadding(12, 8, 12, 8)
+                        background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+
+                        val params = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        params.setMargins(0, 4, 0, 4)
+                        layoutParams = params
+                    }
+
+                    binding.layoutHistory.addView(tv)
+                }
+            } else {
+                binding.layoutHistory.visibility = View.GONE
+            }
+
         }
     }
+
+
 
     // --- MediaPlayer ---
     private fun playAudio(url: String, holder: RecyclerView.ViewHolder) {
@@ -349,6 +434,7 @@ class ChatAdapter(
             holder.itemView.setOnLongClickListener { true }
             return
         }
+
 
 
         // Bind bình thường các loại message

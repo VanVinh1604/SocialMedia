@@ -21,7 +21,7 @@ data class MessageModel(
     val editedAt: Long? = null,
     val readBy: List<String> = emptyList(),
 
-    val isEdited: Boolean = false,       // Đánh dấu đã sửa
+    var isEdited: Boolean = false,       // Đánh dấu đã sửa
     val originalContent: String? = null, // Lưu nội dung cũ
     var editHistory: MutableList<String> = mutableListOf(), // ✅ Lịch sử sửa
 
