@@ -167,6 +167,52 @@
             android:background="?attr/selectableItemBackgroundBorderless"/>
     </LinearLayout>
 
+
+    <!-- Reply Preview Bar -->
+    <LinearLayout
+        android:id="@+id/llReplyPreview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#E0F7FA"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <!-- Người gửi -->
+        <TextView
+            android:id="@+id/tvReplySender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Người dùng"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#00796B"/>
+
+        <!-- Nội dung tin nhắn được reply -->
+        <TextView
+            android:id="@+id/tvReplyContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Trích dẫn tin nhắn..."
+            android:textSize="14sp"
+            android:textColor="#004D40"
+            android:ellipsize="end"
+            android:maxLines="2"/>
+
+        <!-- Nút hủy reply -->
+        <ImageView
+            android:id="@+id/ivCancelReply"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="end"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Huỷ trả lời"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+    </LinearLayout>
+
+
+
     <!-- Input Bar -->
     <LinearLayout
         android:id="@+id/inputBar"

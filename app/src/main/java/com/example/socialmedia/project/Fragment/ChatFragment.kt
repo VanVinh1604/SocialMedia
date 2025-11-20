@@ -80,6 +80,13 @@ class ChatFragment : Fragment() {
     private lateinit var tvEditingMessage: TextView
     private lateinit var ivCancelEdit: ImageView
 
+    private lateinit var llReplyPreview: LinearLayout
+    private lateinit var tvReplySender: TextView
+    private lateinit var tvReplyContent: TextView
+    private lateinit var ivCancelReply: ImageView
+
+    private var replyingMessage: MessageModel? = null
+
 
     private var recordingStartTime: Long = 0L
     private var recordingTimer: Runnable? = null
@@ -126,7 +133,7 @@ class ChatFragment : Fragment() {
             currentUserId,
             userMap,
             onReply = { msg ->
-                // logic reply
+                showReplyPreview(msg)
             },
             onEdit = { msg ->
                 onEditMessageSelected(msg) // ✅ gọi hàm show input edit
@@ -153,8 +160,6 @@ class ChatFragment : Fragment() {
             }
         }
 
-
-
         binding.rvChat.adapter = chatAdapter
 
         llEditPreview = binding.llEditingMessage
@@ -163,6 +168,15 @@ class ChatFragment : Fragment() {
 
         ivCancelEdit.setOnClickListener {
             cancelEditingMessage()
+        }
+
+        llReplyPreview = binding.llReplyPreview
+        tvReplySender = binding.tvReplySender
+        tvReplyContent = binding.tvReplyContent
+        ivCancelReply = binding.ivCancelReply
+
+        ivCancelReply.setOnClickListener {
+            cancelReplyMessage()
         }
 
 
@@ -175,6 +189,20 @@ class ChatFragment : Fragment() {
         }
 
     }
+
+    private fun showReplyPreview(message: MessageModel) {
+        replyingMessage = message
+
+        llReplyPreview.visibility = View.VISIBLE
+        tvReplySender.text = if (message.senderId == currentUserId) "Bạn" else message.senderName
+        tvReplyContent.text = if (message.messageType == MessageType.TEXT)
+            message.content
+        else
+            "[Hình ảnh]"
+
+        binding.etMessage.requestFocus()
+    }
+
 
     // ✅ Hàm load thông tin user hiện tại từ Firebase
     private fun loadCurrentUserInfo() {
@@ -242,6 +270,11 @@ class ChatFragment : Fragment() {
         editingMessage = null
         llEditPreview.visibility = View.GONE
         binding.etMessage.setText("")
+    }
+
+    private fun cancelReplyMessage() {
+        replyingMessage = null
+        llReplyPreview.visibility = View.GONE
     }
 
 
@@ -403,6 +436,7 @@ class ChatFragment : Fragment() {
     private fun sendTextMessage() {
         val text = binding.etMessage.text.toString().trim()
         if (text.isEmpty() || conversationId.isNullOrEmpty()) return
+        val replyToId = replyingMessage?.messageId
 
         val message = MessageModel(
             messageId = UUID.randomUUID().toString(),
@@ -411,12 +445,17 @@ class ChatFragment : Fragment() {
             senderName = currentUserName,
             senderAvatar = currentUserAvatar,
             content = text,
+            replyTo = replyToId, // thêm trường replyTo trong MessageModel
+
             createdAt = System.currentTimeMillis()
         )
         val participants = listOf(currentUserId, otherUserId ?: "")
 
         viewModel.sendMessage(conversationId!!, participants, message) { success ->
-            if (success) binding.etMessage.setText("")
+            if (success) {
+                binding.etMessage.setText("")
+                cancelReplyMessage()
+            }
         }
     }
 

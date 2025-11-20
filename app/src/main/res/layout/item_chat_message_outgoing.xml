@@ -33,19 +33,49 @@
         app:layout_constraintTop_toBottomOf="@id/tvEdited"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Lịch sử sửa -->
+    <LinearLayout
+        android:id="@+id/layoutReply"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:background="@drawable/bg_reply_box"
+        android:visibility="gone"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/tvEdited">
+
+        <TextView
+            android:id="@+id/tvReplyUser"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tên người gửi"
+            android:textStyle="bold"
+            android:textColor="#555555"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:id="@+id/tvReplyContent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nội dung được trả lời..."
+            android:textColor="#444444"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="13sp"/>
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/layoutHistory"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="4dp"
-        android:layout_marginEnd="4dp"
+        android:maxWidth="260dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/tvMessage"
-        app:layout_constraintStart_toEndOf="@id/tvMessage"
 
-        app:layout_constraintEnd_toEndOf="@id/tvMessage"/>
+        app:layout_constraintTop_toBottomOf="@id/tvMessage"
+        app:layout_constraintEnd_toEndOf="@id/tvMessage" />
 
 
     <!-- TIME -->

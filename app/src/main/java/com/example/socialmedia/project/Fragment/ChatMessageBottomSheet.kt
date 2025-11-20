@@ -12,8 +12,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 class ChatMessageBottomSheet(
     private val message: MessageModel,
-
-    private val onReply: (MessageModel) -> Unit,  // thêm callback Reply
+    private val onReply: (MessageModel) -> Unit,
     private val onEdit: (MessageModel) -> Unit,
     private val onDelete: (MessageModel) -> Unit
 ) : BottomSheetDialogFragment() {
@@ -24,23 +23,35 @@ class ChatMessageBottomSheet(
         val view = inflater.inflate(R.layout.bottomsheet_chat_options, container, false)
 
         val tvReplyLayout = view.findViewById<LinearLayout>(R.id.tvReply)
+        val tvEditLayout = view.findViewById<LinearLayout>(R.id.tvEdit)
+        val tvDeleteLayout = view.findViewById<LinearLayout>(R.id.tvDelete)
+
+        // Lấy userId hiện tại
+        val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().uid
+
+        // ❌ Không phải tin nhắn của user → ẩn Edit + Delete
+        if (message.senderId != currentUserId) {
+            tvEditLayout.visibility = View.GONE
+            tvDeleteLayout.visibility = View.GONE
+        }
+
+        // Reply
         tvReplyLayout.setOnClickListener {
             onReply(message)
             dismiss()
         }
 
-        val tvEditLayout = view.findViewById<LinearLayout>(R.id.tvEdit)
+        // Edit
         tvEditLayout.setOnClickListener {
             onEdit(message)
             dismiss()
         }
 
-        val tvDeleteLayout = view.findViewById<LinearLayout>(R.id.tvDelete)
+        // Delete
         tvDeleteLayout.setOnClickListener {
             onDelete(message)
             dismiss()
         }
-
 
         return view
     }

@@ -51,25 +51,6 @@ class ChatRepository {
                     return@addSnapshotListener
                 }
 
-//                val messages = snapshot.documents.mapNotNull { doc ->
-//                    // Lấy isDeleted từ Firestore, ép Boolean
-//                    val isDeleted = doc.getBoolean("isDeleted") ?: false
-//                    Log.d("ChatRepository", "🔍 Document ${doc.id}: isDeleted from Firestore = $isDeleted")
-//
-//                    // Map object
-//                    val message = doc.toObject(MessageModel::class.java)
-//                    if (message != null) {
-//                        Log.d("ChatRepository", "📦 Mapped message ${doc.id}: isDeleted = $isDeleted")
-//                        message.copy(
-//                            messageId = doc.id,
-//
-//                            isDeleted = isDeleted
-//                        )
-//                    } else {
-//                        Log.e("ChatRepository", "❌ Failed to map document ${doc.id}")
-//                        null
-//                    }
-//                }
                 val messages = snapshot.documents.mapNotNull { doc ->
 
                     val message = doc.toObject(MessageModel::class.java)

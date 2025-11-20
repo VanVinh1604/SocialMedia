@@ -7,6 +7,7 @@ import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -98,7 +99,9 @@ class ChatAdapter(
 
     inner class DeletedOutgoingHolder(private val binding: ItemChatDeletedOutgoingBinding)
         : RecyclerView.ViewHolder(binding.root){
-            fun bind(msg: MessageModel, sender: UserModel) {
+        fun getContainer(): View = binding.root
+
+        fun bind(msg: MessageModel, sender: UserModel) {
 
 //        // Load avatar đúng người gửi
 //        Glide.with(binding.root.context)
@@ -115,8 +118,8 @@ class ChatAdapter(
 
     inner class DeletedIncomingHolder(private val binding: ItemChatDeletedIncomingBinding)
         : RecyclerView.ViewHolder(binding.root){
-        private val ivAvatar = itemView.findViewById<ShapeableImageView>(R.id.ivAvatar)
-        private val tvDeleted = itemView.findViewById<TextView>(R.id.tvDeleted)
+        fun getContainer(): View = binding.root
+
 
         fun bind(msg: MessageModel, sender: UserModel) {
 
@@ -136,6 +139,8 @@ class ChatAdapter(
     inner class OutgoingStoryViewHolder(
         private val binding: ItemChatStoryOutgoingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
 
         fun bind(message: MessageModel, currentUser: UserModel) {
             val story = message.story
@@ -160,6 +165,8 @@ class ChatAdapter(
     inner class IncomingStoryViewHolder(
         private val binding: ItemChatStoryIncomingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
 
         fun bind(message: MessageModel, sender: UserModel) {
             val story = message.story
@@ -191,6 +198,8 @@ class ChatAdapter(
     // --- ViewHolder cho ảnh ---
     inner class OutgoingImageViewHolder(private val binding: ItemChatImageOutgoingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
         fun bind(item: MessageModel, sender: UserModel) {
             item.mediaUrl?.let {
                 Glide.with(binding.root.context)
@@ -205,6 +214,8 @@ class ChatAdapter(
 
     inner class IncomingImageViewHolder(private val binding: ItemChatImageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
         fun bind(item: MessageModel, sender: UserModel) {
             item.mediaUrl?.let {
                 Glide.with(binding.root.context)
@@ -226,6 +237,8 @@ class ChatAdapter(
     // --- ViewHolder cho audio ---
     inner class OutgoingAudioViewHolder(private val binding: ItemChatAudioOutgoingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvDuration.text = item.duration ?: "0:00"
 
@@ -239,6 +252,8 @@ class ChatAdapter(
 
     inner class IncomingAudioViewHolder(private val binding: ItemChatAudioIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvDuration.text = item.duration ?: "0:00"
 
@@ -258,106 +273,182 @@ class ChatAdapter(
 
     }
 
-    // --- ViewHolder cho text ---
-    // --- ViewHolder cho text ---
+
+    // --- Trong OutgoingViewHolder ---
     inner class OutgoingViewHolder(private val binding: ItemChatMessageOutgoingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
 
         fun bind(item: MessageModel, sender: UserModel) {
+            // Hiển thị bình thường
             binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                .format(Date(item.createdAt))
-
-            // ======= HIỂN THỊ ĐÃ SỬA =======
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
             binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
 
-            // ======= HIỂN THỊ LỊCH SỬ SỬA =======
-            binding.layoutHistory.removeAllViews()
+            bindReply(item, this)
+            bindHistory(item)
 
-            if (item.editHistory != null && item.editHistory.isNotEmpty()) {
-                binding.layoutHistory.visibility = View.VISIBLE
+            // Long click để reply
+            itemView.setOnLongClickListener { onReply?.invoke(item); true }
+        }
 
-                item.editHistory.forEach { oldText ->
-                    val tv = TextView(binding.root.context).apply {
-                        text = oldText
-                        textSize = 13f
-                        setTextColor(Color.parseColor("#555555"))
-                        setPadding(12, 8, 12, 8)
-                        background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+        private fun bindReply(message: MessageModel, holder: RecyclerView.ViewHolder) {
+            val replyLayoutField = holder.itemView.findViewById<LinearLayout>(R.id.layoutReply)
+            val replySenderField = holder.itemView.findViewById<TextView>(R.id.tvReplyUser)
+            val replyContentField = holder.itemView.findViewById<TextView>(R.id.tvReplyContent)
 
-                        val params = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        params.setMargins(0, 4, 0, 4)
-                        layoutParams = params
+            if (message.replyTo != null) {
+                val repliedMsgIndex = messages.indexOfFirst { it.messageId == message.replyTo }
+                val repliedMsg = messages.getOrNull(repliedMsgIndex)
+
+                if (repliedMsg != null) {
+                    replyLayoutField.visibility = View.VISIBLE
+                    replySenderField.text = repliedMsg.senderName ?: "Người dùng"
+                    replyContentField.text = when (repliedMsg.messageType) {
+                        MessageType.TEXT -> repliedMsg.content
+                        MessageType.IMAGE -> "[Hình ảnh]"
+                        MessageType.VOICE -> "[Tin nhắn âm thanh]"
+                        else -> "[Tin nhắn]"
+                    }
+                    replyLayoutField.setOnClickListener {
+                        if (repliedMsgIndex != -1) {
+//                            val recycler = holder.itemView.parent as? RecyclerView
+//                            recycler?.scrollToPosition(repliedMsgIndex)
+//
+//                            // highlight tin nhắn
+//                            recycler?.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
+//                                highlightMessage(vh)
+//                            }
+                            val recycler = holder.itemView.parent as? RecyclerView
+                            recycler?.let { rv ->
+                                rv.post {
+                                    rv.smoothScrollToPosition(repliedMsgIndex)
+                                    rv.postDelayed({
+                                        rv.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
+                                            highlightMessage(vh)
+                                        }
+                                    }, 200) // delay cho scroll hoàn tất
+                                }
+                            }
+
+                        }
                     }
 
-                    binding.layoutHistory.addView(tv)
+                } else {
+                    replyLayoutField.visibility = View.GONE
                 }
             } else {
-                binding.layoutHistory.visibility = View.GONE
+                replyLayoutField.visibility = View.GONE
             }
+        }
 
-
-            // ======= CLICK VÀO ĐỂ MỞ/ĐÓNG HISTORY =======
+        private fun bindHistory(item: MessageModel) {
+            binding.layoutHistory.visibility = View.GONE
+            binding.layoutHistory.removeAllViews()
+            item.editHistory?.forEach { oldText ->
+                val tv = TextView(binding.root.context).apply {
+                    text = oldText
+                    textSize = 13f
+                    setTextColor(Color.parseColor("#555555"))
+                    setPadding(12, 8, 12, 8)
+                    background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+                    maxWidth = 260
+                }
+                binding.layoutHistory.addView(tv)
+            }
             binding.tvMessage.setOnClickListener {
-                if (binding.layoutHistory.visibility == View.VISIBLE)
-                    binding.layoutHistory.visibility = View.GONE
-                else if (!item.editHistory.isNullOrEmpty())
-                    binding.layoutHistory.visibility = View.VISIBLE
+                binding.layoutHistory.visibility = if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
             }
         }
     }
 
-
+    // --- IncomingViewHolder tương tự ---
     inner class IncomingViewHolder(private val binding: ItemChatMessageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+        fun getContainer(): View = binding.root
+
 
         fun bind(item: MessageModel, sender: UserModel) {
             binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                .format(Date(item.createdAt))
-
+            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
             Glide.with(binding.root.context)
                 .load(sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user)
                 .circleCrop()
                 .into(binding.ivAvatar)
-
-            // ======= HIỂN THỊ ĐÃ SỬA =======
             binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
 
-            // ======= HIỂN THỊ LỊCH SỬ SỬA =======
-            binding.layoutHistory.removeAllViews()
+            bindReply(item, this)
+            bindHistory(item)
 
-            if (item.editHistory != null && item.editHistory.isNotEmpty()) {
-                binding.layoutHistory.visibility = View.VISIBLE
+            itemView.setOnLongClickListener { onReply?.invoke(item); true }
+        }
 
-                item.editHistory.forEach { oldText ->
-                    val tv = TextView(binding.root.context).apply {
-                        text = oldText
-                        textSize = 13f
-                        setTextColor(Color.parseColor("#555555"))
-                        setPadding(12, 8, 12, 8)
-                        background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+        private fun bindReply(message: MessageModel, holder: RecyclerView.ViewHolder) {
+            val replyLayoutField = holder.itemView.findViewById<LinearLayout>(R.id.layoutReply)
+            val replySenderField = holder.itemView.findViewById<TextView>(R.id.tvReplyUser)
+            val replyContentField = holder.itemView.findViewById<TextView>(R.id.tvReplyContent)
 
-                        val params = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        params.setMargins(0, 4, 0, 4)
-                        layoutParams = params
+            if (message.replyTo != null) {
+                val repliedMsgIndex = messages.indexOfFirst { it.messageId == message.replyTo }
+                val repliedMsg = messages.getOrNull(repliedMsgIndex)
+
+                if (repliedMsg != null) {
+                    replyLayoutField.visibility = View.VISIBLE
+                    replySenderField.text = repliedMsg.senderName ?: "Người dùng"
+                    replyContentField.text = when (repliedMsg.messageType) {
+                        MessageType.TEXT -> repliedMsg.content
+                        MessageType.IMAGE -> "[Hình ảnh]"
+                        MessageType.VOICE -> "[Tin nhắn âm thanh]"
+                        else -> "[Tin nhắn]"
                     }
 
-                    binding.layoutHistory.addView(tv)
+                    // Khi bấm vào layoutReply -> scroll tới tin nhắn được reply và highlight
+                    replyLayoutField.setOnClickListener {
+                        if (repliedMsgIndex != -1) {
+
+                            val recycler = holder.itemView.parent as? RecyclerView
+                            recycler?.let { rv ->
+                                rv.post {
+                                    rv.smoothScrollToPosition(repliedMsgIndex)
+                                    rv.postDelayed({
+                                        rv.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
+                                            highlightMessage(vh)
+                                        }
+                                    }, 200) // delay cho scroll hoàn tất
+                                }
+                            }
+
+                        }
+                    }
+                } else {
+                    replyLayoutField.visibility = View.GONE
                 }
             } else {
-                binding.layoutHistory.visibility = View.GONE
+                replyLayoutField.visibility = View.GONE
             }
+        }
 
+
+        private fun bindHistory(item: MessageModel) {
+            binding.layoutHistory.visibility = View.GONE
+            binding.layoutHistory.removeAllViews()
+            item.editHistory?.forEach { oldText ->
+                val tv = TextView(binding.root.context).apply {
+                    text = oldText
+                    textSize = 13f
+                    setTextColor(Color.parseColor("#555555"))
+                    setPadding(12, 8, 12, 8)
+                    background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+                    maxWidth = 260
+                }
+                binding.layoutHistory.addView(tv)
+            }
+            binding.tvMessage.setOnClickListener {
+                binding.layoutHistory.visibility = if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            }
         }
     }
-
 
 
     // --- MediaPlayer ---
@@ -435,7 +526,28 @@ class ChatAdapter(
             return
         }
 
+        if (msg.replyTo != null) {
+            val repliedMsg = messages.find { it.messageId == msg.replyTo }
 
+            if (repliedMsg != null) {
+                // Kiểm tra holder có replyLayout không
+                val replyLayoutField = holder.itemView.findViewById<LinearLayout>(R.id.llReplyPreview)
+                val replySenderField = holder.itemView.findViewById<TextView>(R.id.tvReplySender)
+                val replyContentField = holder.itemView.findViewById<TextView>(R.id.tvReplyContent)
+
+                replyLayoutField?.visibility = View.VISIBLE
+                replySenderField?.text = repliedMsg.senderName ?: "Người dùng"
+                replyContentField?.text = when (repliedMsg.messageType) {
+                    MessageType.TEXT -> repliedMsg.content
+                    MessageType.IMAGE -> "[Hình ảnh]"
+                    else -> "[Tin nhắn]"
+                }
+            } else {
+                holder.itemView.findViewById<LinearLayout>(R.id.llReplyPreview)?.visibility = View.GONE
+            }
+        } else {
+            holder.itemView.findViewById<LinearLayout>(R.id.llReplyPreview)?.visibility = View.GONE
+        }
 
         // Bind bình thường các loại message
         val sender = if (msg.senderId == currentUserId) {
@@ -471,6 +583,30 @@ class ChatAdapter(
 
     }
 
+    private fun highlightMessage(holder: RecyclerView.ViewHolder) {
+        // Lấy container của holder
+        val container: View = when (holder) {
+            is OutgoingViewHolder -> holder.getContainer()
+            is IncomingViewHolder -> holder.getContainer()
+            is OutgoingImageViewHolder -> holder.getContainer()
+            is IncomingImageViewHolder -> holder.getContainer()
+            is OutgoingAudioViewHolder -> holder.getContainer()
+            is IncomingAudioViewHolder -> holder.getContainer()
+            is OutgoingStoryViewHolder -> holder.getContainer()
+            is IncomingStoryViewHolder -> holder.getContainer()
+            is DeletedOutgoingHolder -> holder.getContainer()
+            is DeletedIncomingHolder -> holder.getContainer()
+            else -> holder.itemView
+        }
+
+        // Set viền hoặc background highlight
+        container.setBackgroundResource(R.drawable.bg_highlight_message)
+
+        // Sau 1.5s bỏ highlight
+        container.postDelayed({
+            container.setBackgroundColor(Color.TRANSPARENT)
+        }, 1500)
+    }
 
     override fun getItemCount(): Int = messages.size
     fun updateMessages(newMessages: List<MessageModel>) {

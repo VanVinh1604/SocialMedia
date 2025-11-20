@@ -13,7 +13,10 @@ data class MessageModel(
     val content: String = "",
     val duration: String? = null,
     val mediaUrl: String? = null,
+
     val replyToMessageId: String? = null,
+    var replyTo: String? = null,
+
     val postId: String? = null,           // For shared posts
     val story: StoryModel? = null,
     var isDeleted: Boolean = false,
