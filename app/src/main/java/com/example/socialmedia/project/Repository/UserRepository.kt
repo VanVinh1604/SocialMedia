@@ -2,6 +2,7 @@ package com.example.socialmedia.project.Repository
 
 import android.util.Log
 import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Server.Firebase.FirebaseService
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.tasks.await
@@ -10,6 +11,9 @@ class UserRepository {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance().reference
+
+    private val firebaseService = FirebaseService()
+
 
     /**
      * 📥 Lấy thông tin người dùng hiện tại
@@ -75,5 +79,30 @@ class UserRepository {
             Log.e("UserRepository", "❌ Lỗi khi xóa user: ${e.message}")
             false
         }
+    }
+
+    fun getFriends(currentUserId: String, callback: (List<UserModel>) -> Unit) {
+        // Lấy danh sách mutual follow userId
+        firebaseService.getMutualFollowUsers(currentUserId, { friendIds ->
+            // Lấy thông tin chi tiết user
+            val friends = mutableListOf<UserModel>()
+            if (friendIds.isEmpty()) {
+                callback(emptyList())
+                return@getMutualFollowUsers
+            }
+
+            var processed = 0
+            friendIds.forEach { uid ->
+                firebaseService.getUserById(uid) { user ->
+                    friends.add(user)
+                    processed++
+                    if (processed == friendIds.size) {
+                        callback(friends)
+                    }
+                }
+            }
+        }, { error ->
+            callback(emptyList()) // lỗi → trả list rỗng
+        })
     }
 }

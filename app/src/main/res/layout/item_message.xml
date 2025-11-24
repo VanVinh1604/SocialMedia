@@ -6,27 +6,34 @@
     android:layout_height="80dp"
     android:padding="8dp">
 
-    <!-- Ảnh đại diện người dùng -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/ivAvatar"
+    <FrameLayout
+        android:id="@+id/avatarContainer"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_marginEnd="16dp"
-        android:src="@drawable/baseline_person_24"
-        app:shapeAppearanceOverlay="@style/CircleImageView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent">
 
-    <!-- Separator line -->
-    <View
-        android:id="@+id/divider"
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:background="#D3D3D3"
-        app:layout_constraintStart_toStartOf="@id/tvName"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/ivAvatar"/>
+        <!-- Avatar group -->
+        <include
+            android:id="@+id/ivAvatarGroup"
+            layout="@layout/item_group_avatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:visibility="gone"/>
+
+        <!-- Avatar đơn -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivAvatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/baseline_person_24"
+            app:shapeAppearanceOverlay="@style/CircleImageView"
+            android:visibility="visible"/>
+
+        <!-- Badge số lượng tin nhắn -->
+
+    </FrameLayout>
 
     <!-- Tên người dùng -->
     <TextView
@@ -37,8 +44,8 @@
         android:textSize="16sp"
         android:textStyle="bold"
         android:maxLines="1"
-        app:layout_constraintStart_toEndOf="@id/ivAvatar"
-        app:layout_constraintTop_toTopOf="@id/ivAvatar"
+        app:layout_constraintStart_toEndOf="@id/avatarContainer"
+        app:layout_constraintTop_toTopOf="@id/avatarContainer"
         app:layout_constraintEnd_toStartOf="@id/tvTime"
         app:layout_constraintHorizontal_bias="0"/>
 
@@ -52,27 +59,26 @@
         android:textColor="#808080"
         android:maxLines="1"
         android:ellipsize="end"
-        app:layout_constraintStart_toEndOf="@id/ivAvatar"
+        app:layout_constraintStart_toEndOf="@id/avatarContainer"
         app:layout_constraintTop_toBottomOf="@id/tvName"
         app:layout_constraintEnd_toStartOf="@id/tvTime"/>
 
-    <!-- Badge số lượng tin nhắn -->
-    <TextView
-        android:id="@+id/badgeUnread"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minWidth="20dp"
-        android:minHeight="20dp"
-        android:padding="4dp"
-        android:background="@drawable/circle_status_online"
-        android:gravity="center"
-        android:text="0"
-        android:textColor="@android:color/white"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="@id/ivAvatar"
-        app:layout_constraintEnd_toEndOf="@id/ivAvatar"/>
-
+<!--     Badge số lượng tin nhắn -->
+        <TextView
+            android:id="@+id/badgeUnread"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="20dp"
+            android:minHeight="20dp"
+            android:padding="4dp"
+            android:background="@drawable/circle_status_online"
+            android:gravity="center"
+            android:text="0"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:visibility="visible"
+            app:layout_constraintTop_toTopOf="@id/avatarContainer"
+            app:layout_constraintEnd_toEndOf="@id/avatarContainer"/>
 
     <!-- Thời gian tin nhắn -->
     <TextView
@@ -84,4 +90,14 @@
         android:textColor="#808080"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvName"/>
+
+    <!-- Separator line -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="#D3D3D3"
+        app:layout_constraintStart_toStartOf="@id/tvName"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

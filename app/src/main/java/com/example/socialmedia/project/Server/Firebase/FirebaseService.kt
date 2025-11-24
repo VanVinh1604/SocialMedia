@@ -505,52 +505,6 @@ class FirebaseService {
         }
     }
 
-    // Upload story cũng nên kiểm tra userId trước khi push
-//    fun uploadStoryToFirebase(
-//        userId: String,
-//        mediaUrl: String,
-//        isVideo: Boolean,
-//        duration: Long? = null,
-//        thumbnailUrl: String? = null,
-//        saveToDatabase: Boolean = true,
-//        onComplete: (success: Boolean) -> Unit
-//    ) {
-//        if (getCurrentUserId() != userId) {
-//            Log.e("FirebaseService", "❌ Không có quyền upload story cho user khác")
-//            onComplete(false)
-//            return
-//        }
-//
-//        if (!saveToDatabase) {
-//            onComplete(true)
-//            return
-//        }
-//
-//        val storyRef = database.child("stories").push()
-//        val storyId = storyRef.key ?: return onComplete(false)
-//        val storyType = if (isVideo) "video" else "image"
-//
-//        val storyData = mutableMapOf(
-//            "storyId" to storyId,
-//            "userId" to userId,
-//            "mediaUrl" to mediaUrl,
-//            "type" to storyType,
-//            "createdAt" to System.currentTimeMillis(),
-//            "expiresAt" to (System.currentTimeMillis() + 24 * 60 * 60 * 1000),
-//            "viewCount" to 0,
-//            "views" to mapOf<String, Boolean>(),
-//            "isExpired" to false
-//        )
-//
-//        if (isVideo) {
-//            thumbnailUrl?.let { storyData["thumbnailUrl"] = it }
-//            duration?.let { storyData["duration"] = it }
-//        }
-//
-//        storyRef.setValue(storyData)
-//            .addOnSuccessListener { onComplete(true) }
-//            .addOnFailureListener { onComplete(false) }
-//    }
 
     fun uploadStoryToFirebase(
         userId: String,

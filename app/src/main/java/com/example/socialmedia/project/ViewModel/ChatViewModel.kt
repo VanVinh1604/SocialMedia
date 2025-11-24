@@ -16,9 +16,9 @@ class ChatViewModel : ViewModel() {
         repository.loadLatestMessages(conversationId, limit, onLoaded)
     }
 
-    fun listenNewMessages(conversationId: String?) {
-        repository.listenNewMessages(conversationId)
-    }
+//    fun listenNewMessages(conversationId: String?) {
+//        repository.listenNewMessages(conversationId)
+//    }
 
     fun loadMoreMessages(conversationId: String?, oldestTimestamp: Long, onLoaded: (List<MessageModel>) -> Unit) {
         repository.loadMoreMessages(conversationId, oldestTimestamp, onLoaded)

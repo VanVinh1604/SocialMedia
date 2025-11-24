@@ -6,8 +6,10 @@ import androidx.lifecycle.MutableLiveData
 import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.ConversationModel
 import com.example.socialmedia.project.Domain.Model.MessageModel
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.*
 import java.util.UUID
+import kotlin.text.set
 
 class ChatRepository {
 
@@ -18,7 +20,6 @@ class ChatRepository {
     private var listener: ListenerRegistration? = null
     private var initialLoadLimit: Long = 20
 
-    // ✅ Sử dụng snapshot listener ngay từ đầu để realtime update
     fun loadLatestMessages(
         conversationId: String?,
         limit: Long,
@@ -31,58 +32,55 @@ class ChatRepository {
         }
 
         initialLoadLimit = limit
-
-        // Loại bỏ listener cũ
         listener?.remove()
+
         listener = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(limit)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Log.e("ChatRepository", "Failed loadLatestMessages", error)
-                    onLoaded(emptyList())
-                    return@addSnapshotListener
+                if (snapshot != null) {
+                    val messages = snapshot.documents.mapNotNull { doc ->
+                        val m = doc.toObject(MessageModel::class.java)
+                        if (m != null) {
+                            m.messageId = doc.id
+                            m.isDeleted = doc.getBoolean("isDeleted") ?: false
+                            m.isEdited = doc.getBoolean("isEdited") ?: false
+                            m
+                        } else null
+                    }
+                    _messagesLiveData.postValue(messages)
+                    onLoaded(messages)
                 }
-
-                if (snapshot == null) {
-                    onLoaded(emptyList())
-                    return@addSnapshotListener
-                }
-
-                val messages = snapshot.documents.mapNotNull { doc ->
-
-                    val message = doc.toObject(MessageModel::class.java)
-
-                    if (message != null) {
-                        // KHÔNG DÙNG COPY NỮA
-                        message.messageId = doc.id
-
-                        // Firestore luôn override lên var → không bị reset
-                        message.isDeleted = doc.getBoolean("isDeleted") ?: false
-                        message.isEdited = doc.getBoolean("isEdited") ?: false
-//                        message.editHistory = doc.get("editHistory") as? List<String> ?: emptyList()
-
-                        message
-                    } else null
-                }
-
-
-                Log.d("ChatRepository", "✅ Loaded ${messages.size} messages, isDeleted flags: ${messages.map { it.isDeleted }}")
-
-                // Cập nhật LiveData và callback
-                _messagesLiveData.postValue(messages)
-                onLoaded(messages)
             }
     }
 
+    fun getGroupPreviewAvatar(
+        userIds: List<String>,
+        callback: (List<String?>) -> Unit
+    ) {
+        val limit = userIds.take(3)
+        val result = mutableListOf<String?>()
+        var count = 0
 
-    // ✅ Loại bỏ listenNewMessages vì loadLatestMessages đã dùng snapshot listener
-    @Deprecated("Use loadLatestMessages with snapshot listener instead")
-    fun listenNewMessages(conversationId: String?) {
-        // Không cần nữa vì loadLatestMessages đã listen realtime
-        Log.d("ChatRepository", "listenNewMessages is deprecated, using snapshot in loadLatestMessages")
+        limit.forEach { uid ->
+            FirebaseDatabase.getInstance()
+                .getReference("InfoUser")
+                .child(uid)
+                .get()
+                .addOnSuccessListener { snap ->
+                    val avatar = snap.child("profilePictureUrl").getValue(String::class.java)
+                    result.add(avatar)
+                    count++
+                    if (count == limit.size) callback(result)
+                }
+                .addOnFailureListener {
+                    result.add(null)
+                    count++
+                    if (count == limit.size) callback(result)
+                }
+        }
     }
 
     fun loadMoreMessages(conversationId: String?, oldestTimestamp: Long, onLoaded: (List<MessageModel>) -> Unit) {
@@ -99,23 +97,15 @@ class ChatRepository {
             .limit(20)
             .get()
             .addOnSuccessListener { snapshot ->
-//                val messages = snapshot.documents.mapNotNull {
-//                    it.toObject(MessageModel::class.java)?.copy(
-//                        messageId = it.id
-//                    )
-//                }.sortedBy { it.createdAt }
                 val messages = snapshot.documents.mapNotNull { doc ->
                     val message = doc.toObject(MessageModel::class.java)
-
                     if (message != null) {
                         message.messageId = doc.id
                         message.isDeleted = doc.getBoolean("isDeleted") ?: false
                         message.isEdited = doc.getBoolean("isEdited") ?: false
-//                        message.editHistory = doc.get("editHistory") as? List<String> ?: emptyList()
                         message
                     } else null
                 }.sortedBy { it.createdAt }
-
                 onLoaded(messages)
             }
             .addOnFailureListener {
@@ -130,18 +120,14 @@ class ChatRepository {
             .collection("messages")
             .document(message.messageId)
 
-        // Lấy dữ liệu cũ trước
         msgRef.get().addOnSuccessListener { snapshot ->
             val oldMessage = snapshot.toObject(MessageModel::class.java)
             if (oldMessage != null) {
-                // Tạo danh sách editHistory mới
                 val newHistory = oldMessage.editHistory?.toMutableList() ?: mutableListOf()
-                // Lưu nội dung cũ vào history
                 newHistory.add(oldMessage.content)
 
-                // Cập nhật message
                 val updateMap = mapOf(
-                    "content" to message.content,      // Nội dung mới
+                    "content" to message.content,
                     "isEdited" to true,
                     "editedAt" to System.currentTimeMillis(),
                     "editHistory" to newHistory
@@ -162,81 +148,91 @@ class ChatRepository {
         }
     }
 
-
     fun sendMessage(
         conversationId: String?,
         participants: List<String>,
         message: MessageModel,
         onComplete: (Boolean) -> Unit
     ) {
-        if (participants.isEmpty()) {
+        val validParticipants = participants.filter { it.isNotBlank() }.distinct()
+        if (validParticipants.isEmpty()) {
+            Log.e("ChatRepository", "❌ Participants list empty after filtering")
             onComplete(false)
             return
         }
 
-        if (conversationId.isNullOrEmpty()) {
-            getOrCreateConversation(participants) { newConvId ->
-                sendMessage(newConvId, participants, message, onComplete)
+        // Hàm tạo conversation nếu chưa có (1-1 hoặc nhóm)
+        fun createConversationAndSend() {
+            getOrCreateConversation(validParticipants) { newConvId ->
+                if (newConvId.isNotEmpty()) {
+                    sendMessage(newConvId, validParticipants, message, onComplete)
+                } else {
+                    Log.e("ChatRepository", "❌ Failed to create conversation")
+                    onComplete(false)
+                }
             }
+        }
+
+        // Nếu chưa có conversationId -> tạo mới
+        if (conversationId.isNullOrEmpty()) {
+            createConversationAndSend()
             return
         }
 
         val msgId = if (message.messageId.isNotEmpty()) message.messageId else UUID.randomUUID().toString()
-        val messageWithId = message.copy(messageId = msgId)
-        val conversationRef = db.collection("conversations").document(conversationId)
+        val msgWithId = message.copy(messageId = msgId)
+        val convRef = db.collection("conversations").document(conversationId)
 
-        conversationRef.collection("messages")
+        // Gửi message
+        convRef.collection("messages")
             .document(msgId)
-            .set(messageWithId)
-            .addOnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    Log.e("ChatRepository", "Failed sendMessage", task.exception)
-                    onComplete(false)
-                    return@addOnCompleteListener
-                }
-
+            .set(msgWithId)
+            .addOnSuccessListener {
+                // Tạo preview message
                 val preview = when {
                     message.content.isNotEmpty() -> message.content
                     message.messageType == MessageType.IMAGE -> "[Hình ảnh]"
                     message.messageType == MessageType.VOICE -> "[Tin nhắn thoại]"
-                    message.messageType == MessageType.STORY_REPLY -> "[Đã trả lời story của bạn]"
+                    message.messageType == MessageType.STORY_REPLY -> "[Trả lời story]"
                     else -> ""
                 }
 
+                // Cập nhật conversation
                 val updateMap = mutableMapOf<String, Any>(
                     "lastMessagePreview" to preview,
                     "lastMessageAt" to System.currentTimeMillis(),
                     "lastMessageSenderId" to message.senderId,
-                    "updatedAt" to System.currentTimeMillis(),
-                    "participants" to participants.sorted()
+                    "updatedAt" to System.currentTimeMillis()
                 )
 
-                val unreadMap = participants
-                    .filter { it != message.senderId }
-                    .associateWith { FieldValue.increment(1) }
-                if (unreadMap.isNotEmpty()) updateMap["unreadCount"] = unreadMap
+                // Tăng unreadCount cho tất cả trừ sender
+                validParticipants.filter { it != message.senderId }.forEach { uid ->
+                    updateMap["unreadCount.$uid"] = FieldValue.increment(1)
+                }
+//                val unreadMap = participants
+//                    .filter { it != message.senderId }
+//                    .associateWith { FieldValue.increment(1) }
+//                if (unreadMap.isNotEmpty()) updateMap["unreadCount"] = unreadMap
+//
 
-                conversationRef.set(updateMap, SetOptions.merge())
+                convRef.set(updateMap, SetOptions.merge())
                     .addOnSuccessListener { onComplete(true) }
                     .addOnFailureListener { e ->
-                        Log.e("ChatRepository", "Failed update conversation", e)
+                        Log.e("ChatRepository", "❌ Failed to update conversation", e)
                         onComplete(false)
                     }
             }
-            .addOnFailureListener {
-                Log.e("ChatRepository", "Failed sendMessage", it)
+            .addOnFailureListener { e ->
+                Log.e("ChatRepository", "❌ Failed to send message", e)
                 onComplete(false)
             }
     }
 
-    fun markMessagesAsRead(conversationId: String?, userId: String) {
-        if (conversationId.isNullOrEmpty() || userId.isEmpty()) return
-
-        db.collection("conversations")
-            .document(conversationId)
-            .update("unreadCount.$userId", 0)
-            .addOnSuccessListener { Log.d("ChatRepository", "Unread reset for $userId") }
-            .addOnFailureListener { e -> Log.e("ChatRepository", "Failed reset unread", e) }
+    fun markMessagesAsRead(conversationId: String, userId: String) {
+        val convRef = db.collection("conversations").document(conversationId)
+        convRef.update("unreadCount.$userId", 0)
+            .addOnSuccessListener { Log.d("ChatRepository", "Marked read for $userId") }
+            .addOnFailureListener { e -> Log.e("ChatRepository", "Failed mark read", e) }
     }
 
     fun deleteMessage(conversationId: String, messageId: String, onComplete: (Boolean) -> Unit) {
@@ -245,7 +241,6 @@ class ChatRepository {
             .collection("messages")
             .document(messageId)
 
-        // Soft delete: chỉ đánh dấu isDeleted = true
         msgRef.update("isDeleted", true)
             .addOnSuccessListener {
                 Log.d("ChatRepository", "✅ Message $messageId marked as deleted")
@@ -257,95 +252,68 @@ class ChatRepository {
             }
     }
 
-
-    fun loadAllConversations(currentUserId: String, onLoaded: (List<ConversationModel>) -> Unit) {
+    fun loadAllConversations(currentUserId: String, onUpdate: (List<ConversationModel>) -> Unit) {
         db.collection("conversations")
             .whereArrayContains("participants", currentUserId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
-                    onLoaded(emptyList())
+                    onUpdate(emptyList())
                     return@addSnapshotListener
                 }
 
-                val conversationList = mutableListOf<ConversationModel>()
-
-                snapshot.documents.forEach { doc ->
-                    val conv = doc.toObject(ConversationModel::class.java) ?: return@forEach
-
-                    val rawUnread = doc.get("unreadCount") as? Map<*, *>
-                    val unreadMap = rawUnread?.mapNotNull { entry ->
-                        val key = entry.key as? String
-                        val value = (entry.value as? Number)?.toLong()
-                        if (key != null && value != null) key to value else null
+                val list = snapshot.documents.mapNotNull { doc ->
+                    val conv = doc.toObject(ConversationModel::class.java) ?: return@mapNotNull null
+                    val unreadRaw = doc.get("unreadCount") as? Map<*, *>
+                    val unreadMap = unreadRaw?.mapNotNull {
+                        val uid = it.key as? String
+                        val count = (it.value as? Number)?.toLong()
+                        if (uid != null && count != null) uid to count else null
                     }?.toMap() ?: emptyMap()
 
-                    val conversationId = doc.id
-                    val conversationRef = db.collection("conversations").document(conversationId)
-                        .collection("messages")
-                        .orderBy("createdAt", Query.Direction.DESCENDING)
-                        .limit(1)
+                    conv.copy(
+                        conversationId = doc.id,
+                        unreadCount = unreadMap,
+                        lastMessageAt = doc.getLong("lastMessageAt") ?: 0L,
+                        lastMessageSenderId = doc.getString("lastMessageSenderId") ?: ""
+                    )
+                }.sortedByDescending { it.lastMessageAt ?: 0L }
 
-                    // Lấy tin nhắn cuối cùng để check isDeleted
-                    conversationRef.get().addOnSuccessListener { msgSnapshot ->
-                        val lastMsg = msgSnapshot.documents.firstOrNull()
-                        val lastMessageIsDeleted = lastMsg?.getBoolean("isDeleted") ?: false
-
-                        val updatedConv = conv.copy(
-                            conversationId = conversationId,
-                            unreadCount = unreadMap,
-                            lastMessageIsDeleted = lastMessageIsDeleted
-                        )
-
-                        conversationList.add(updatedConv)
-
-                        // Khi đã load hết tất cả conversation, sort theo lastMessageAt
-                        if (conversationList.size == snapshot.documents.size) {
-                            val sortedList = conversationList.sortedByDescending { it.lastMessageAt ?: 0 }
-                            onLoaded(sortedList)
-                        }
-                    }.addOnFailureListener {
-                        Log.e("ChatRepository", "Failed to get last message for $conversationId", it)
-                    }
-                }
+                Log.e("dChatRepository", "Loaded ${list.size} conversations for $currentUserId")
+                onUpdate(list)
             }
     }
 
 
-    fun getOrCreateConversation(
-        participants: List<String>,
-        onResult: (conversationId: String) -> Unit
-    ) {
-        if (participants.size < 2) return
-        val sortedParticipants = participants.sorted()
-        val firstUser = sortedParticipants[0]
-        val secondUser = sortedParticipants[1]
+    fun getOrCreateConversation(participants: List<String>, onResult: (String) -> Unit) {
+        if (participants.size != 2) return
 
-        db.collection("conversations")
-            .whereArrayContains("participants", firstUser)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val existingConv = snapshot.documents.find { doc ->
+        val sorted = participants.sorted()
+        val a = sorted[0]
+        val b = sorted[1]
+
+        db.collection("conversations").whereArrayContains("participants", a).get()
+            .addOnSuccessListener { snap ->
+                val exist = snap.documents.find { doc ->
                     val part = doc.get("participants") as? List<*>
-                    part?.contains(secondUser) == true && part.size == 2
+                    part?.contains(b) == true && part.size == 2
                 }
 
-                if (existingConv != null) {
-                    onResult(existingConv.id)
-                } else {
-                    val newConvRef = db.collection("conversations").document()
-                    val newConversation = mapOf(
-                        "participants" to sortedParticipants,
-                        "createdAt" to System.currentTimeMillis(),
-                        "lastMessageAt" to System.currentTimeMillis(),
-                        "lastMessagePreview" to "",
-                        "unreadCount" to sortedParticipants.associateWith { 0L }
-                    )
-                    newConvRef.set(newConversation)
-                        .addOnSuccessListener { onResult(newConvRef.id) }
-                        .addOnFailureListener { e -> Log.e("ChatRepository", "Failed create conversation", e) }
-                }
+                if (exist != null) { onResult(exist.id); return@addOnSuccessListener }
+
+                val ref = db.collection("conversations").document()
+                val newConv = mapOf(
+                    "conversationId" to ref.id,
+                    "participants" to sorted,
+                    "type" to "DIRECT",
+                    "createdAt" to System.currentTimeMillis(),
+                    "updatedAt" to System.currentTimeMillis(),
+                    "lastMessageAt" to 0L,
+                    "unreadCount" to sorted.associateWith { 0L }
+                )
+                ref.set(newConv)
+                    .addOnSuccessListener { onResult(ref.id) }
+                    .addOnFailureListener { e -> Log.e("ChatRepository", "Failed create conversation", e) }
             }
-            .addOnFailureListener { e -> Log.e("ChatRepository", "Failed getOrCreateConversation", e) }
     }
 
     fun removeListener() {
