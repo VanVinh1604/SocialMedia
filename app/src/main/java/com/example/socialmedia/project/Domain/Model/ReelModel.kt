@@ -2,7 +2,6 @@ package com.example.socialmedia.project.Domain.Model
 
 import java.util.UUID
 
-
 data class ReelModel(
     val reelId: String = UUID.randomUUID().toString(),
     val userId: String = "",
@@ -10,6 +9,7 @@ data class ReelModel(
     val thumbnailUrl: String = "",
     val caption: String? = null,
     val duration: Int = 0,
+    val hashtags: List<String> = emptyList(),
     val musicId: String? = null,
     val allowsComments: Boolean = true,
     val allowsDuet: Boolean = true,

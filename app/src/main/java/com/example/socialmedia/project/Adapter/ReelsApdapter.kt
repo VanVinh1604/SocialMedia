@@ -1,5 +1,8 @@
-// File: ReelsAdapter.kt
+// ========================================
+// FILE 1: ReelsAdapter.kt - COMPLETE FIXED VERSION
+// ========================================
 package com.example.socialmedia.project.Adapter
+
 import androidx.appcompat.app.AppCompatActivity
 import android.annotation.SuppressLint
 import android.util.Log
@@ -59,7 +62,6 @@ class ReelsAdapter(
 
     inner class ReelViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-        // Views
         private val playerView: PlayerView = itemView.findViewById(R.id.playerView)
         private val ivHeartFly: ImageView = itemView.findViewById(R.id.ivHeartFly)
 
@@ -76,23 +78,27 @@ class ReelsAdapter(
         private val cvProfilePic: CardView = itemView.findViewById(R.id.cvProfilePic)
         private val btnFollow: ImageView = itemView.findViewById(R.id.btnFollow)
 
-        // Controller
         private val ivPlayPause: ImageView = itemView.findViewById(R.id.ivPlayPause)
         private val ivSeekBackward: ImageView = itemView.findViewById(R.id.ivSeekBackward)
         private val ivSeekForward: ImageView = itemView.findViewById(R.id.ivSeekForward)
 
         private var player: ExoPlayer? = null
-
         private var isLiked = false
         private var lastTapTime = 0L
         private val hideControllerRunnable = Runnable { hideController() }
-
 
         @SuppressLint("ClickableViewAccessibility")
         fun bind(reel: ReelModel, position: Int) {
             tvUsername.text = "@loading..."
             tvCaption.text = reel.caption ?: ""
-            tvHashtag.text = "#Reels"
+
+            // ✅ Hiển thị hashtags
+            tvHashtag.text = if (reel.hashtags.isNotEmpty()) {
+                reel.hashtags.joinToString(" ") { "#$it" }
+            } else {
+                "#Reels"
+            }
+
             tvMusicInfo.text = "Original Sound - loading..."
 
             tvLikeCount.text = formatCount(reel.likeCount)
@@ -107,25 +113,29 @@ class ReelsAdapter(
 
             loadUserInfo(reel.userId)
             checkIfUserLiked(reel)
-            setupFollowButton(reel) // ✅ Gọi setup follow button
-
+            setupFollowButton(reel)
             initializePlayer(reel.videoUrl)
 
-            // Click listeners
+            // ✅ FIX: Like button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutLike).setOnClickListener {
                 toggleLike(reel, position)
+                onLikeClick(reel, position) // ✅ Ghi nhận LIKE
             }
 
+            // ✅ FIX: Comment button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutComment).setOnClickListener {
-                // ✅ Truyền thêm reelOwnerId vào CommentsBottomSheet
+                onCommentClick(reel, position) // ✅ Ghi nhận COMMENT trước
+
+                // Mở comment sheet
                 val fragment = CommentsBottomSheet.newInstance(reel.reelId, reel.userId)
                 (itemView.context as? androidx.fragment.app.FragmentActivity)?.let { activity ->
                     fragment.show(activity.supportFragmentManager, "CommentsBottomSheet")
                 }
             }
 
+            // ✅ FIX: Share button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutShare).setOnClickListener {
-                onShareClick(reel, position)
+                onShareClick(reel, position) // ✅ Ghi nhận SHARE
             }
 
             cvProfilePic.setOnClickListener {
@@ -136,12 +146,13 @@ class ReelsAdapter(
                 (itemView.context as? AppCompatActivity)?.onBackPressed()
             }
 
-            // Double tap & single tap
+            // ✅ FIX: Double tap - GỌI CALLBACK
             itemView.setOnClickListener {
                 val now = System.currentTimeMillis()
                 if (now - lastTapTime < 300) {
                     toggleLike(reel, position)
                     showHeartAnimation()
+                    onLikeClick(reel, position) // ✅ Ghi nhận LIKE khi double tap
                 } else {
                     togglePlayPause()
                     toggleController()
@@ -152,7 +163,6 @@ class ReelsAdapter(
             ivSeekBackward.setOnClickListener { seekBackward() }
             ivSeekForward.setOnClickListener { seekForward() }
 
-            // Gesture Detector for double tap left/right
             val gestureDetector = GestureDetector(itemView.context, object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDoubleTap(e: MotionEvent): Boolean {
                     val width = itemView.width
@@ -169,7 +179,6 @@ class ReelsAdapter(
             itemView.setOnTouchListener { _, event -> gestureDetector.onTouchEvent(event) }
         }
 
-        // ✅ Setup Follow Button - Di chuyển vào trong ViewHolder
         private fun setupFollowButton(reel: ReelModel) {
             val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
             if (currentUserId == null) {
@@ -178,56 +187,43 @@ class ReelsAdapter(
             }
 
             val reelOwnerId = reel.userId
-
-            // Nếu là bài của chính mình, ẩn nút follow
             if (currentUserId == reelOwnerId) {
                 btnFollow.visibility = View.GONE
                 return
             }
 
-            // Kiểm tra trạng thái follow
             database.reference.child("Follow").child(currentUserId)
                 .child("following").child(reelOwnerId)
                 .addValueEventListener(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         val isFollowing = snapshot.getValue(Boolean::class.java) ?: false
-
-                        // Nếu đã follow, ẩn nút
                         btnFollow.visibility = if (isFollowing) View.GONE else View.VISIBLE
                     }
-
                     override fun onCancelled(error: DatabaseError) {
                         Log.e("ReelsAdapter", "Error checking follow status", error.toException())
                     }
                 })
 
-            // Xử lý click follow
             btnFollow.setOnClickListener {
                 followUser(currentUserId, reelOwnerId)
             }
         }
 
-        // ✅ Follow User - Cập nhật đúng cấu trúc Follow
         private fun followUser(currentUserId: String, targetUserId: String) {
-            // Lưu vào Follow/{currentUserId}/following/{targetUserId}
             database.reference.child("Follow").child(currentUserId)
                 .child("following").child(targetUserId).setValue(true)
                 .addOnSuccessListener {
-                    // Lưu vào Follow/{targetUserId}/followers/{currentUserId}
                     database.reference.child("Follow").child(targetUserId)
                         .child("followers").child(currentUserId).setValue(true)
 
-                    // Cập nhật followingCount trong InfoUser
                     database.reference.child("InfoUser").child(currentUserId)
                         .child("followingCount")
                         .setValue(ServerValue.increment(1))
 
-                    // Cập nhật followerCount trong InfoUser
                     database.reference.child("InfoUser").child(targetUserId)
                         .child("followerCount")
                         .setValue(ServerValue.increment(1))
 
-                    // Tạo FollowModel record (optional - nếu muốn giữ cả 2 cấu trúc)
                     val followId = UUID.randomUUID().toString()
                     val followModel = mapOf(
                         "followId" to followId,
@@ -240,60 +236,10 @@ class ReelsAdapter(
 
                     Toast.makeText(itemView.context, "Đã theo dõi", Toast.LENGTH_SHORT).show()
                     btnFollow.visibility = View.GONE
-
-                    Log.d("ReelsAdapter", "Follow successful: $currentUserId -> $targetUserId")
                 }
                 .addOnFailureListener { e ->
                     Log.e("ReelsAdapter", "Failed to follow user", e)
                     Toast.makeText(itemView.context, "Không thể theo dõi", Toast.LENGTH_SHORT).show()
-                }
-        }
-
-        // ✅ Unfollow User - Cập nhật đúng cấu trúc Follow
-        private fun unfollowUser(currentUserId: String, targetUserId: String) {
-            // Xóa Follow/{currentUserId}/following/{targetUserId}
-            database.reference.child("Follow").child(currentUserId)
-                .child("following").child(targetUserId).removeValue()
-                .addOnSuccessListener {
-                    // Xóa Follow/{targetUserId}/followers/{currentUserId}
-                    database.reference.child("Follow").child(targetUserId)
-                        .child("followers").child(currentUserId).removeValue()
-
-                    // Giảm followingCount
-                    database.reference.child("InfoUser").child(currentUserId)
-                        .child("followingCount")
-                        .setValue(ServerValue.increment(-1))
-
-                    // Giảm followerCount
-                    database.reference.child("InfoUser").child(targetUserId)
-                        .child("followerCount")
-                        .setValue(ServerValue.increment(-1))
-
-                    // Xóa FollowModel record (nếu có)
-                    database.reference.child("Follows")
-                        .orderByChild("followerId")
-                        .equalTo(currentUserId)
-                        .addListenerForSingleValueEvent(object : ValueEventListener {
-                            override fun onDataChange(snapshot: DataSnapshot) {
-                                for (followSnapshot in snapshot.children) {
-                                    val followingId = followSnapshot.child("followingId").getValue(String::class.java)
-                                    if (followingId == targetUserId) {
-                                        followSnapshot.ref.removeValue()
-                                        break
-                                    }
-                                }
-                            }
-                            override fun onCancelled(error: DatabaseError) {}
-                        })
-
-                    Toast.makeText(itemView.context, "Đã bỏ theo dõi", Toast.LENGTH_SHORT).show()
-                    btnFollow.visibility = View.VISIBLE
-
-                    Log.d("ReelsAdapter", "Unfollow successful: $currentUserId -> $targetUserId")
-                }
-                .addOnFailureListener { e ->
-                    Log.e("ReelsAdapter", "Failed to unfollow user", e)
-                    Toast.makeText(itemView.context, "Không thể bỏ theo dõi", Toast.LENGTH_SHORT).show()
                 }
         }
 
@@ -485,3 +431,4 @@ class ReelsAdapter(
         super.onViewRecycled(holder)
     }
 }
+

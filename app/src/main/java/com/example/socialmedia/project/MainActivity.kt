@@ -24,6 +24,7 @@ import im.zego.zim.callback.ZIMLoggedInCallback
 import im.zego.zim.entity.ZIMError
 import im.zego.zim.entity.ZIMUserInfo
 import im.zego.zim.enums.ZIMErrorCode
+import com.example.socialmedia.project.Utils.DatabaseMigration
 
 class MainActivity : AppCompatActivity() {
 
@@ -51,7 +52,10 @@ class MainActivity : AppCompatActivity() {
         setupNavigation()
         setupBottomNav()
 
-        // ✅ Đảm bảo lấy userId và userName một cách đáng tin cậy
+        // ✅ CHẠY MIGRATION 1 LẦN (Đặt ở đây, trong onCreate)
+        runHashtagsMigration()
+
+        // Khởi tạo Zego
         val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
         val userId = sharedPref.getString("user_id", null)
         val fullName = sharedPref.getString("full_name", null)
@@ -61,7 +65,6 @@ class MainActivity : AppCompatActivity() {
             initZegoWithRetry(userId, fullName, maxRetries = 3)
         } else {
             Log.e(TAG, "❌ User data missing! userId=$userId, fullName=$fullName")
-            // Thử lấy từ FirebaseAuth nếu có
             auth.currentUser?.let { user ->
                 val fallbackUserId = user.uid
                 val fallbackName = user.displayName ?: "User"
@@ -71,10 +74,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ✅ Function để chạy migration
+    private fun runHashtagsMigration() {
+        // Kiểm tra xem đã chạy migration chưa
+        val sharedPref = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val hasMigrated = sharedPref.getBoolean("hashtags_migrated", false)
+
+        if (!hasMigrated) {
+            Log.d(TAG, "🔄 Running hashtags migration...")
+
+            val database = FirebaseDatabase.getInstance()
+            DatabaseMigration.addHashtagsToExistingReels(database) { updatedCount ->
+                Log.d(TAG, "🎉 Migration completed! Updated $updatedCount reels")
+
+                // Verify kết quả
+                DatabaseMigration.verifyHashtags(database)
+
+                // Đánh dấu đã migration để không chạy lại
+                sharedPref.edit().putBoolean("hashtags_migrated", true).apply()
+                Log.d(TAG, "✅ Migration flag saved")
+            }
+        } else {
+            Log.d(TAG, "✓ Hashtags migration already done, skipping...")
+        }
+    }
+
     // ✅ Khởi tạo Zego với retry mechanism
     private fun initZegoWithRetry(userId: String, userName: String, maxRetries: Int, currentAttempt: Int = 1) {
         try {
-            // Kiểm tra lại dữ liệu trước khi init
             if (userId.isEmpty() || userName.isEmpty()) {
                 Log.e(TAG, "❌ Invalid user data: userId=$userId, userName=$userName")
                 return
@@ -84,16 +111,13 @@ class MainActivity : AppCompatActivity() {
             val appSign: String = Constants.APP_SIGN
             val config = ZegoUIKitPrebuiltCallInvitationConfig()
 
-            // ✅ UnInit nếu đã init trước đó
             if (isZegoInitialized) {
                 Log.d(TAG, "⚠️ Zego đã init, đang unInit...")
                 ZegoUIKitPrebuiltCallService.unInit()
                 isZegoInitialized = false
-                // Đợi một chút để cleanup hoàn tất
                 Thread.sleep(500)
             }
 
-            // ✅ Init Zego Call Service
             ZegoUIKitPrebuiltCallService.init(
                 application,
                 appID,
@@ -106,7 +130,6 @@ class MainActivity : AppCompatActivity() {
             isZegoInitialized = true
             Log.d(TAG, "✅ Zego initialized successfully for: $userId ($userName)")
 
-            // ✅ Đợi một chút để Zego khởi tạo hoàn tất
             android.os.Handler(Looper.getMainLooper()).postDelayed({
                 loginZIMWithRetry(userId, userName, maxRetries = 3)
             }, 1000)
@@ -115,12 +138,11 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "❌ Zego init failed (attempt $currentAttempt/$maxRetries): ${e.message}", e)
             isZegoInitialized = false
 
-            // Retry nếu chưa hết số lần thử
             if (currentAttempt < maxRetries) {
                 android.os.Handler(Looper.getMainLooper()).postDelayed({
                     Log.d(TAG, "🔄 Retrying Zego init... (attempt ${currentAttempt + 1}/$maxRetries)")
                     initZegoWithRetry(userId, userName, maxRetries, currentAttempt + 1)
-                }, 2000L * currentAttempt) // Tăng dần delay: 2s, 4s, 6s...
+                }, 2000L * currentAttempt)
             }
         }
     }
@@ -128,7 +150,6 @@ class MainActivity : AppCompatActivity() {
     // ✅ Login ZIM với retry và null check
     private fun loginZIMWithRetry(userId: String, userName: String, maxRetries: Int, currentAttempt: Int = 1) {
         try {
-            // ✅ QUAN TRỌNG: Kiểm tra ZIM instance có sẵn không
             val zimInstance = ZIM.getInstance()
             if (zimInstance == null) {
                 Log.e(TAG, "❌ ZIM instance is null! (attempt $currentAttempt/$maxRetries)")
@@ -142,12 +163,10 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            // ✅ Tạo ZIMUserInfo với null check
             val zimUserInfo = ZIMUserInfo()
             zimUserInfo.userID = userId
             zimUserInfo.userName = userName
 
-            // ✅ Kiểm tra dữ liệu trước khi login
             if (zimUserInfo.userID.isNullOrEmpty()) {
                 Log.e(TAG, "❌ ZIMUserInfo.userID is null or empty!")
                 return
@@ -164,7 +183,6 @@ class MainActivity : AppCompatActivity() {
                         isZIMLoggedIn = false
                         Log.e(TAG, "❌ ZIM login failed: ${errorInfo.code} - ${errorInfo.message}")
 
-                        // Retry nếu chưa hết lần thử
                         if (currentAttempt < maxRetries) {
                             android.os.Handler(Looper.getMainLooper()).postDelayed({
                                 Log.d(TAG, "🔄 Retrying ZIM login after error... (attempt ${currentAttempt + 1}/$maxRetries)")
@@ -188,7 +206,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // -------------------- Firebase Presence --------------------
     private fun setupUserPresence() {
         val user = auth.currentUser ?: return
         val userRef = FirebaseDatabase.getInstance().getReference("InfoUser").child(user.uid)
@@ -207,7 +224,6 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    // -------------------- Save Session --------------------
     private fun saveUserSession() {
         auth.currentUser?.let { user ->
             val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
@@ -221,7 +237,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // -------------------- Navigation --------------------
     private fun setupNavigation() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
@@ -236,7 +251,9 @@ class MainActivity : AppCompatActivity() {
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.chatFragment, R.id.callFragment, R.id.messageFragment, R.id.notificationFragment,R.id.addStoryFragment,R.id.storyViewerFragment,R.id.profileFragment -> {
+                R.id.chatFragment, R.id.callFragment, R.id.messageFragment,
+                R.id.notificationFragment, R.id.addStoryFragment,
+                R.id.storyViewerFragment, R.id.profileFragment -> {
                     binding.container.visibility = View.GONE
                     binding.navHostFragment.setPadding(0, 0, 0, 0)
                 }
@@ -248,7 +265,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // -------------------- Bottom Navigation --------------------
     private fun setupBottomNav() {
         binding.bottomNavigation.selectedItemId = R.id.nav_home
         animateIcon(R.id.nav_home)
@@ -317,7 +333,6 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.menu.setGroupCheckable(0, true, false)
     }
 
-    // -------------------- Utils --------------------
     private fun dpToPx(dp: Int): Int =
         (dp * resources.displayMetrics.density).toInt()
 
@@ -327,7 +342,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        // ✅ Logout ZIM trước
         if (isZIMLoggedIn) {
             try {
                 ZIM.getInstance()?.logout()
@@ -338,7 +352,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ✅ Cleanup Zego Call Service
         if (isZegoInitialized) {
             try {
                 ZegoUIKitPrebuiltCallService.unInit()
@@ -364,5 +377,4 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 }

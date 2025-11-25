@@ -3,6 +3,7 @@ package com.example.socialmedia.project.ViewModel
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.example.socialmedia.project.Utils.HashtagUtils
 import androidx.lifecycle.*
 import com.example.socialmedia.project.Domain.Enum.AudienceType
 import com.example.socialmedia.project.Domain.Enum.PostType
@@ -178,6 +179,7 @@ class UploadViewModel(
         context: Context,
         videoMedia: MediaItem,
         caption: String,
+        hashtagsInput: String, // ✅ THÊM PARAMETER NÀY
         musicId: String?,
         allowsComments: Boolean,
         allowsDuet: Boolean,
@@ -186,7 +188,6 @@ class UploadViewModel(
         try {
             _uploadProgress.value = UploadProgress.GettingUserInfo
 
-            // Get current user
             val currentUser = auth.currentUser
             if (currentUser == null) {
                 _uploadResult.value = UploadResult.Error("Người dùng chưa đăng nhập")
@@ -200,7 +201,16 @@ class UploadViewModel(
 
             Log.d(TAG, "Starting reel upload for user: $userId")
 
-            // Upload video to Cloudinary (giống như upload video trong POST)
+            // ✅ KẾT HỢP HASHTAG TỪ CẢ 2 NGUỒN
+            val hashtagsFromCaption = HashtagUtils.extractHashtags(caption)
+            val hashtagsFromInput = parseHashtags(hashtagsInput)
+            val allHashtags = (hashtagsFromCaption + hashtagsFromInput).distinct()
+
+            Log.d(TAG, "📌 From caption: $hashtagsFromCaption")
+            Log.d(TAG, "📌 From input: $hashtagsFromInput")
+            Log.d(TAG, "📌 Final hashtags: $allHashtags")
+
+            // Upload video to Cloudinary
             _uploadProgress.value = UploadProgress.UploadingReel(0)
 
             val videoList = listOf(videoMedia)
@@ -222,14 +232,13 @@ class UploadViewModel(
 
             val uploadedVideo = uploadedMediaList[0]
             val videoUrl = uploadedVideo.mediaUrl
-            val thumbnailUrl = uploadedVideo.mediaUrl // Cloudinary tự động tạo thumbnail cho video
+            val thumbnailUrl = uploadedVideo.mediaUrl
 
             Log.d(TAG, "Video uploaded to Cloudinary: $videoUrl")
 
-            // Get video duration
-            val duration = (videoMedia.duration?.toInt() ?: 0) / 1000 // Convert to seconds
+            val duration = (videoMedia.duration?.toInt() ?: 0) / 1000
 
-            // Create Reel model
+            // ✅ SỬ DỤNG allHashtags THAY VÌ hashtags
             val reel = ReelModel(
                 reelId = reelId,
                 userId = userId,
@@ -237,6 +246,7 @@ class UploadViewModel(
                 thumbnailUrl = thumbnailUrl,
                 caption = caption,
                 duration = duration,
+                hashtags = allHashtags,  // ✅ SỬ DỤNG KẾT HỢP
                 musicId = musicId,
                 allowsComments = allowsComments,
                 allowsDuet = allowsDuet,
@@ -244,26 +254,25 @@ class UploadViewModel(
                 createdAt = timestamp
             )
 
-            // Save to Firebase Realtime Database
             _uploadProgress.value = UploadProgress.SavingReel
 
-            Log.d(TAG, "Saving reel to database: $reelId")
+            Log.d(TAG, "Saving reel with hashtags: $allHashtags")
 
-            // Lưu vào node "Reels"
+            // Lưu vào Firebase
             database.reference
                 .child("Reels")
                 .child(reelId)
                 .setValue(reel)
                 .await()
 
-            // Cập nhật số lượng reels của user
+            // Cập nhật reelCount
             val userRef = database.reference.child("InfoUser").child(userId)
             userRef.child("reelCount").get().await().let { snapshot ->
                 val currentCount = snapshot.getValue(Int::class.java) ?: 0
                 userRef.child("reelCount").setValue(currentCount + 1).await()
             }
 
-            // Thêm reelId vào danh sách reels của user
+            // Thêm vào UserReels
             database.reference
                 .child("UserReels")
                 .child(userId)
@@ -271,12 +280,12 @@ class UploadViewModel(
                 .setValue(timestamp)
                 .await()
 
-            Log.d(TAG, "Reel uploaded successfully!")
+            Log.d(TAG, "✅ Reel uploaded successfully with hashtags: $allHashtags")
             _uploadResult.value = UploadResult.ReelSuccess
             _uploadProgress.value = UploadProgress.Idle
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error uploading reel", e)
+            Log.e(TAG, "❌ Error uploading reel", e)
             _uploadResult.value = UploadResult.Error(e.message ?: "Lỗi không xác định")
             _uploadProgress.value = UploadProgress.Idle
         }
