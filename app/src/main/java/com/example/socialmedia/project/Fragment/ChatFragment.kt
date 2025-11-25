@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,6 +40,7 @@ import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.Utils.ChatCloudinaryHelper
 import com.example.socialmedia.project.ViewModel.ChatViewModel
 import com.example.socialmedia.project.ViewModel.SharedUserViewModel
+import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.zegocloud.uikit.service.defines.ZegoUIKitUser
@@ -64,6 +66,7 @@ class ChatFragment : Fragment() {
     private var otherUserId: String? = null
     private var otherUserName: String? = null
     private var otherUserAvatar: String? = null
+
 
     // ✅ Cache thông tin user hiện tại
     private var currentUserName: String = "Bạn"
@@ -227,14 +230,21 @@ class ChatFragment : Fragment() {
         Glide.with(requireContext())
             .load(otherUserAvatar ?: R.drawable.image_avata_user)
             .circleCrop()
-            .into(binding.ivAvatar)
+            .into(binding.ivAvatarSingle)
+
+        // Kiểm tra kiểu conversation
+        viewModel.getParticipants(conversationId!!) { participants ->
+            if (participants.size > 2) {
+                setupAvatar(true, participants)
+            } else {
+                // fallback: hiển thị avatar single
+                setupAvatar(false)
+            }
+        }
 
         binding.ivBack.setOnClickListener { parentFragmentManager.popBackStack() }
-
-//        chatAdapter = ChatAdapter(messages, currentUserId, mapOf())
         val layoutManager = LinearLayoutManager(context).apply { stackFromEnd = true }
         binding.rvChat.layoutManager = layoutManager
-//        binding.rvChat.adapter = chatAdapter
 
         binding.ivFile.setOnClickListener {
             pickImageLauncher.launch("image/*")
@@ -266,6 +276,40 @@ class ChatFragment : Fragment() {
         }
 
     }
+
+    private fun setupAvatar(isGroup: Boolean, participants: List<UserModel>? = null) {
+        if (isGroup && participants != null) {
+            setupGroupAvatarsTwo(participants)
+        } else {
+            // Direct chat
+            binding.ivAvatarSingle.visibility = View.VISIBLE
+            binding.ivAvatarGroup.root.visibility = View.GONE
+            Glide.with(requireContext())
+                .load(otherUserAvatar ?: R.drawable.image_avata_user)
+                .circleCrop()
+                .into(binding.ivAvatarSingle)
+        }
+    }
+
+    private fun setupGroupAvatarsTwo(participants: List<UserModel>) {
+        binding.ivAvatarSingle.visibility = View.GONE
+        binding.ivAvatarGroup.root.visibility = View.VISIBLE
+
+        val avatar1 = binding.ivAvatarGroup.root.findViewById<ShapeableImageView>(R.id.avatar1)
+        val avatar2 = binding.ivAvatarGroup.root.findViewById<ShapeableImageView>(R.id.avatar2)
+
+        val userIds = participants.map { it.userId }
+        viewModel.getGroupPreviewAvatar(userIds) { avatarUrls ->
+            // Luôn đảm bảo list có ít nhất 2 phần tử
+            val firstAvatar = avatarUrls.getOrNull(0) ?: R.drawable.image_avata_user
+            val secondAvatar = avatarUrls.getOrNull(1) ?: R.drawable.image_avata_user
+
+            Glide.with(requireContext()).load(firstAvatar).circleCrop().into(avatar1)
+            Glide.with(requireContext()).load(secondAvatar).circleCrop().into(avatar2)
+        }
+    }
+
+
     private fun cancelEditingMessage() {
         editingMessage = null
         llEditPreview.visibility = View.GONE

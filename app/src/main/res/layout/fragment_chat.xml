@@ -21,15 +21,33 @@
             android:layout_centerVertical="true"
             android:contentDescription="Back"/>
 
-        <com.google.android.material.imageview.ShapeableImageView
+        <!-- Avatar Container (GIỮ NGUYÊN ID ivAvatar) -->
+        <FrameLayout
             android:id="@+id/ivAvatar"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_toEndOf="@id/ivBack"
             android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            app:shapeAppearanceOverlay="@style/CircleImageView"
-            android:src="@drawable/image_avata_user"/>
+            android:layout_marginStart="8dp">
+
+            <!-- Avatar đơn -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivAvatarSingle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:shapeAppearanceOverlay="@style/CircleImageView"
+                android:src="@drawable/image_avata_user"
+                android:visibility="gone"/>
+
+            <!-- Avatar nhóm -->
+            <include
+                android:id="@+id/ivAvatarGroup"
+                layout="@layout/item_group_chatview"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:visibility="visible"/>
+
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tvUserName"
