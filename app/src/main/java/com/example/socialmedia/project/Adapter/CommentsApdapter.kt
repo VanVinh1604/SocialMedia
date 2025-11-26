@@ -21,13 +21,16 @@ import java.util.*
 
 class CommentsAdapter(
     private val comments: MutableList<CommentsModel>,
-    private val reelOwnerId: String, // Thêm ID của người đăng reel
+    private val reelOwnerId: String,
     private val onReplyClick: (CommentsModel) -> Unit,
     private val onLikeClick: (CommentsModel) -> Unit
 ) : RecyclerView.Adapter<CommentsAdapter.CommentViewHolder>() {
 
     private val database = FirebaseDatabase.getInstance()
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    // ✅ Map để track listeners và tránh duplicate
+    private val replyListeners = mutableMapOf<String, ValueEventListener>()
 
     inner class CommentViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val imgUserAvatar: CircleImageView = view.findViewById(R.id.imgUserAvatar)
@@ -68,7 +71,7 @@ class CommentsAdapter(
             onReplyClick(comment)
         }
 
-        // ✅ Setup long press để edit/delete (chỉ với comment của mình)
+        // Setup long press để edit/delete (chỉ với comment của mình)
         if (comment.userId == currentUserId) {
             holder.itemView.setOnLongClickListener {
                 showCommentOptionsDialog(holder.itemView.context, comment, position)
@@ -76,6 +79,14 @@ class CommentsAdapter(
             }
         } else {
             holder.itemView.setOnLongClickListener(null)
+        }
+
+        // ✅ Remove old listener trước khi load replies mới
+        replyListeners[comment.commentId]?.let { oldListener ->
+            database.reference.child("Comments")
+                .orderByChild("parentCommentId")
+                .equalTo(comment.commentId)
+                .removeEventListener(oldListener)
         }
 
         // Load replies
@@ -97,14 +108,12 @@ class CommentsAdapter(
                         .circleCrop()
                         .into(holder.imgUserAvatar)
 
-                    // Hiển thị label "Tác giả" nếu comment.userId == reelOwnerId
                     if (comment.userId == reelOwnerId) {
                         holder.tvAuthorLabel.visibility = View.VISIBLE
                     } else {
                         holder.tvAuthorLabel.visibility = View.GONE
                     }
 
-                    // Show star if current user
                     holder.imgCurrentUserStar.visibility =
                         if (comment.userId == currentUserId) View.VISIBLE else View.GONE
                 }
@@ -116,7 +125,7 @@ class CommentsAdapter(
     private fun setupLikeButton(holder: CommentViewHolder, comment: CommentsModel) {
         val commentRef = database.reference.child("Comments").child(comment.commentId)
 
-        // Load like status
+        // ✅ Load like status - SINGLE VALUE
         commentRef.child("likedUsers").child(currentUserId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -128,9 +137,9 @@ class CommentsAdapter(
                 override fun onCancelled(error: DatabaseError) {}
             })
 
-        // Load like count
+        // ✅ Load like count - SINGLE VALUE (không cần realtime)
         commentRef.child("likeCount")
-            .addValueEventListener(object : ValueEventListener {
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val count = snapshot.getValue(Int::class.java) ?: 0
                     holder.tvLikeCount.text = count.toString()
@@ -150,11 +159,13 @@ class CommentsAdapter(
                         commentRef.child("likedUsers").child(currentUserId).removeValue()
                         commentRef.child("likeCount").setValue((currentCount - 1).coerceAtLeast(0))
                         holder.imgLikeComment.setImageResource(R.drawable.ic_favorite)
+                        holder.tvLikeCount.text = ((currentCount - 1).coerceAtLeast(0)).toString()
                     } else {
                         // Like
                         commentRef.child("likedUsers").child(currentUserId).setValue(true)
                         commentRef.child("likeCount").setValue(currentCount + 1)
                         holder.imgLikeComment.setImageResource(R.drawable.ic_favorite_red)
+                        holder.tvLikeCount.text = (currentCount + 1).toString()
                     }
 
                     onLikeClick(comment)
@@ -163,35 +174,40 @@ class CommentsAdapter(
     }
 
     private fun loadReplies(holder: CommentViewHolder, comment: CommentsModel) {
-        // Query replies by parentCommentId
-        database.reference.child("Comments")
-            .orderByChild("parentCommentId")
-            .equalTo(comment.commentId)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val replies = mutableListOf<CommentsModel>()
+        // ✅ Tạo listener mới
+        val repliesListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val replies = mutableListOf<CommentsModel>()
 
-                    for (replySnapshot in snapshot.children) {
-                        val reply = replySnapshot.getValue(CommentsModel::class.java)
-                        if (reply != null) {
-                            replies.add(reply)
-                        }
-                    }
-
-                    // Sort by oldest first
-                    replies.sortBy { it.createdAt }
-
-                    if (replies.isNotEmpty()) {
-                        displayReplies(holder, replies)
-                    } else {
-                        holder.layoutReplies.visibility = View.GONE
-                        holder.tvSeeMoreReplies.visibility = View.GONE
-                        holder.tvHideReplies.visibility = View.GONE
+                for (replySnapshot in snapshot.children) {
+                    val reply = replySnapshot.getValue(CommentsModel::class.java)
+                    if (reply != null) {
+                        replies.add(reply)
                     }
                 }
 
-                override fun onCancelled(error: DatabaseError) {}
-            })
+                replies.sortBy { it.createdAt }
+
+                if (replies.isNotEmpty()) {
+                    displayReplies(holder, replies)
+                } else {
+                    holder.layoutReplies.visibility = View.GONE
+                    holder.tvSeeMoreReplies.visibility = View.GONE
+                    holder.tvHideReplies.visibility = View.GONE
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
+        // ✅ Lưu listener vào map
+        replyListeners[comment.commentId] = repliesListener
+
+        // ✅ Attach listener
+        database.reference.child("Comments")
+            .orderByChild("parentCommentId")
+            .equalTo(comment.commentId)
+            .addValueEventListener(repliesListener)
     }
 
     private fun displayReplies(holder: CommentViewHolder, replies: List<CommentsModel>) {
@@ -199,13 +215,11 @@ class CommentsAdapter(
         holder.layoutReplies.visibility = View.VISIBLE
 
         if (replies.size == 1) {
-            // Show single reply
             val replyView = createReplyView(holder.itemView.context, replies[0])
             holder.layoutReplies.addView(replyView)
             holder.tvSeeMoreReplies.visibility = View.GONE
             holder.tvHideReplies.visibility = View.GONE
         } else {
-            // Show first reply only
             val firstReplyView = createReplyView(holder.itemView.context, replies[0])
             holder.layoutReplies.addView(firstReplyView)
 
@@ -214,7 +228,6 @@ class CommentsAdapter(
             holder.tvHideReplies.visibility = View.GONE
 
             holder.tvSeeMoreReplies.setOnClickListener {
-                // Show all replies
                 holder.layoutReplies.removeAllViews()
                 replies.forEach { reply ->
                     val replyView = createReplyView(holder.itemView.context, reply)
@@ -225,7 +238,6 @@ class CommentsAdapter(
             }
 
             holder.tvHideReplies.setOnClickListener {
-                // Show only first reply
                 holder.layoutReplies.removeAllViews()
                 val firstView = createReplyView(holder.itemView.context, replies[0])
                 holder.layoutReplies.addView(firstView)
@@ -249,11 +261,9 @@ class CommentsAdapter(
         val imgLikeReply: ImageView = replyView.findViewById(R.id.imgLikeReply)
         val tvReplyLikeCount: TextView = replyView.findViewById(R.id.tvReplyLikeCount)
 
-        // Set content
         tvReplyContent.text = reply.content
         tvReplyTime.text = getTimeAgo(reply.createdAt)
 
-        // ✅ Long press để edit/delete reply (chỉ với reply của mình)
         if (reply.userId == currentUserId) {
             replyView.setOnLongClickListener {
                 showReplyOptionsDialog(context, reply)
@@ -261,7 +271,6 @@ class CommentsAdapter(
             }
         }
 
-        // Load user info
         database.reference.child("InfoUser").child(reply.userId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -275,7 +284,6 @@ class CommentsAdapter(
                         .circleCrop()
                         .into(imgReplyAvatar)
 
-                    // Hiển thị label "Tác giả" cho reply nếu cần
                     if (reply.userId == reelOwnerId) {
                         tvReplyAuthorLabel.visibility = View.VISIBLE
                     } else {
@@ -288,9 +296,9 @@ class CommentsAdapter(
                 override fun onCancelled(error: DatabaseError) {}
             })
 
-        // Setup like for reply
         val replyRef = database.reference.child("Comments").child(reply.commentId)
 
+        // ✅ SINGLE VALUE - không realtime
         replyRef.child("likedUsers").child(currentUserId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -302,8 +310,9 @@ class CommentsAdapter(
                 override fun onCancelled(error: DatabaseError) {}
             })
 
+        // ✅ SINGLE VALUE
         replyRef.child("likeCount")
-            .addValueEventListener(object : ValueEventListener {
+            .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val count = snapshot.getValue(Int::class.java) ?: 0
                     tvReplyLikeCount.text = count.toString()
@@ -321,10 +330,12 @@ class CommentsAdapter(
                         replyRef.child("likedUsers").child(currentUserId).removeValue()
                         replyRef.child("likeCount").setValue((currentCount - 1).coerceAtLeast(0))
                         imgLikeReply.setImageResource(R.drawable.ic_favorite)
+                        tvReplyLikeCount.text = ((currentCount - 1).coerceAtLeast(0)).toString()
                     } else {
                         replyRef.child("likedUsers").child(currentUserId).setValue(true)
                         replyRef.child("likeCount").setValue(currentCount + 1)
                         imgLikeReply.setImageResource(R.drawable.ic_favorite_red)
+                        tvReplyLikeCount.text = (currentCount + 1).toString()
                     }
                 }
         }
@@ -336,10 +347,8 @@ class CommentsAdapter(
         return replyView
     }
 
-    // ✅ Dialog options cho reply
     private fun showReplyOptionsDialog(context: android.content.Context, reply: CommentsModel) {
         val options = arrayOf("Chỉnh sửa", "Xóa")
-
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Tùy chọn")
         builder.setItems(options) { dialog, which ->
@@ -351,7 +360,6 @@ class CommentsAdapter(
         builder.show()
     }
 
-    // ✅ Dialog chỉnh sửa reply
     private fun showEditReplyDialog(context: android.content.Context, reply: CommentsModel) {
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Chỉnh sửa câu trả lời")
@@ -369,72 +377,52 @@ class CommentsAdapter(
             dialog.dismiss()
         }
 
-        builder.setNegativeButton("Hủy") { dialog, _ ->
-            dialog.dismiss()
-        }
+        builder.setNegativeButton("Hủy") { dialog, _ -> dialog.dismiss() }
 
-        val dialog = builder.create()
-        dialog.show()
+        val dialogInstance = builder.create()
+        dialogInstance.show()
 
         input.requestFocus()
         val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 
-    // ✅ Dialog xác nhận xóa reply
     private fun showDeleteReplyConfirmDialog(context: android.content.Context, reply: CommentsModel) {
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Xóa câu trả lời")
         builder.setMessage("Bạn có chắc muốn xóa câu trả lời này?")
-
         builder.setPositiveButton("Xóa") { dialog, _ ->
             deleteReply(reply)
             dialog.dismiss()
         }
-
-        builder.setNegativeButton("Hủy") { dialog, _ ->
-            dialog.dismiss()
-        }
-
+        builder.setNegativeButton("Hủy") { dialog, _ -> dialog.dismiss() }
         builder.show()
     }
 
-    // ✅ Cập nhật reply
     private fun updateReply(reply: CommentsModel, newContent: String) {
         database.reference.child("Comments").child(reply.commentId)
             .child("content").setValue(newContent)
             .addOnSuccessListener {
                 reply.content = newContent
-                notifyDataSetChanged() // Refresh để hiển thị nội dung mới
-                android.widget.Toast.makeText(
-                    null,
-                    "Đã cập nhật câu trả lời",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("CommentsAdapter", "Failed to update reply", e)
             }
     }
 
-    // ✅ Xóa reply
     private fun deleteReply(reply: CommentsModel) {
         database.reference.child("Comments").child(reply.commentId)
             .removeValue()
             .addOnSuccessListener {
-                // Giảm reply count của parent comment
                 reply.parentCommentId?.let { parentId ->
                     database.reference.child("Comments").child(parentId)
                         .child("replyCount")
                         .setValue(com.google.firebase.database.ServerValue.increment(-1))
                 }
 
-                // Giảm comment count trong Reel
                 database.reference.child("Reels").child(reply.commentableId)
                     .child("commentCount")
                     .setValue(com.google.firebase.database.ServerValue.increment(-1))
-
-                notifyDataSetChanged() // Refresh để ẩn reply đã xóa
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("CommentsAdapter", "Failed to delete reply", e)
@@ -454,10 +442,8 @@ class CommentsAdapter(
         }
     }
 
-    // ✅ Hiển thị dialog options (Edit/Delete)
     private fun showCommentOptionsDialog(context: android.content.Context, comment: CommentsModel, position: Int) {
         val options = arrayOf("Chỉnh sửa", "Xóa")
-
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Tùy chọn")
         builder.setItems(options) { dialog, which ->
@@ -469,14 +455,13 @@ class CommentsAdapter(
         builder.show()
     }
 
-    // ✅ Dialog chỉnh sửa comment
     private fun showEditCommentDialog(context: android.content.Context, comment: CommentsModel, position: Int) {
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Chỉnh sửa bình luận")
 
         val input = android.widget.EditText(context)
         input.setText(comment.content)
-        input.setSelection(comment.content.length) // Đặt cursor ở cuối
+        input.setSelection(comment.content.length)
         builder.setView(input)
 
         builder.setPositiveButton("Lưu") { dialog, _ ->
@@ -487,79 +472,68 @@ class CommentsAdapter(
             dialog.dismiss()
         }
 
-        builder.setNegativeButton("Hủy") { dialog, _ ->
-            dialog.dismiss()
-        }
+        builder.setNegativeButton("Hủy") { dialog, _ -> dialog.dismiss() }
 
-        val dialog = builder.create()
-        dialog.show()
+        val dialogInstance = builder.create()
+        dialogInstance.show()
 
-        // Hiển thị bàn phím
         input.requestFocus()
         val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 
-    // ✅ Dialog xác nhận xóa
     private fun showDeleteConfirmDialog(context: android.content.Context, comment: CommentsModel, position: Int) {
         val builder = android.app.AlertDialog.Builder(context)
         builder.setTitle("Xóa bình luận")
         builder.setMessage("Bạn có chắc muốn xóa bình luận này?")
-
         builder.setPositiveButton("Xóa") { dialog, _ ->
             deleteComment(comment, position)
             dialog.dismiss()
         }
-
-        builder.setNegativeButton("Hủy") { dialog, _ ->
-            dialog.dismiss()
-        }
-
+        builder.setNegativeButton("Hủy") { dialog, _ -> dialog.dismiss() }
         builder.show()
     }
 
-    // ✅ Cập nhật comment
     private fun updateComment(comment: CommentsModel, newContent: String, position: Int) {
         database.reference.child("Comments").child(comment.commentId)
             .child("content").setValue(newContent)
             .addOnSuccessListener {
                 comment.content = newContent
                 notifyItemChanged(position)
-                android.widget.Toast.makeText(
-                    comments[position].let { null } ?: return@addOnSuccessListener,
-                    "Đã cập nhật bình luận",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("CommentsAdapter", "Failed to update comment", e)
             }
     }
 
-    // ✅ Xóa comment
     private fun deleteComment(comment: CommentsModel, position: Int) {
         database.reference.child("Comments").child(comment.commentId)
             .removeValue()
             .addOnSuccessListener {
-                // Giảm comment count trong Reel
                 database.reference.child("Reels").child(comment.commentableId)
                     .child("commentCount")
                     .setValue(com.google.firebase.database.ServerValue.increment(-1))
 
-                // Nếu là reply, giảm reply count của parent
                 comment.parentCommentId?.let { parentId ->
                     database.reference.child("Comments").child(parentId)
                         .child("replyCount")
                         .setValue(com.google.firebase.database.ServerValue.increment(-1))
                 }
-
-                comments.removeAt(position)
-                notifyItemRemoved(position)
-                notifyItemRangeChanged(position, comments.size)
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("CommentsAdapter", "Failed to delete comment", e)
             }
+    }
+
+    // ✅ QUAN TRỌNG: Clean up listeners khi adapter bị destroy
+    fun clearListeners() {
+        replyListeners.forEach { (commentId, listener) ->
+            database.reference.child("Comments")
+                .orderByChild("parentCommentId")
+                .equalTo(commentId)
+                .removeEventListener(listener)
+        }
+        replyListeners.clear()
     }
 
     override fun getItemCount(): Int = comments.size

@@ -934,6 +934,7 @@ class UploadFragment : Fragment() {
                     selectedMedia,
                     binding.editCaption.text.toString(),
                     binding.editHashtag.text.toString(),
+
                     selectedMusic,
                     taggedPeople,
                     selectedLocation,
@@ -947,6 +948,7 @@ class UploadFragment : Fragment() {
                     requireContext(),
                     selectedMedia[0], // Reel chỉ có 1 video
                     binding.editCaption.text.toString(),
+                    binding.editHashtag.text.toString(),
                     selectedMusic?.musicId,
                     allowsComments,
                     allowsDuet,
