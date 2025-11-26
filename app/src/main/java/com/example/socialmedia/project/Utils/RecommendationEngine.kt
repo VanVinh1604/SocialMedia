@@ -310,15 +310,16 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         val totalScore = hashtagScore + popularityScore + recencyScore + diversityBonus
 
         // 📋 LOG (chỉ log 5 video đầu để không spam)
+        // 📋 LOG (chỉ log 5 video đầu để không spam)
         if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.v(TAG, """
-                📊 Score for ${reel.reelId.take(8)}:
-                   Hashtag: $hashtagScore
-                   Popularity: $popularityScore
-                   Recency: $recencyScore
-                   Diversity: $diversityBonus
-                   → TOTAL: $totalScore
-            """.trimIndent())
+            Log.d(TAG, """  // ✅ Correct!
+        📊 Score for ${reel.reelId.take(8)}:
+           Hashtag: $hashtagScore
+           Popularity: $popularityScore
+           Recency: $recencyScore
+           Diversity: $diversityBonus
+           → TOTAL: $totalScore
+    """.trimIndent())
         }
 
         return totalScore
