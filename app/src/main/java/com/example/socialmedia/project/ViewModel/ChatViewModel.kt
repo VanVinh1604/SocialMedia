@@ -17,6 +17,8 @@ class ChatViewModel : ViewModel() {
 
     val messages: LiveData<List<MessageModel>> get() = repository.messagesLiveData
 
+    val currentUserId: String = "CURRENT_USER_ID" // Replace with actual userId
+
     fun loadLatestMessages(conversationId: String?, limit: Long = 20, onLoaded: (List<MessageModel>) -> Unit) {
         repository.loadLatestMessages(conversationId, limit, onLoaded)
     }
@@ -119,6 +121,14 @@ class ChatViewModel : ViewModel() {
 
     fun getGroupPreviewAvatar(userIds: List<String>, callback: (List<String?>) -> Unit) {
         repository.getGroupPreviewAvatar(userIds, callback)
+    }
+
+    fun getParticipantsLive(conversationId: String): LiveData<List<UserModel>> {
+        val result = MutableLiveData<List<UserModel>>()
+        getParticipants(conversationId) { users ->
+            result.postValue(users)
+        }
+        return result
     }
 
 

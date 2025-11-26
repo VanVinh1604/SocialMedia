@@ -27,6 +27,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -191,7 +192,29 @@ class ChatFragment : Fragment() {
             viewModel.markMessagesAsRead(convId, currentUserId)
         }
 
+//        binding.rlChatHeader.setOnClickListener {
+//            conversationId?.let {
+//                val action = ChatFragmentDirections.actionChatFragmentToChatInfoFragment(it)
+//                findNavController().navigate(action)
+//            }
+//        }
+        binding.rlChatHeader.setOnClickListener {
+            conversationId?.let { convId ->
+                val action = ChatFragmentDirections
+                    .actionChatFragmentToChatInfoFragment(
+                        conversationId = convId,
+                        userName = otherUserName ?: "",
+                        userAvatar = otherUserAvatar ?: ""
+                    )
+                Log.e("ChatFragment", "Navigating to ChatInfoFragment with conversationId=$convId")
+                Log.e("ChatFragment", "otherUserName=${otherUserName}, otherUserAvatar=${otherUserAvatar}")
+                findNavController().navigate(action)
+            }
+        }
+
+
     }
+
 
     private fun showReplyPreview(message: MessageModel) {
         replyingMessage = message
@@ -274,6 +297,7 @@ class ChatFragment : Fragment() {
                 override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
             })
         }
+
 
     }
 

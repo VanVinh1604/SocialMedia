@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!--
+        DRAWABLE RESOURCES NEEDED:
+
+        res/drawable/bg_online_status.xml:
+        <shape xmlns:android="http://schemas.android.com/apk/res/android"
+            android:shape="oval">
+            <solid android:color="#4CAF50" />
+            <stroke android:width="2dp" android:color="@android:color/white" />
+        </shape>
+
+        res/drawable/bg_badge.xml:
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@android:color/white" />
+            <corners android:radius="12dp" />
+            <stroke android:width="1dp" android:color="#E0E0E0" />
+        </shape>
+
+        res/drawable/bg_action_button.xml:
+        <shape xmlns:android="http://schemas.android.com/apk/res/android"
+            android:shape="oval">
+            <solid android:color="#F5F5F5" />
+        </shape>
+
+        res/values/styles.xml:
+        <style name="CircleImageView">
+            <item name="cornerFamily">rounded</item>
+            <item name="cornerSize">50%</item>
+        </style>
+
+        Icon drawables needed (use Material Icons or custom vectors):
+        - ic_back.xml (chevron left)
+        - ic_user_plus.xml
+        - ic_bell.xml / ic_bell_off.xml
+        - ic_search.xml
+        - ic_theme.xml
+        - ic_thumbs_up.xml
+        - ic_text.xml
+        - ic_sparkles.xml
+        - ic_users.xml
+        - ic_user_check.xml
+        - ic_link.xml
+        - ic_image.xml
+        - ic_archive.xml
+        - ic_block.xml
+        - ic_logout.xml
+        - ic_chevron_right.xml
+        -->
+
+        <!-- Header -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@android:color/white"
+            android:elevation="2dp">
+
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_back"
+                android:contentDescription="Quay lại"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Profile Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingVertical="24dp"
+            android:paddingHorizontal="16dp">
+
+            <!-- Avatar with Badge -->
+            <FrameLayout
+                android:layout_width="96dp"
+                android:layout_height="96dp">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivAvatarSingle"
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:background="#E0E0E0"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/CircleImageView" />
+
+                <include
+                    android:id="@+id/ivAvatarGroup"
+                    layout="@layout/layout_group_avatar"
+                    android:visibility="gone"/>
+
+
+                <!-- Online Status Indicator (Single Chat) -->
+                <View
+                    android:id="@+id/viewOnlineStatus"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_marginEnd="2dp"
+                    android:layout_marginBottom="2dp"
+                    android:background="@drawable/circle_status_online" />
+
+                <!-- Member Count Badge (Group Chat) -->
+                <TextView
+                    android:id="@+id/tvMemberCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="-4dp"
+                    android:layout_marginEnd="-4dp"
+                    android:background="@drawable/bg_badge"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="8"
+                    android:textColor="@android:color/black"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+            <!-- Name -->
+            <TextView
+                android:id="@+id/tvName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Đỗ Án Chuyên Ngành"
+                android:textSize="20sp"
+                android:textColor="@android:color/black"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <!-- Status/Activity -->
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Hoạt động 22 phút trước"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:gravity="center" />
+
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <!-- Add Button -->
+                <LinearLayout
+                    android:id="@+id/layoutAdd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:layout_marginHorizontal="16dp">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/circle_background_gray">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_add"
+                            android:contentDescription="Thêm" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Thêm"
+                        android:textSize="12sp"
+                        android:textColor="#333333" />
+                </LinearLayout>
+
+                <!-- Notification Button -->
+                <LinearLayout
+                    android:id="@+id/layoutNotification"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:layout_marginHorizontal="16dp">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/circle_background_gray">
+
+                        <ImageView
+                            android:id="@+id/ivNotification"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_notification"
+                            android:contentDescription="Thông báo" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tvNotificationLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Thông báo"
+                        android:textSize="12sp"
+                        android:textColor="#333333" />
+                </LinearLayout>
+
+                <!-- Search Button -->
+                <LinearLayout
+                    android:id="@+id/layoutSearch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:layout_marginHorizontal="16dp">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/circle_background_gray">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_search"
+                            android:contentDescription="Tìm kiếm" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Tìm kiếm"
+                        android:textSize="12sp"
+                        android:textColor="#333333" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Customize Section -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="#F5F5F5" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tùy chỉnh"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textStyle="bold" />
+
+        <!-- Theme Option -->
+        <LinearLayout
+            android:id="@+id/layoutTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <View
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+
+                />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Chủ đề"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+        <!-- Quick React Option -->
+        <LinearLayout
+            android:id="@+id/layoutQuickReact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Cảm xúc nhanh" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Cảm xúc nhanh"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+        <!-- Nickname Option -->
+        <LinearLayout
+            android:id="@+id/layoutNickname"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Biệt danh" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Biệt danh"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/arrow"
+                android:contentDescription="Mở" />
+
+        </LinearLayout>
+
+        <!-- Word Effect Option -->
+        <LinearLayout
+            android:id="@+id/layoutWordEffect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Hiệu ứng từ ngữ" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Hiệu ứng từ ngữ"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+        <!-- Group Chat Info Section (Only for Group) -->
+        <View
+            android:id="@+id/dividerGroupInfo"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="#F5F5F5"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvGroupInfoTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Thông tin về đoạn chat"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <!-- View Members -->
+        <LinearLayout
+            android:id="@+id/layoutViewMembers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Xem thành viên" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Xem thành viên trong đoạn chat"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="Mở" />
+
+        </LinearLayout>
+
+        <!-- Member Requests -->
+        <LinearLayout
+            android:id="@+id/layoutMemberRequests"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Yêu cầu làm thành viên" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Yêu cầu làm thành viên"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Tắt"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="Mở" />
+
+        </LinearLayout>
+
+        <!-- Invite Link -->
+        <LinearLayout
+            android:id="@+id/layoutInviteLink"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Liên kết mời" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Liên kết mời"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/tvLinkStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Tắt"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="Mở" />
+
+        </LinearLayout>
+
+        <!-- Other Actions Section -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="#F5F5F5" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hành động khác"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textStyle="bold" />
+
+        <!-- Media Files and Links -->
+        <LinearLayout
+            android:id="@+id/layoutMedia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Ảnh, file và liên kết" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Ảnh, file và liên kết"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="Mở" />
+
+        </LinearLayout>
+
+        <!-- Mute Notifications -->
+        <LinearLayout
+            android:id="@+id/layoutMute"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Tắt thông báo" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Tắt thông báo"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+        <!-- Ignore Messages (Single Chat) -->
+        <LinearLayout
+            android:id="@+id/layoutIgnore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="Bỏ qua tin nhắn" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Bỏ qua tin nhắn"
+                android:textSize="15sp"
+                android:textColor="@android:color/black" />
+
+        </LinearLayout>
+
+        <!-- Block (Single Chat) -->
+        <LinearLayout
+            android:id="@+id/layoutBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_block"
+                android:contentDescription="Chặn" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Chặn"
+                android:textSize="15sp"
+                android:textColor="#E74C3C" />
+
+        </LinearLayout>
+
+        <!-- Leave Group (Group Chat) -->
+        <LinearLayout
+            android:id="@+id/layoutLeaveGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_logout"
+                android:contentDescription="Rời nhóm" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Rời nhóm"
+                android:textSize="15sp"
+                android:textColor="#E74C3C" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="32dp" />
+
+    </LinearLayout>
+
+</ScrollView>

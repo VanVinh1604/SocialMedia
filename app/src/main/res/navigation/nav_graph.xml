@@ -382,6 +382,32 @@
             android:name="userAvatar"
             app:argType="string"
             android:defaultValue="" />
+        <action
+            android:id="@+id/action_chatFragment_to_chatInfoFragment"
+            app:destination="@id/chatInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/chatInfoFragment"
+        android:name="com.example.socialmedia.project.Fragment.ChatInfoFragment"
+        android:label="Chat Info"
+        tools:layout="@layout/fragment_chat_info">
+
+        <argument
+            android:name="conversationId"
+            app:argType="string" />
+        <argument
+            android:name="userName"
+            app:argType="string" />
+        <argument
+            android:name="userAvatar"
+            app:argType="string" />
+
     </fragment>
 
     <fragment
