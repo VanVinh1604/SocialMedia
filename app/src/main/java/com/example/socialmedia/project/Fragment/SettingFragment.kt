@@ -9,25 +9,22 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.fragment.app.viewModels // <-- THÊM IMPORT NÀY
-import androidx.navigation.NavOptions
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.socialmedia.MainActivity
 import com.example.socialmedia.R
-import com.example.socialmedia.databinding.FragmentSettingBinding // <-- Import ViewBinding
+import com.example.socialmedia.databinding.FragmentSettingBinding
 import com.example.socialmedia.project.UserManagementActivity
-import com.google.firebase.auth.FirebaseAuth // <-- THÊM IMPORT FIREBASE
+import com.google.firebase.auth.FirebaseAuth
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallService
 import im.zego.zim.ZIM
-
-import com.example.socialmedia.project.ViewModel.SettingMenuViewModel // <-- SỬA IMPORT NÀY
+import com.example.socialmedia.project.ViewModel.SettingMenuViewModel
 
 class SettingFragment : Fragment() {
 
     private var _binding: FragmentSettingBinding? = null
     private val binding get() = _binding!!
 
-    // === SỬA LỖI: Khởi tạo SettingMenuViewModel (tên mới) ===
     private val viewModel: SettingMenuViewModel by viewModels()
 
     override fun onCreateView(
@@ -42,17 +39,13 @@ class SettingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupListeners()
-        setupObservers() // <-- GỌI HÀM OBSERVER MỚI
-
-        // Yêu cầu ViewModel tải số lượng
+        setupObservers()
         viewModel.loadBlockCount()
     }
 
-    // === MỚI: Hàm lắng nghe LiveData từ ViewModel ===
     private fun setupObservers() {
         viewModel.blockCount.observe(viewLifecycleOwner) { count ->
             if (count > 0) {
-                // Đảm bảo bạn đã thêm tv_block_count vào XML
                 binding.tvBlockCount.text = count.toString()
                 binding.tvBlockCount.visibility = View.VISIBLE
             } else {
@@ -76,59 +69,49 @@ class SettingFragment : Fragment() {
             }
         }
 
-        // SettingFragment.kt - Phần xử lý logout
-        binding.cvLogout.setOnClickListener {
+        // === [CẬP NHẬT MỚI] SỰ KIỆN CLICK CHO 3 MỤC ACTIVITY ===
+
+        // 1. Saved (Đã lưu)
+        binding.llSaved.setOnClickListener {
             try {
-                // 1️⃣ Logout ZIM (nếu đang đăng nhập)
-                try {
-                    val zimInstance = ZIM.getInstance()
-                    if (MainActivity.isZIMLoggedIn && zimInstance != null) {
-                        zimInstance.logout()
-                        MainActivity.isZIMLoggedIn = false
-                        Log.d("SettingFragment", "✅ ZIM logout thành công")
-                    }
-                } catch (e: Exception) {
-                    Log.e("SettingFragment", "⚠️ Lỗi khi logout ZIM: ${e.message}")
-                }
-
-                // 2️⃣ Dọn Zego Call Service
-                try {
-                    if (MainActivity.isZegoInitialized) {
-                        ZegoUIKitPrebuiltCallService.unInit()
-                        MainActivity.isZegoInitialized = false
-                        Log.d("SettingFragment", "✅ Zego Call Service unInit thành công")
-                    }
-                } catch (e: Exception) {
-                    Log.e("SettingFragment", "⚠️ Lỗi khi unInit Zego: ${e.message}")
-                }
-
-                // 3️⃣ Đăng xuất Firebase
-                FirebaseAuth.getInstance().signOut()
-                Log.d("SettingFragment", "✅ Firebase signOut thành công")
-
-                // 4️⃣ Xóa SharedPreferences (xoá session cũ)
-                val sharedPref = requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-                with(sharedPref.edit()) {
-                    clear()
-                    apply()
-                }
-                Log.d("SettingFragment", "✅ SharedPreferences cleared")
-
-                // 5️⃣ Chuyển về màn hình UserManagementActivity (Login)
-                val intent = Intent(requireContext(), UserManagementActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                requireActivity().finish()
-
-                Toast.makeText(requireContext(), "Đã đăng xuất hoàn toàn", Toast.LENGTH_SHORT).show()
-
+                // Đảm bảo ID này khớp với id action trong nav_graph.xml
+                findNavController().navigate(R.id.action_settingFragment_to_savedFragment)
             } catch (e: Exception) {
-                Log.e("SettingFragment", "❌ Lỗi khi đăng xuất: ${e.message}", e)
-                Toast.makeText(requireContext(), "Lỗi đăng xuất: ${e.message}", Toast.LENGTH_SHORT).show()
+                // Nếu lỗi, thử dùng ID đích trực tiếp (nếu action chưa đặt tên đúng)
+                try {
+                    findNavController().navigate(R.id.savedFragment)
+                } catch (e2: Exception) {
+                    showToast("Lỗi NavGraph: Chưa tạo action tới SavedFragment")
+                }
             }
         }
 
-        // === KẾT THÚC SỬA LỖI ===
+        // 2. History (Lịch sử)
+        binding.llHistory.setOnClickListener {
+            try {
+                findNavController().navigate(R.id.action_settingFragment_to_historyFragment)
+            } catch (e: Exception) {
+                try {
+                    findNavController().navigate(R.id.historyFragment)
+                } catch (e2: Exception) {
+                    showToast("Lỗi NavGraph: Chưa tạo action tới HistoryFragment")
+                }
+            }
+        }
+
+        // 3. Stories storage (Kho lưu trữ tin)
+        binding.llStoriesStorage.setOnClickListener {
+            try {
+                findNavController().navigate(R.id.action_settingFragment_to_storiesStorageFragment)
+            } catch (e: Exception) {
+                try {
+                    findNavController().navigate(R.id.storiesStorageFragment)
+                } catch (e2: Exception) {
+                    showToast("Lỗi NavGraph: Chưa tạo action tới StoriesStorageFragment")
+                }
+            }
+        }
+        // ========================================================
 
         // Nút Block
         binding.llBlock.setOnClickListener {
@@ -139,26 +122,64 @@ class SettingFragment : Fragment() {
             }
         }
 
-        // Các nút khác
-        binding.llSaved.setOnClickListener {
-            showToast("Chức năng 'Saved' đang phát triển")
-        }
-        binding.llHistory.setOnClickListener {
-            showToast("Chức năng 'History' đang phát triển")
-        }
-        binding.llStoriesStorage.setOnClickListener {
-            showToast("Chức năng 'Stories storage' đang phát triển")
-        }
+        // Nút Privacy
         binding.llPrivacy.setOnClickListener {
             try {
-                // Điều hướng đến màn hình PrivacySettingsFragment bạn vừa tạo
                 findNavController().navigate(R.id.action_settingFragment_to_privacySettingsFragment)
             } catch (e: Exception) {
                 showToast("Lỗi NavGraph: " + e.message)
             }
         }
+
         binding.cvAddAccount.setOnClickListener {
             showToast("Chức năng 'Add account' đang phát triển")
+        }
+
+        // Xử lý Logout
+        binding.cvLogout.setOnClickListener {
+            performLogout()
+        }
+    }
+
+    private fun performLogout() {
+        try {
+            // 1. Logout ZIM
+            try {
+                val zimInstance = ZIM.getInstance()
+                if (MainActivity.isZIMLoggedIn && zimInstance != null) {
+                    zimInstance.logout()
+                    MainActivity.isZIMLoggedIn = false
+                }
+            } catch (e: Exception) { Log.e("SettingFragment", "Lỗi ZIM: ${e.message}") }
+
+            // 2. UnInit Zego
+            try {
+                if (MainActivity.isZegoInitialized) {
+                    ZegoUIKitPrebuiltCallService.unInit()
+                    MainActivity.isZegoInitialized = false
+                }
+            } catch (e: Exception) { Log.e("SettingFragment", "Lỗi Zego: ${e.message}") }
+
+            // 3. Firebase SignOut
+            FirebaseAuth.getInstance().signOut()
+
+            // 4. Clear Prefs
+            val sharedPref = requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            with(sharedPref.edit()) {
+                clear()
+                apply()
+            }
+
+            // 5. Navigate to Login
+            val intent = Intent(requireContext(), UserManagementActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            requireActivity().finish()
+
+            Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show()
+
+        } catch (e: Exception) {
+            showToast("Lỗi đăng xuất: ${e.message}")
         }
     }
 
@@ -168,6 +189,6 @@ class SettingFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // Tránh memory leak
+        _binding = null
     }
 }

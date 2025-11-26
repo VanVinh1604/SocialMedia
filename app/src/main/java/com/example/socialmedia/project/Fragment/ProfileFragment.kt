@@ -70,6 +70,7 @@ class ProfileFragment : Fragment() {
             try {
                 val bundle = Bundle().apply {
                     putString("postId", post.postId)
+                    putString("userId", post.userId ?: targetUserId ?: "")
                 }
                 findNavController().navigate(R.id.action_profileFragment_to_postDetailFragment, bundle)
             } catch (e: Exception) {

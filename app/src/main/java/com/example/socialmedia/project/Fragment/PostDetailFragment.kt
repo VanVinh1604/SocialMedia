@@ -5,22 +5,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.example.socialmedia.R
-import com.example.socialmedia.project.Adapter.MediaViewPagerAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.example.socialmedia.databinding.FragmentPostDetailBinding
-import com.example.socialmedia.project.ViewModel.PostDetailViewModel
+import com.example.socialmedia.project.Adapter.PostDetailAdapter
 import com.example.socialmedia.project.Domain.Model.PostModel
-import com.google.android.material.tabs.TabLayoutMediator
+import com.example.socialmedia.project.ViewModel.PostDetailViewModel
 import com.google.firebase.auth.FirebaseAuth
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class PostDetailFragment : Fragment() {
 
@@ -28,11 +21,11 @@ class PostDetailFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var viewModel: PostDetailViewModel
-    private var postId: String? = null
-    private var postAuthorId: String? = null
-    private var currentUserId: String? = null
+    private lateinit var detailAdapter: PostDetailAdapter
 
-    private lateinit var mediaAdapter: MediaViewPagerAdapter
+    // Biến nhận từ Bundle
+    private var startPostId: String? = null
+    private var postAuthorId: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -45,142 +38,82 @@ class PostDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        postId = arguments?.getString("postId")
-        currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        // 1. Nhận dữ liệu truyền vào
+        startPostId = arguments?.getString("postId")
+        postAuthorId = arguments?.getString("userId")
 
-        if (postId == null || currentUserId == null) {
-            Toast.makeText(context, "Lỗi: Không tìm thấy bài đăng hoặc người dùng", Toast.LENGTH_SHORT).show()
+        if (startPostId == null || postAuthorId == null) {
+            Toast.makeText(context, "Lỗi: Thiếu thông tin bài viết", Toast.LENGTH_SHORT).show()
             findNavController().popBackStack()
             return
         }
 
         viewModel = ViewModelProvider(this)[PostDetailViewModel::class.java]
 
-        setupUI()
-        setupClickListeners()
+        setupViewPager()
         setupObservers()
 
-        viewModel.loadPostDetails(postId!!)
+        // 2. Bắt đầu tải dữ liệu
+        // Dùng !! ở đây an toàn vì ta đã check null ở if bên trên rồi
+        viewModel.loadUserPosts(postAuthorId!!, startPostId!!)
     }
 
-    private fun setupUI() {
-        mediaAdapter = MediaViewPagerAdapter()
-        binding.viewPagerMedia.adapter = mediaAdapter
-
-        // Ẩn RecyclerView comments vì sẽ xem trong BottomSheet
-        binding.rvComments.visibility = View.GONE
-    }
-
-    private fun setupClickListeners() {
-        binding.ivToolbarBack.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
-        binding.btnLike.setOnClickListener {
-            viewModel.toggleLike(postId!!)
-        }
-
-        binding.btnBookmark.setOnClickListener {
-            viewModel.toggleBookmark(postId!!)
-        }
-
-        // Chỉ mở comment khi bấm vào icon comment trên thanh action bar
-        binding.btnComment.setOnClickListener {
-            openComments()
-        }
-
-        // ĐÃ XÓA: binding.etAddComment.setOnClickListener
-    }
-
-    private fun openComments() {
-        if (postAuthorId == null) {
-            Toast.makeText(context, "Đang tải...", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val commentSheet = CommentBottomSheetFragment(
-            postId = postId!!,
-            currentUserId = currentUserId!!,
-            postAuthorId = postAuthorId!!
+    private fun setupViewPager() {
+        detailAdapter = PostDetailAdapter(
+            context = requireContext(),
+            posts = emptyList(),
+            onBackClick = {
+                findNavController().popBackStack()
+            },
+            onCommentClick = { post ->
+                openComments(post)
+            },
+            onLikeClick = { postId, isLiked ->
+                viewModel.toggleLike(postId, isLiked)
+            },
+            onBookmarkClick = { postId, isBookmarked ->
+                viewModel.toggleBookmark(postId, isBookmarked)
+            }
         )
-        commentSheet.show(parentFragmentManager, "CommentBottomSheet")
+
+        binding.viewPagerPosts.apply {
+            adapter = detailAdapter
+            orientation = ViewPager2.ORIENTATION_VERTICAL
+            offscreenPageLimit = 1
+        }
     }
 
     private fun setupObservers() {
-        // 1. Lắng nghe thông tin bài post
-        viewModel.post.observe(viewLifecycleOwner) { post ->
-            if (post != null) {
-                postAuthorId = post.userId
-                updatePostUI(post)
+        viewModel.postList.observe(viewLifecycleOwner) { posts ->
+            if (posts.isNotEmpty()) {
+                detailAdapter.updateData(posts)
             }
         }
 
-        // 2. Lắng nghe trạng thái Like
-        viewModel.isLikedByCurrentUser.observe(viewLifecycleOwner) { isLiked ->
-            val icon = if (isLiked) R.drawable.ic_favorite_red else R.drawable.ic_favorite
-            binding.btnLike.setImageResource(icon)
-        }
-
-        // 3. Lắng nghe số lượng Like
-        viewModel.likeCount.observe(viewLifecycleOwner) { count ->
-            binding.tvLikeCount.text = "$count lượt thích"
-        }
-
-        // 4. Lắng nghe trạng thái Bookmark
-        viewModel.isBookmarked.observe(viewLifecycleOwner) { isBookmarked ->
-            if (isBookmarked) {
-                binding.btnBookmark.setImageResource(R.drawable.ic_bookmark_outline)
-                binding.btnBookmark.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.black))
-            } else {
-                binding.btnBookmark.setImageResource(R.drawable.ic_bookmark_outline)
-                binding.btnBookmark.clearColorFilter()
+        viewModel.initialPosition.observe(viewLifecycleOwner) { position ->
+            if (position != null && position >= 0) {
+                binding.viewPagerPosts.setCurrentItem(position, false)
             }
         }
 
-        // ĐÃ XÓA: Code load avatar user hiện tại vào ivMyAvatar (vì view đã bị xóa)
-
-        // Lắng nghe lỗi
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
             if (error != null) {
-                Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun updatePostUI(post: PostModel) {
-        // Cập nhật Header
-        Glide.with(this)
-            .load(post.userProfileUrl)
-            .placeholder(R.drawable.image_avata_user)
-            .circleCrop()
-            .into(binding.ivUserAvatar)
-        binding.tvUsername.text = post.userName
+    private fun openComments(post: PostModel) {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-        // Cập nhật Media
-        mediaAdapter.submitList(post.mediaList)
-
-        // Cập nhật Indicator
-        if (post.mediaList.size > 1) {
-            binding.tabIndicator.isVisible = true
-            TabLayoutMediator(binding.tabIndicator, binding.viewPagerMedia) { _, _ -> }.attach()
-        } else {
-            binding.tabIndicator.isVisible = false
-        }
-
-        // Cập nhật Caption và Timestamp
-        binding.tvCaption.isVisible = !post.caption.isNullOrEmpty()
-        binding.tvCaption.text = post.caption
-        binding.tvTimestamp.text = formatTimestamp(post.createdAt)
-    }
-
-    private fun formatTimestamp(timestamp: Long): String {
-        return try {
-            val sdf = SimpleDateFormat("dd 'tháng' MM, yyyy 'lúc' HH:mm", Locale("vi", "VN"))
-            val netDate = Date(timestamp)
-            sdf.format(netDate)
-        } catch (e: Exception) {
-            "Vừa xong"
-        }
+        // === ĐÃ SỬA LỖI Ở ĐÂY ===
+        // PostModel có thể trả về null, nên cần dùng ?: "" để lấy giá trị mặc định nếu null
+        val commentSheet = CommentBottomSheetFragment(
+            postId = post.postId ?: "",       // Sửa tại đây
+            currentUserId = currentUid,
+            postAuthorId = post.userId ?: ""  // Sửa tại đây
+        )
+        commentSheet.show(parentFragmentManager, "CommentBottomSheet")
     }
 
     override fun onDestroyView() {

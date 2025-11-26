@@ -1,147 +1,104 @@
 package com.example.socialmedia.project.ViewModel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
-// Xóa import CommentModel
 import com.example.socialmedia.project.Domain.Model.PostModel
-import com.google.firebase.auth.FirebaseAuth // Thêm import
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import kotlinx.coroutines.launch
 
 class PostDetailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance() // Thêm auth
+    private val auth = FirebaseAuth.getInstance()
 
-    private val _post = MutableLiveData<PostModel?>()
-    val post: LiveData<PostModel?> get() = _post
+    // Danh sách tất cả bài viết của user đó
+    private val _postList = MutableLiveData<List<PostModel>>()
+    val postList: LiveData<List<PostModel>> get() = _postList
 
-    // === XÓA HOÀN TOÀN LOGIC COMMENT Ở ĐÂY ===
-    // private val _comments = MutableLiveData<List<CommentModel>>()
-    // val comments: LiveData<List<CommentModel>> get() = _comments
+    // Vị trí của bài viết mà người dùng đã bấm vào lúc đầu
+    private val _initialPosition = MutableLiveData<Int>()
+    val initialPosition: LiveData<Int> get() = _initialPosition
 
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> get() = _errorMessage
 
-    // === THÊM LOGIC LIKE/BOOKMARK VÀO ĐÂY ===
-    private val _isLikedByCurrentUser = MutableLiveData<Boolean>(false)
-    val isLikedByCurrentUser: LiveData<Boolean> get() = _isLikedByCurrentUser
+    /**
+     * Tải danh sách bài viết của targetUserId.
+     * @param targetUserId: ID của người đăng bài.
+     * @param startPostId: ID của bài viết vừa bấm vào (để scroll tới đó đầu tiên).
+     */
+    fun loadUserPosts(targetUserId: String, startPostId: String) {
+        val query = database.child("posts").orderByChild("userId").equalTo(targetUserId)
 
-    private val _likeCount = MutableLiveData<Long>(0)
-    val likeCount: LiveData<Long> get() = _likeCount
-
-    private val _isBookmarked = MutableLiveData<Boolean>(false)
-    val isBookmarked: LiveData<Boolean> get() = _isBookmarked
-    // =====================================
-
-    // === CÁC BIẾN ĐỂ GIỮ LISTENER ===
-    private var postListener: ValueEventListener? = null
-    private var likesListener: ValueEventListener? = null
-    private var bookmarkListener: ValueEventListener? = null
-    private var postRef: DatabaseReference? = null
-    private var likesRef: DatabaseReference? = null
-    private var bookmarkRef: DatabaseReference? = null
-
-
-    fun loadPostDetails(postId: String) {
-        val currentUid = auth.currentUser?.uid
-        if (postId.isEmpty() || currentUid == null) {
-            _errorMessage.postValue("Lỗi: PostId hoặc User không hợp lệ")
-            return
-        }
-
-        cleanupListeners() // Xóa listener cũ
-
-        viewModelScope.launch {
-            loadPost(postId)
-            loadLikeAndBookmarkStatus(postId, currentUid)
-            // === XÓA loadRootComments(postId) ===
-        }
-    }
-
-    // Tải thông tin chính của bài post
-    private fun loadPost(postId: String) {
-        postRef = database.child("posts").child(postId)
-        postListener = object : ValueEventListener {
+        query.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                _post.postValue(snapshot.getValue(PostModel::class.java))
+                val posts = ArrayList<PostModel>()
+                for (snap in snapshot.children) {
+                    val post = snap.getValue(PostModel::class.java)
+                    if (post != null) {
+                        post.postId = snap.key ?: "" // Đảm bảo gán ID từ key
+                        posts.add(post)
+                    }
+                }
+
+                // Sắp xếp: Bài mới nhất lên đầu (giảm dần theo thời gian)
+                posts.sortByDescending { it.createdAt }
+
+                _postList.postValue(posts)
+
+                // Tìm vị trí của bài viết startPostId trong danh sách đã sắp xếp
+                val index = posts.indexOfFirst { it.postId == startPostId }
+                if (index != -1) {
+                    _initialPosition.postValue(index)
+                }
             }
+
             override fun onCancelled(error: DatabaseError) {
-                _post.postValue(null)
-                _errorMessage.postValue("Lỗi tải post: ${error.message}")
+                _errorMessage.postValue("Lỗi tải danh sách bài viết: ${error.message}")
             }
-        }
-        postRef?.addValueEventListener(postListener!!)
+        })
     }
 
-    // Tải trạng thái Like và Bookmark
-    private fun loadLikeAndBookmarkStatus(postId: String, currentUid: String) {
-        // 1. Tải Likes
-        likesRef = database.child("post_likes").child(postId)
-        likesListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                _likeCount.postValue(snapshot.childrenCount)
-                _isLikedByCurrentUser.postValue(snapshot.hasChild(currentUid))
-            }
-            override fun onCancelled(error: DatabaseError) {
-                _errorMessage.postValue("Lỗi tải Like: ${error.message}")
-            }
-        }
-        likesRef?.addValueEventListener(likesListener!!)
-
-        // 2. Tải Bookmark (Giả sử bạn lưu ở "bookmarks/USER_ID/POST_ID")
-        bookmarkRef = database.child("bookmarks").child(currentUid).child(postId)
-        bookmarkListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                _isBookmarked.postValue(snapshot.exists())
-            }
-            override fun onCancelled(error: DatabaseError) {}
-        }
-        bookmarkRef?.addValueEventListener(bookmarkListener!!)
-    }
-
-    // === XÓA HÀM loadRootComments ===
-
-    // === THÊM CÁC HÀM TÁI SỬ DỤNG LOGIC ===
-    fun toggleLike(postId: String) {
+    /**
+     * Xử lý Like/Unlike.
+     * Lưu ý: ViewModel chỉ gọi Firebase, việc update UI realtime do Adapter tự lắng nghe hoặc quan sát LiveData nếu cần.
+     */
+    fun toggleLike(postId: String, currentStatus: Boolean) {
         val currentUid = auth.currentUser?.uid ?: return
-        val ref = database.child("post_likes").child(postId).child(currentUid)
 
-        if (_isLikedByCurrentUser.value == true) {
-            ref.removeValue()
+        // 1. Chỗ lưu cũ (để đếm like cho bài viết)
+        val postLikesRef = database.child("post_likes").child(postId).child(currentUid)
+
+        // 2. [MỚI] Chỗ lưu mới (để làm Lịch sử cho User)
+        val userHistoryRef = database.child("user_likes").child(currentUid).child(postId)
+
+        if (currentStatus) {
+            // Nếu đang Like -> Bấm phát nữa là Unlike -> Xóa khỏi cả 2 nơi
+            postLikesRef.removeValue()
+            userHistoryRef.removeValue()
         } else {
-            ref.setValue(true)
+            // Nếu chưa Like -> Bấm là Like -> Lưu vào cả 2 nơi
+            postLikesRef.setValue(true)
+            userHistoryRef.setValue(true) // Giá trị là timestamp hoặc true đều được
         }
     }
 
-    fun toggleBookmark(postId: String) {
+    /**
+     * Xử lý Bookmark/Unbookmark.
+     */
+    fun toggleBookmark(postId: String, currentStatus: Boolean) {
         val currentUid = auth.currentUser?.uid ?: return
         val ref = database.child("bookmarks").child(currentUid).child(postId)
 
-        if (_isBookmarked.value == true) {
-            ref.removeValue()
+        if (currentStatus) {
+            ref.removeValue() // Bỏ lưu
         } else {
-            ref.setValue(true)
+            ref.setValue(true) // Lưu
         }
-    }
-
-    // Hàm này sẽ được gọi khi Fragment bị hủy
-    private fun cleanupListeners() {
-        postListener?.let { postRef?.removeEventListener(it) }
-        likesListener?.let { likesRef?.removeEventListener(it) }
-        bookmarkListener?.let { bookmarkRef?.removeEventListener(it) }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        cleanupListeners()
     }
 }

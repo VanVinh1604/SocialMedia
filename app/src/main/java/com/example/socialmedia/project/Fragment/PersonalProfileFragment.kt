@@ -93,13 +93,22 @@ class PersonalProfileFragment : Fragment() {
     private fun setupPostGrid() {
         postAdapter = ProfilePostAdapter { post ->
             val postId = post.postId
-            val bundle = bundleOf("postId" to postId)
+
+            // === SỬA Ở ĐÂY ===
+            // Thêm "userId" to post.userId vào trong bundleOf
+            val bundle = bundleOf(
+                "postId" to postId,
+                "userId" to post.userId  // <--- Dòng bạn cần thêm nằm ở đây
+            )
+            // =================
+
             try {
                 findNavController().navigate(R.id.action_personalProfileFragment_to_postDetailFragment, bundle)
             } catch (e: Exception) {
                 Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
             }
         }
+
         binding.rvPhotos.apply {
             layoutManager = GridLayoutManager(context, 3)
             adapter = postAdapter
@@ -241,6 +250,7 @@ class PersonalProfileFragment : Fragment() {
             if (userId != null) {
                 val bundle = Bundle().apply {
                     putString("userId", userId)
+
                     putString("listType", "following")
                 }
                 try {
