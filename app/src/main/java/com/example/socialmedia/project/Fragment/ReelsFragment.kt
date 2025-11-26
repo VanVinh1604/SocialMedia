@@ -27,6 +27,14 @@ class ReelsFragment : Fragment() {
     private val database = FirebaseDatabase.getInstance()
     private lateinit var recommendationEngine: RecommendationEngine
 
+    private var videoStartTime = 0L
+
+    // 🔄 BIẾN QUẢN LÝ LOAD MORE
+    private var isLoadingMore = false
+    private var hasMoreReels = true
+    private val BATCH_SIZE = 10              // Load 20 video mỗi lần
+    private val LOAD_MORE_THRESHOLD = 5      // Load thêm khi còn 5 video
+
     private val TAG = "ReelsFragment"
 
     override fun onCreateView(
@@ -35,7 +43,6 @@ class ReelsFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         return inflater.inflate(R.layout.fragment_reels, container, false)
-
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -51,15 +58,24 @@ class ReelsFragment : Fragment() {
 
         setupAdapter()
         setupViewPager()
+
+        // 🐛 NÚT DEBUG
         view.findViewById<View>(R.id.btnDebug)?.setOnClickListener {
             recommendationEngine.getHashtagScoresDebug { scores ->
-                Log.d("ReelsFragment", "HASHTAG SCORES: $scores")
+                Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                Log.d(TAG, "📊 HASHTAG SCORES DEBUG:")
+                scores.entries
+                    .sortedByDescending { it.value }
+                    .forEachIndexed { index, (tag, score) ->
+                        Log.d(TAG, "   ${index + 1}. #$tag = $score điểm")
+                    }
+                Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                Toast.makeText(requireContext(), "Check Logcat!", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Dùng loadAllReels() để test, sau này đổi thành loadRecommendedReels()
-        loadAllReels()
-
+        // 🎯 LOAD BATCH ĐẦU TIÊN
+        loadMoreRecommendedReels()
     }
 
     private fun hideBottomNavigation() {
@@ -73,37 +89,39 @@ class ReelsFragment : Fragment() {
     private fun setupAdapter() {
         adapter = ReelsAdapter(
             reels = reelsList,
+
             onLikeClick = { reel, _ ->
-                Log.d(TAG, "LIKE clicked: ${reel.reelId}, hashtags: ${reel.hashtags}")
+                Log.d(TAG, "❤️ LIKE: ${reel.reelId.take(8)}")
                 recommendationEngine.recordInteraction(
                     reelId = reel.reelId,
-                    interactionType = "LIKE",
-
+                    interactionType = "LIKE"
                 )
             },
+
             onCommentClick = { reel, _ ->
-                Log.d(TAG, "COMMENT clicked: ${reel.reelId}")
+                Log.d(TAG, "💬 COMMENT: ${reel.reelId.take(8)}")
                 recommendationEngine.recordInteraction(
                     reelId = reel.reelId,
-                    interactionType = "COMMENT",
-
+                    interactionType = "COMMENT"
                 )
 
                 val commentsSheet = CommentsBottomSheet.newInstance(reel.reelId, reel.userId)
                 commentsSheet.show(childFragmentManager, "CommentsBottomSheet")
             },
+
             onShareClick = { reel, _ ->
-                Log.d(TAG, "SHARE clicked: ${reel.reelId}")
+                Log.d(TAG, "📤 SHARE: ${reel.reelId.take(8)}")
                 recommendationEngine.recordInteraction(
                     reelId = reel.reelId,
-                    interactionType = "SHARE",
-
+                    interactionType = "SHARE"
                 )
                 Toast.makeText(requireContext(), "Share: ${reel.reelId}", Toast.LENGTH_SHORT).show()
             },
+
             onFollowClick = { reel, _ ->
                 Toast.makeText(requireContext(), "Following ${reel.userId}", Toast.LENGTH_SHORT).show()
             },
+
             onProfileClick = { reel, _ ->
                 Toast.makeText(requireContext(), "Profile: ${reel.userId}", Toast.LENGTH_SHORT).show()
             }
@@ -118,53 +136,121 @@ class ReelsFragment : Fragment() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
 
+                // ⏱️ XỬ LÝ VIDEO TRƯỚC ĐÓ
+                if (videoStartTime > 0 && position > 0) {
+                    val watchDuration = System.currentTimeMillis() - videoStartTime
+                    val previousReel = reelsList[position - 1]
+
+                    Log.d(TAG, "⏱️ Watched ${previousReel.reelId.take(8)} for ${watchDuration}ms")
+
+                    if (watchDuration < 2000) {
+                        Log.d(TAG, "🚫 SKIPPED")
+                        recommendationEngine.recordInteraction(
+                            reelId = previousReel.reelId,
+                            interactionType = "SKIP"
+                        )
+                    } else {
+                        recommendationEngine.recordInteraction(
+                            reelId = previousReel.reelId,
+                            interactionType = "WATCH_TIME",
+                            duration = watchDuration
+                        )
+                    }
+                }
+
+                // 🎬 VIDEO HIỆN TẠI
                 if (position < reelsList.size) {
                     val currentReel = reelsList[position]
-                    Log.d(TAG, "VIEW: ${currentReel.reelId}, hashtags: ${currentReel.hashtags}")
+                    Log.d(TAG, "👁️ VIEW: ${currentReel.reelId.take(8)} (${position + 1}/${reelsList.size})")
 
                     recommendationEngine.recordInteraction(
                         reelId = currentReel.reelId,
-                        interactionType = "VIEW",
-
+                        interactionType = "VIEW"
                     )
+
+                    videoStartTime = System.currentTimeMillis()
                 }
 
+                // 🔄 KIỂM TRA VÀ LOAD THÊM
+                checkAndLoadMore(position)
+
+                // 🎥 PLAY/PAUSE
                 val previousPosition = position - 1
                 if (previousPosition >= 0) {
                     getViewHolderAtPosition(previousPosition)?.let { adapter.pauseCurrentVideo(it) }
                 }
                 getViewHolderAtPosition(position)?.let { adapter.playVideo(position, it) }
             }
-
-
-
-        }) // ← Đóng callback
-    } // ← Đóng hàm setupViewPager()
+        })
+    }
 
     private fun getViewHolderAtPosition(position: Int): ReelsAdapter.ReelViewHolder? {
         val recyclerView = viewPager.getChildAt(0) as? RecyclerView
         return recyclerView?.findViewHolderForAdapterPosition(position) as? ReelsAdapter.ReelViewHolder
     }
 
-    private fun loadRecommendedReels() {
+    // 🔄 KIỂM TRA VÀ LOAD THÊM VIDEO
+    private fun checkAndLoadMore(currentPosition: Int) {
+        if (isLoadingMore || !hasMoreReels) return
+
+        val remainingReels = reelsList.size - currentPosition - 1
+
+        Log.d(TAG, "📊 Position: $currentPosition, Total: ${reelsList.size}, Remaining: $remainingReels")
+
+        // Nếu còn <= 5 video → load thêm
+        if (remainingReels <= LOAD_MORE_THRESHOLD) {
+            Log.d(TAG, "🔄 Triggering load more...")
+            loadMoreRecommendedReels()
+        }
+    }
+
+    // 📦 LOAD BATCH VIDEO MỚI
+    private fun loadMoreRecommendedReels() {
+        if (isLoadingMore) {
+            Log.d(TAG, "⚠️ Already loading, skipping...")
+            return
+        }
+
+        isLoadingMore = true
         progressBar.visibility = View.VISIBLE
-        recommendationEngine.getRecommendedReels { recommendedReels ->
-            reelsList.clear()
-            if (recommendedReels.isEmpty()) {
-                loadAllReels()
-            } else {
-                reelsList.addAll(recommendedReels)
-                progressBar.visibility = View.GONE
-                adapter.notifyDataSetChanged()
-                viewPager.post { getViewHolderAtPosition(0)?.let { adapter.playVideo(0, it) } }
+
+        Log.d(TAG, "📦 Loading batch of $BATCH_SIZE reels...")
+
+        recommendationEngine.getRecommendedReelsBatch(BATCH_SIZE) { newReels ->
+            isLoadingMore = false
+            progressBar.visibility = View.GONE
+
+            if (newReels.isEmpty()) {
+                Log.w(TAG, "⚠️ No more reels available")
+                hasMoreReels = false
+                Toast.makeText(requireContext(), "Đã hết video mới!", Toast.LENGTH_SHORT).show()
+                return@getRecommendedReelsBatch
+            }
+
+            val startPosition = reelsList.size
+            reelsList.addAll(newReels)
+
+            Log.d(TAG, "✅ Added ${newReels.size} reels (Total: ${reelsList.size})")
+
+            adapter.notifyItemRangeInserted(startPosition, newReels.size)
+
+            // Nếu là lần đầu load → play video đầu
+            if (startPosition == 0 && reelsList.isNotEmpty()) {
+                viewPager.post {
+                    getViewHolderAtPosition(0)?.let { adapter.playVideo(0, it) }
+                    videoStartTime = System.currentTimeMillis()
+                }
             }
         }
     }
 
+    // 📋 LOAD TẤT CẢ (BACKUP - KHI KHÔNG CÓ ĐỀ XUẤT)
     private fun loadAllReels() {
         progressBar.visibility = View.VISIBLE
+
         database.reference.child("Reels")
             .orderByChild("createdAt")
+            .limitToLast(50)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     reelsList.clear()
@@ -177,7 +263,10 @@ class ReelsFragment : Fragment() {
                     adapter.notifyDataSetChanged()
 
                     if (reelsList.isNotEmpty()) {
-                        viewPager.post { getViewHolderAtPosition(0)?.let { adapter.playVideo(0, it) } }
+                        viewPager.post {
+                            getViewHolderAtPosition(0)?.let { adapter.playVideo(0, it) }
+                            videoStartTime = System.currentTimeMillis()
+                        }
                     }
                 }
 
@@ -190,16 +279,34 @@ class ReelsFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
+
+        if (videoStartTime > 0 && viewPager.currentItem < reelsList.size) {
+            val watchDuration = System.currentTimeMillis() - videoStartTime
+            val currentReel = reelsList[viewPager.currentItem]
+
+            if (watchDuration > 2000) {
+                recommendationEngine.recordInteraction(
+                    reelId = currentReel.reelId,
+                    interactionType = "WATCH_TIME",
+                    duration = watchDuration
+                )
+            }
+        }
+
         getViewHolderAtPosition(viewPager.currentItem)?.let { adapter.pauseCurrentVideo(it) }
     }
 
     override fun onResume() {
         super.onResume()
-        getViewHolderAtPosition(viewPager.currentItem)?.let { adapter.playVideo(viewPager.currentItem, it) }
+        getViewHolderAtPosition(viewPager.currentItem)?.let {
+            adapter.playVideo(viewPager.currentItem, it)
+        }
+        videoStartTime = System.currentTimeMillis()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        videoStartTime = 0
         viewPager.adapter = null
     }
 }

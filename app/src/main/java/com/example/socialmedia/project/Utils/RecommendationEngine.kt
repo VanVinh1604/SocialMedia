@@ -5,26 +5,41 @@ import com.example.socialmedia.project.Domain.Model.ReelInteractionModel
 import com.example.socialmedia.project.Domain.Model.ReelModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import kotlin.math.pow
 
 class RecommendationEngine(private val database: FirebaseDatabase) {
 
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
     private val TAG = "RecommendationEngine"
 
+    // 🎯 HÀM CHÍNH: LẤY DANH SÁCH ĐỀ XUẤT
     fun getRecommendedReels(callback: (List<ReelModel>) -> Unit) {
         if (currentUserId.isEmpty()) {
+            Log.w(TAG, "⚠️ User not logged in")
             callback(emptyList())
             return
         }
 
+        Log.d(TAG, "🔄 Getting recommendations for user: ${currentUserId.take(8)}...")
+
         getUserInteractions { interactions ->
+            if (interactions.isEmpty()) {
+                Log.w(TAG, "⚠️ No interactions found, returning empty list")
+                callback(emptyList())
+                return@getUserInteractions
+            }
+
             val hashtagScores = extractHashtagScores(interactions)
             val viewedReelIds = interactions.filter { it.interactionType == "VIEW" }.map { it.reelId }
+
+            Log.d(TAG, "📊 Hashtag scores calculated: ${hashtagScores.size} tags")
+            Log.d(TAG, "👁️ Viewed ${viewedReelIds.size} reels")
 
             fetchAndScoreReels(viewedReelIds, hashtagScores, callback)
         }
     }
 
+    // 📥 LẤY TƯƠNG TÁC CỦA USER
     private fun getUserInteractions(callback: (List<ReelInteractionModel>) -> Unit) {
         database.reference.child("ReelInteractions")
             .orderByChild("userId")
@@ -36,33 +51,70 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
                         child.getValue(ReelInteractionModel::class.java)?.let { list.add(it) }
                     }
                     list.sortByDescending { it.timestamp }
+                    Log.d(TAG, "✅ Loaded ${list.size} interactions")
                     callback(list)
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e(TAG, "Load interactions failed", error.toException())
+                    Log.e(TAG, "❌ Load interactions failed", error.toException())
                     callback(emptyList())
                 }
             })
     }
 
+    // 🧮 TÍNH ĐIỂM CHO TỪNG HASHTAG (CÓ TIME DECAY)
     private fun extractHashtagScores(interactions: List<ReelInteractionModel>): Map<String, Double> {
         val scores = mutableMapOf<String, Double>()
+        val now = System.currentTimeMillis()
+
         interactions.forEach { interaction ->
-            val weight = when (interaction.interactionType) {
+            // 🎯 ĐIỂM GỐC THEO LOẠI TƯƠNG TÁC
+            val baseWeight = when (interaction.interactionType) {
                 "LIKE" -> 10.0
                 "COMMENT" -> 8.0
                 "SHARE" -> 6.0
-                "VIEW" -> 2.0
+                "WATCH_TIME" -> {
+                    // Xem > 15 giây = video hay
+                    if (interaction.duration > 15000) 5.0 else 1.0
+                }
+                "VIEW" -> 1.0
+
+                // ❌ TÍN HIỆU TIÊU CỰC
+                "HIDE" -> -15.0    // User nhấn "Không quan tâm"
+                "SKIP" -> -3.0     // User swipe nhanh (< 2s)
+
                 else -> 0.0
             }
+
+            // ⏳ TIME DECAY: Tương tác càng cũ càng ít giá trị
+            // Mỗi 7 ngày giảm 10% (0.9^(days/7))
+            val daysSince = (now - interaction.timestamp) / (1000.0 * 60 * 60 * 24)
+            val decayFactor = 0.9.pow(daysSince / 7.0)
+
+            // 🎯 ĐIỂM CUỐI = ĐIỂM GỐC × HỆ SỐ GIẢM
+            val finalWeight = baseWeight * decayFactor
+
+            // 📊 CỘNG ĐIỂM CHO TỪNG HASHTAG
             interaction.hashtags.forEach { tag ->
-                scores[tag] = scores.getOrDefault(tag, 0.0) + weight
+                scores[tag] = scores.getOrDefault(tag, 0.0) + finalWeight
             }
         }
+
+        // 📋 LOG TOP 10 HASHTAGS
+        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        Log.d(TAG, "📊 TOP HASHTAG SCORES:")
+        scores.entries
+            .sortedByDescending { it.value }
+            .take(10)
+            .forEachIndexed { index, (tag, score) ->
+                Log.d(TAG, "   ${index + 1}. #$tag = %.2f".format(score))
+            }
+        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
         return scores
     }
 
+    // 🎬 FETCH REELS VÀ TÍNH ĐIỂM
     private fun fetchAndScoreReels(
         viewedIds: List<String>,
         hashtagScores: Map<String, Double>,
@@ -73,30 +125,236 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             .limitToLast(200)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val result = mutableListOf<ReelModel>()
+                    val allReels = mutableListOf<ReelModel>()
+                    val recommendedReels = mutableListOf<Pair<ReelModel, Double>>()
+
                     for (child in snapshot.children) {
                         val reel = child.getValue(ReelModel::class.java) ?: continue
-                        if (reel.userId == currentUserId || viewedIds.contains(reel.reelId)) continue
+                        allReels.add(reel)
 
-                        val score = reel.hashtags.sumOf { hashtagScores.getOrDefault(it, 0.0) }
-                            .plus(reel.likeCount * 0.1)
-                            .plus(if ((System.currentTimeMillis() - reel.createdAt) < 24 * 60 * 60 * 1000) 50 else 0)
+                        // 🚫 BỎ QUA VIDEO CỦA CHÍNH USER HOẶC ĐÃ XEM
+                        if (reel.userId == currentUserId || viewedIds.contains(reel.reelId)) {
+                            continue
+                        }
 
-                        if (score > 5) result.add(reel)
+                        // 🧮 TÍNH ĐIỂM
+                        val score = calculateReelScore(reel, hashtagScores, viewedIds)
+
+                        // ✅ CHỈ THÊM NẾU ĐIỂM > 5
+                        if (score > 5.0) {
+                            recommendedReels.add(reel to score)
+                        }
                     }
-                    result.shuffle()
-                    callback(result.take(50))
+
+                    // 🎲 TRỘN VỚI VIDEO NGẪU NHIÊN (80% recommended + 20% random)
+                    val finalReels = mixRecommendations(
+                        recommendedReels.sortedByDescending { it.second }.map { it.first },
+                        allReels
+                    )
+
+                    Log.d(TAG, "✅ Final: ${finalReels.size} reels (${recommendedReels.size} recommended + random)")
+                    callback(finalReels)
                 }
 
                 override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "❌ Fetch reels failed", error.toException())
+                    callback(emptyList())
+                }
+            })
+    }
+    // 📦 LOAD VIDEO THEO BATCH (20 VIDEO MỖI LẦN)
+    fun getRecommendedReelsBatch(batchSize: Int, callback: (List<ReelModel>) -> Unit) {
+        if (currentUserId.isEmpty()) {
+            Log.w(TAG, "⚠️ User not logged in")
+            callback(emptyList())
+            return
+        }
+
+        Log.d(TAG, "📦 Getting batch of $batchSize recommendations...")
+
+        getUserInteractions { interactions ->
+            if (interactions.isEmpty()) {
+                Log.w(TAG, "⚠️ No interactions, loading random batch")
+                loadRandomReelsBatch(batchSize, callback)
+                return@getUserInteractions
+            }
+
+            val hashtagScores = extractHashtagScores(interactions)
+            val viewedReelIds = interactions.filter { it.interactionType == "VIEW" }.map { it.reelId }
+
+            fetchAndScoreReelsBatch(viewedReelIds, hashtagScores, batchSize, callback)
+        }
+    }
+
+    // 📦 FETCH BATCH (TỈ LỆ 80% ĐỀ XUẤT + 20% NGẪU NHIÊN)
+    private fun fetchAndScoreReelsBatch(
+        viewedIds: List<String>,
+        hashtagScores: Map<String, Double>,
+        batchSize: Int,
+        callback: (List<ReelModel>) -> Unit
+    ) {
+        database.reference.child("Reels")
+            .orderByChild("createdAt")
+            .limitToLast(200)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val allReels = mutableListOf<ReelModel>()
+                    val recommendedReels = mutableListOf<Pair<ReelModel, Double>>()
+
+                    for (child in snapshot.children) {
+                        val reel = child.getValue(ReelModel::class.java) ?: continue
+                        allReels.add(reel)
+
+                        // 🚫 Bỏ qua video của user hoặc đã xem
+                        if (reel.userId == currentUserId || viewedIds.contains(reel.reelId)) {
+                            continue
+                        }
+
+                        // 🧮 Tính điểm
+                        val score = calculateReelScore(reel, hashtagScores, viewedIds)
+                        if (score > 5.0) {
+                            recommendedReels.add(reel to score)
+                        }
+                    }
+
+                    // 📊 TỈ LỆ 80/20
+                    val numRecommended = (batchSize * 0.8).toInt()  // 16 video
+                    val numRandom = batchSize - numRecommended       // 4 video
+
+                    // 🎯 Lấy video đề xuất (sắp xếp theo điểm)
+                    val recommendedPart = recommendedReels
+                        .sortedByDescending { it.second }
+                        .map { it.first }
+                        .take(numRecommended)
+
+                    // 🎲 Lấy video ngẫu nhiên
+                    val randomPart = allReels
+                        .filter { it !in recommendedPart && !viewedIds.contains(it.reelId) && it.userId != currentUserId }
+                        .shuffled()
+                        .take(numRandom)
+
+                    // 🔀 Trộn và xáo
+                    val finalBatch = (recommendedPart + randomPart).shuffled()
+
+                    Log.d(TAG, "✅ Batch: ${recommendedPart.size} recommended + ${randomPart.size} random = ${finalBatch.size}")
+                    callback(finalBatch)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "❌ Fetch failed", error.toException())
                     callback(emptyList())
                 }
             })
     }
 
-    /**
-     * ✅ GHI NHẬN TƯƠNG TÁC - TỰ ĐỘNG FETCH HASHTAGS TỪ FIREBASE
-     */
+    // 🎲 LOAD VIDEO NGẪU NHIÊN (KHI USER CHƯA CÓ TƯƠNG TÁC)
+    private fun loadRandomReelsBatch(batchSize: Int, callback: (List<ReelModel>) -> Unit) {
+        database.reference.child("Reels")
+            .orderByChild("createdAt")
+            .limitToLast(100)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val reels = mutableListOf<ReelModel>()
+                    for (child in snapshot.children) {
+                        val reel = child.getValue(ReelModel::class.java)
+                        reel?.let {
+                            if (it.userId != currentUserId) {
+                                reels.add(it)
+                            }
+                        }
+                    }
+
+                    val randomBatch = reels.shuffled().take(batchSize)
+                    Log.d(TAG, "🎲 Loaded ${randomBatch.size} random reels")
+                    callback(randomBatch)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "❌ Load random failed", error.toException())
+                    callback(emptyList())
+                }
+            })
+    }
+
+    // 🧮 TÍNH ĐIỂM CHO 1 VIDEO
+    private fun calculateReelScore(
+        reel: ReelModel,
+        hashtagScores: Map<String, Double>,
+        viewedIds: List<String>
+    ): Double {
+
+        // 1️⃣ ĐIỂM TỪ HASHTAG (Điểm chính)
+        val hashtagScore = reel.hashtags.sumOf {
+            hashtagScores.getOrDefault(it, 0.0)
+        }
+
+        // 2️⃣ ĐIỂM PHỔ BIẾN (Video nhiều tương tác)
+        val popularityScore = (reel.likeCount * 0.5) +
+                (reel.commentCount * 0.3) +
+                (reel.shareCount * 0.2)
+
+        // 3️⃣ ĐIỂM MỚI (Video càng mới càng ưu tiên)
+        val hoursSincePost = (System.currentTimeMillis() - reel.createdAt) / (1000 * 60 * 60)
+        val recencyScore = when {
+            hoursSincePost < 24 -> 50.0   // < 1 ngày
+            hoursSincePost < 72 -> 25.0   // 1-3 ngày
+            hoursSincePost < 168 -> 10.0  // 3-7 ngày
+            else -> 0.0                    // > 1 tuần
+        }
+
+        // 4️⃣ ĐIỂM ĐA DẠNG (Tránh 1 hashtag chiếm hết)
+        val uniqueMatchedHashtags = reel.hashtags.intersect(hashtagScores.keys).size
+        val diversityBonus = if (uniqueMatchedHashtags > 0) 5.0 else 0.0
+
+        // 🎯 TỔNG ĐIỂM
+        val totalScore = hashtagScore + popularityScore + recencyScore + diversityBonus
+
+        // 📋 LOG (chỉ log 5 video đầu để không spam)
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.v(TAG, """
+                📊 Score for ${reel.reelId.take(8)}:
+                   Hashtag: $hashtagScore
+                   Popularity: $popularityScore
+                   Recency: $recencyScore
+                   Diversity: $diversityBonus
+                   → TOTAL: $totalScore
+            """.trimIndent())
+        }
+
+        return totalScore
+    }
+
+    // 🎲 TRỘN VIDEO ĐỀ XUẤT VỚI VIDEO NGẪU NHIÊN
+    private fun mixRecommendations(
+        recommendedReels: List<ReelModel>,
+        allReels: List<ReelModel>
+    ): List<ReelModel> {
+
+        // 📊 TỶ LỆ: 80% đề xuất + 20% ngẫu nhiên
+        val exploitationRatio = 0.7
+        val targetSize = 50
+
+        val numRecommended = (targetSize * exploitationRatio).toInt()
+        val numRandom = targetSize - numRecommended
+
+        // 🎯 LẤY VIDEO ĐỀ XUẤT
+        val recommendedPart = recommendedReels.take(numRecommended)
+
+        // 🎲 LẤY VIDEO NGẪU NHIÊN (không trùng)
+        val randomPart = allReels
+            .filter { it !in recommendedReels }
+            .shuffled()
+            .take(numRandom)
+
+        // 🔀 TRỘN VÀ XÁO
+        val result = (recommendedPart + randomPart).shuffled()
+
+        Log.d(TAG, "🎲 Mixed: ${recommendedPart.size} recommended + ${randomPart.size} random = ${result.size} total")
+
+        return result
+    }
+
+    // 💾 GHI NHẬN TƯƠNG TÁC
     fun recordInteraction(
         reelId: String,
         interactionType: String,
@@ -109,37 +367,32 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
 
         Log.d(TAG, "🔄 Recording $interactionType for reel: ${reelId.take(8)}...")
 
-        // ✅ LUÔN FETCH HASHTAGS TỪ FIREBASE TRƯỚC KHI LƯU
-        // ✅ FETCH TOÀN BỘ REEL ĐỂ KIỂM TRA
+        // ✅ FETCH HASHTAGS TỪ FIREBASE
         database.reference.child("Reels").child(reelId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val hashtags = mutableListOf<String>()
 
-                    // Đọc hashtags từ Firebase
+                    // Đọc hashtags
                     val hashtagsSnapshot = snapshot.child("hashtags")
                     for (child in hashtagsSnapshot.children) {
                         child.getValue(String::class.java)?.let { hashtags.add(it) }
                     }
 
-                    // ✅ NẾU KHÔNG CÓ HASHTAGS → THỬ EXTRACT TỪ CAPTION
+                    // ⚠️ NẾU KHÔNG CÓ → EXTRACT TỪ CAPTION
                     if (hashtags.isEmpty()) {
                         val caption = snapshot.child("caption").getValue(String::class.java)
-                        Log.d(TAG, "⚠️ No hashtags found, caption: $caption")
-
                         if (!caption.isNullOrBlank()) {
                             val extractedHashtags = HashtagUtils.extractHashtags(caption)
                             if (extractedHashtags.isNotEmpty()) {
-                                Log.d(TAG, "🔧 Extracted from caption: $extractedHashtags")
                                 hashtags.addAll(extractedHashtags)
-
-                                // Lưu hashtags vào Firebase luôn
                                 snapshot.ref.child("hashtags").setValue(extractedHashtags)
+                                Log.d(TAG, "🔧 Extracted hashtags from caption: $extractedHashtags")
                             }
                         }
                     }
 
-                    Log.d(TAG, "📌 Final hashtags: $hashtags")
+                    Log.d(TAG, "📌 Hashtags: $hashtags")
                     saveInteraction(reelId, interactionType, hashtags, duration)
                 }
 
@@ -150,9 +403,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    /**
-     * ✅ LƯU INTERACTION VÀO FIREBASE
-     */
+    // 💾 LƯU INTERACTION VÀO FIREBASE
     private fun saveInteraction(
         reelId: String,
         interactionType: String,
@@ -166,13 +417,12 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             return
         }
 
-        // Sử dụng HashMap để đảm bảo hashtags được lưu đúng
         val interactionData = hashMapOf<String, Any>(
             "interactionId" to interactionId,
             "userId" to currentUserId,
             "reelId" to reelId,
             "interactionType" to interactionType,
-            "hashtags" to hashtags,  // ✅ Lưu hashtags đã fetch
+            "hashtags" to hashtags,
             "timestamp" to ServerValue.TIMESTAMP,
             "duration" to duration
         )
@@ -182,26 +432,20 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             .child(interactionId)
             .setValue(interactionData)
             .addOnSuccessListener {
-                Log.d(TAG, "✅ SAVED: $interactionType")
-                Log.d(TAG, "   ReelID: ${reelId.take(8)}...")
-                Log.d(TAG, "   Hashtags: $hashtags")
-                Log.d(TAG, "   InteractionID: ${interactionId.take(8)}...")
+                Log.d(TAG, "✅ SAVED: $interactionType for ${reelId.take(8)}")
             }
             .addOnFailureListener { error ->
                 Log.e(TAG, "❌ Failed to save interaction", error)
             }
     }
-    /**
-     * 🔍 DEBUG: Xem điểm hashtag của user hiện tại
-     */
+
+    // 🐛 DEBUG: XEM ĐIỂM HASHTAG
     fun getHashtagScoresDebug(callback: (Map<String, Double>) -> Unit) {
         if (currentUserId.isEmpty()) {
             Log.w(TAG, "⚠️ User not logged in")
             callback(emptyMap())
             return
         }
-
-        Log.d(TAG, "🔍 Fetching hashtag scores for user: ${currentUserId.take(8)}...")
 
         getUserInteractions { interactions ->
             val scores = extractHashtagScores(interactions)
@@ -210,19 +454,14 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             Log.d(TAG, "📊 HASHTAG SCORES BREAKDOWN:")
             Log.d(TAG, "   Total interactions: ${interactions.size}")
             Log.d(TAG, "   Unique hashtags: ${scores.size}")
-            Log.d(TAG, "")
 
-            // Sắp xếp theo điểm giảm dần
             scores.entries
                 .sortedByDescending { it.value }
                 .forEachIndexed { index, (tag, score) ->
-                    val interactionCount = interactions.count { interaction ->
-                        tag in interaction.hashtags
-                    }
+                    val count = interactions.count { tag in it.hashtags }
                     Log.d(TAG, "   ${index + 1}. #$tag")
-                    Log.d(TAG, "      Score: $score")
-                    Log.d(TAG, "      Interactions: $interactionCount times")
-                    Log.d(TAG, "")
+                    Log.d(TAG, "      Score: %.2f".format(score))
+                    Log.d(TAG, "      Times: $count")
                 }
 
             Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
