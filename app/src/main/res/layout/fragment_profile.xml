@@ -51,7 +51,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-50dp"
-            android:paddingBottom="24dp"
+            android:paddingBottom="12dp"
             android:clickable="true">
 
             <com.google.android.material.imageview.ShapeableImageView
@@ -185,7 +185,7 @@
                     android:textColor="#666666"
                     android:textSize="14sp"
                     android:visibility="gone"
-                    tools:text="Đây là ghi chú của người khác 📸"
+                    tools:text="Đây là ghi chú"
                     tools:visibility="visible" />
             </LinearLayout>
 
@@ -218,6 +218,7 @@
                     app:iconGravity="textStart"
                     app:iconTint="#FFFFFF"
                     app:iconSize="20dp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShareProfile"
                     android:layout_width="0dp"
@@ -239,11 +240,23 @@
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvStoryHighlights"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="0dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_story_highlight" />
+
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="8dp"
             app:tabGravity="fill"
             app:tabMode="fixed"
             app:tabIndicatorColor="@color/purple_main"
@@ -261,8 +274,8 @@
                 android:layout_height="wrap_content"
                 android:text="Reels"
                 android:icon="@drawable/ic_reels" />
-
         </com.google.android.material.tabs.TabLayout>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPhotos"
             android:layout_width="match_parent"

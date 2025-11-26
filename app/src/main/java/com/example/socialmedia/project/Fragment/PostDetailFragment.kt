@@ -5,23 +5,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContextCompat // <-- Thêm import
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.example.socialmedia.R
-// Xóa import navArgs, chúng ta sẽ lấy postId từ arguments
-// import androidx.navigation.fragment.navArgs
-// import com.example.socialmedia.project.Adapter.CommentAdapter // <-- KHÔNG DÙNG NỮA
 import com.example.socialmedia.project.Adapter.MediaViewPagerAdapter
 import com.example.socialmedia.databinding.FragmentPostDetailBinding
 import com.example.socialmedia.project.ViewModel.PostDetailViewModel
 import com.example.socialmedia.project.Domain.Model.PostModel
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.FirebaseDatabase
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,7 +37,7 @@ class PostDetailFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentPostDetailBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -49,7 +45,6 @@ class PostDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Lấy postId từ arguments (cách chuẩn)
         postId = arguments?.getString("postId")
         currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
@@ -59,11 +54,11 @@ class PostDetailFragment : Fragment() {
             return
         }
 
-        viewModel = ViewModelProvider(this).get(PostDetailViewModel::class.java)
+        viewModel = ViewModelProvider(this)[PostDetailViewModel::class.java]
 
         setupUI()
-        setupClickListeners() // <-- ĐÃ CẬP NHẬT
-        setupObservers() // <-- ĐÃ CẬP NHẬT
+        setupClickListeners()
+        setupObservers()
 
         viewModel.loadPostDetails(postId!!)
     }
@@ -72,13 +67,8 @@ class PostDetailFragment : Fragment() {
         mediaAdapter = MediaViewPagerAdapter()
         binding.viewPagerMedia.adapter = mediaAdapter
 
-        // === XÓA LOGIC RecyclerView BÌNH LUẬN ===
-        // binding.rvComments.layoutManager = LinearLayoutManager(context)
-        // Chúng ta sẽ ẩn nó đi và thêm một nút "Xem bình luận"
-        binding.rvComments.visibility = View.GONE // Ẩn RecyclerView
-
-        // Thêm một TextView để hiển thị "Xem tất cả bình luận" (nếu bạn muốn)
-        // (Trong layout của bạn không có, chúng ta sẽ dùng nút comment)
+        // Ẩn RecyclerView comments vì sẽ xem trong BottomSheet
+        binding.rvComments.visibility = View.GONE
     }
 
     private fun setupClickListeners() {
@@ -86,7 +76,6 @@ class PostDetailFragment : Fragment() {
             findNavController().popBackStack()
         }
 
-        // === TÁI SỬ DỤNG LOGIC VIEWMODEL ===
         binding.btnLike.setOnClickListener {
             viewModel.toggleLike(postId!!)
         }
@@ -95,25 +84,20 @@ class PostDetailFragment : Fragment() {
             viewModel.toggleBookmark(postId!!)
         }
 
-        // === ĐÂY LÀ PHẦN TÁI SỬ DỤNG QUAN TRỌNG NHẤT ===
+        // Chỉ mở comment khi bấm vào icon comment trên thanh action bar
         binding.btnComment.setOnClickListener {
             openComments()
         }
 
-        // Cũng mở comment khi nhấn vào EditText
-        binding.etAddComment.setOnClickListener {
-            openComments()
-        }
+        // ĐÃ XÓA: binding.etAddComment.setOnClickListener
     }
 
-    // Hàm tái sử dụng CommentBottomSheetFragment
     private fun openComments() {
         if (postAuthorId == null) {
             Toast.makeText(context, "Đang tải...", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // TÁI SỬ DỤNG HOÀN TOÀN BottomSheet của bạn
         val commentSheet = CommentBottomSheetFragment(
             postId = postId!!,
             currentUserId = currentUserId!!,
@@ -122,51 +106,38 @@ class PostDetailFragment : Fragment() {
         commentSheet.show(parentFragmentManager, "CommentBottomSheet")
     }
 
-
     private fun setupObservers() {
         // 1. Lắng nghe thông tin bài post
         viewModel.post.observe(viewLifecycleOwner) { post ->
             if (post != null) {
-                postAuthorId = post.userId // Lấy ID tác giả
+                postAuthorId = post.userId
                 updatePostUI(post)
             }
         }
 
-        // === XÓA OBSERVER CHO COMMENTS ===
-
-        // 2. Lắng nghe trạng thái Like (Tái sử dụng)
+        // 2. Lắng nghe trạng thái Like
         viewModel.isLikedByCurrentUser.observe(viewLifecycleOwner) { isLiked ->
             val icon = if (isLiked) R.drawable.ic_favorite_red else R.drawable.ic_favorite
             binding.btnLike.setImageResource(icon)
         }
 
-        // 3. Lắng nghe số lượng Like (Tái sử dụng)
+        // 3. Lắng nghe số lượng Like
         viewModel.likeCount.observe(viewLifecycleOwner) { count ->
             binding.tvLikeCount.text = "$count lượt thích"
         }
 
-        // 4. Lắng nghe trạng thái Bookmark (Tái sử dụng)
+        // 4. Lắng nghe trạng thái Bookmark
         viewModel.isBookmarked.observe(viewLifecycleOwner) { isBookmarked ->
             if (isBookmarked) {
-                // Nếu đã lưu: Dùng icon outline và TÔ MÀU (ví dụ màu đen)
                 binding.btnBookmark.setImageResource(R.drawable.ic_bookmark_outline)
                 binding.btnBookmark.setColorFilter(ContextCompat.getColor(requireContext(), android.R.color.black))
             } else {
-                // Nếu chưa lưu: Dùng icon outline và BỎ MÀU
                 binding.btnBookmark.setImageResource(R.drawable.ic_bookmark_outline)
                 binding.btnBookmark.clearColorFilter()
             }
         }
 
-        // 5. Lắng nghe avatar của người dùng hiện tại (để điền vào ô comment)
-        FirebaseDatabase.getInstance().getReference("InfoUser").child(currentUserId!!)
-            .child("profilePictureUrl").get().addOnSuccessListener {
-                Glide.with(this)
-                    .load(it.value.toString())
-                    .placeholder(R.drawable.image_avata_user)
-                    .circleCrop()
-                    .into(binding.ivMyAvatar)
-            }
+        // ĐÃ XÓA: Code load avatar user hiện tại vào ivMyAvatar (vì view đã bị xóa)
 
         // Lắng nghe lỗi
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
@@ -185,13 +156,13 @@ class PostDetailFragment : Fragment() {
             .into(binding.ivUserAvatar)
         binding.tvUsername.text = post.userName
 
-        // Cập nhật MediaAdapter bằng .submitList()
+        // Cập nhật Media
         mediaAdapter.submitList(post.mediaList)
 
-        // Cập nhật dấu chấm
+        // Cập nhật Indicator
         if (post.mediaList.size > 1) {
             binding.tabIndicator.isVisible = true
-            TabLayoutMediator(binding.tabIndicator, binding.viewPagerMedia) { tab, position -> }.attach()
+            TabLayoutMediator(binding.tabIndicator, binding.viewPagerMedia) { _, _ -> }.attach()
         } else {
             binding.tabIndicator.isVisible = false
         }
@@ -203,12 +174,12 @@ class PostDetailFragment : Fragment() {
     }
 
     private fun formatTimestamp(timestamp: Long): String {
-        try {
+        return try {
             val sdf = SimpleDateFormat("dd 'tháng' MM, yyyy 'lúc' HH:mm", Locale("vi", "VN"))
             val netDate = Date(timestamp)
-            return sdf.format(netDate)
+            sdf.format(netDate)
         } catch (e: Exception) {
-            return "Vừa xong"
+            "Vừa xong"
         }
     }
 

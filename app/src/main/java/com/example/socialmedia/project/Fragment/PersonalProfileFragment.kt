@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -14,13 +13,14 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentPersonalProfileBinding
 import com.example.socialmedia.project.Adapter.ProfilePostAdapter
-// (Xóa import MediaType nếu PostModel của bạn không dùng nó)
-// import com.example.socialmedia.project.Domain.Enum.MediaType
+import com.example.socialmedia.project.Adapter.StoryHighlightAdapter
 import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Domain.Model.StoryHighlightModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.ViewModel.ProfileViewModel
 import com.google.android.material.tabs.TabLayout
@@ -32,7 +32,9 @@ class PersonalProfileFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ProfileViewModel by navGraphViewModels(R.id.nav_graph)
+
     private lateinit var postAdapter: ProfilePostAdapter
+    private lateinit var highlightAdapter: StoryHighlightAdapter // Adapter cho Story Highlight
 
     private var allPosts: List<PostModel> = emptyList()
 
@@ -48,6 +50,7 @@ class PersonalProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupPostGrid()
+        setupHighlights() // Cài đặt adapter cho Highlight
         setupObservers()
         setupClickListeners()
         setupTabs()
@@ -55,9 +58,38 @@ class PersonalProfileFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.loadProfile(null)
+        viewModel.loadProfile(null) // Tải profile của chính mình
     }
 
+    // === [QUAN TRỌNG] CÀI ĐẶT HIGHLIGHT ===
+    private fun setupHighlights() {
+        highlightAdapter = StoryHighlightAdapter(emptyList()) { highlight ->
+            // Kiểm tra xem user bấm vào nút "Mới" hay bấm vào tin đã có
+            if (highlight.id == "ADD_NEW") {
+                // 1. Tạo mới Highlight
+                try {
+                    findNavController().navigate(R.id.action_personalProfileFragment_to_createHighlightFragment)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                // 2. [MỚI] Xem Highlight đã có
+                val bundle = Bundle().apply {
+                    putString("highlightId", highlight.id) // Truyền ID để ViewModel tải dữ liệu
+                }
+                try {
+                    findNavController().navigate(R.id.action_personalProfileFragment_to_highlightViewerFragment, bundle)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Lỗi điều hướng: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        binding.rvStoryHighlights.apply {
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = highlightAdapter
+        }
+    }
     private fun setupPostGrid() {
         postAdapter = ProfilePostAdapter { post ->
             val postId = post.postId
@@ -88,8 +120,32 @@ class PersonalProfileFragment : Fragment() {
             if (view == null) return@Observer
             allPosts = posts
             binding.tvPostCount.text = posts.size.toString()
-            filterAndDisplayPosts() // Lọc dựa trên tab
+            filterAndDisplayPosts()
         })
+
+        // === [QUAN TRỌNG] OBSERVER HIGHLIGHTS VỚI NÚT ADD ===
+        viewModel.userHighlights.observe(viewLifecycleOwner) { firebaseHighlights ->
+            // 1. Tạo danh sách hiển thị
+            val displayList = ArrayList<StoryHighlightModel>()
+
+            // 2. Luôn chèn nút "Mới" vào vị trí đầu tiên
+            displayList.add(
+                StoryHighlightModel(
+                    id = "ADD_NEW",
+                    name = "Mới",
+                    coverUrl = "" // Adapter sẽ tự xử lý để hiện icon dấu cộng
+                )
+            )
+
+            // 3. Chèn tiếp dữ liệu thật từ Firebase (nếu có)
+            displayList.addAll(firebaseHighlights)
+
+            // 4. Cập nhật Adapter
+            highlightAdapter.submitList(displayList)
+
+            // 5. Luôn hiện RecyclerView vì luôn có ít nhất nút "Mới"
+            binding.rvStoryHighlights.visibility = View.VISIBLE
+        }
 
         viewModel.errorMessage.observe(viewLifecycleOwner, Observer { errorMsg ->
             if (!errorMsg.isNullOrEmpty()) {
@@ -108,27 +164,18 @@ class PersonalProfileFragment : Fragment() {
         })
     }
 
-    // === CẬP NHẬT LOGIC LỌC ===
     private fun filterAndDisplayPosts() {
         val selectedTabPosition = binding.tabLayout.selectedTabPosition
-
-        // LƯU Ý: Giả sử PostModel của bạn có trường "isReel: Boolean"
         val (postsToShow, emptyMessageTitle, emptyMessageSub) = if (selectedTabPosition == 0) {
-            // Tab 0 = Bài đăng (Ảnh + Video KHÔNG PHẢI REEL)
-            // Sửa logic: "isReel" là false
             val gridPosts = allPosts.filter { !it.isReel }
             Triple(gridPosts, "Chưa có bài đăng", "Ảnh và video của bạn sẽ ở đây.")
         } else {
-            // Tab 1 = Reels
-            // Sửa logic: "isReel" là true
             val reelPosts = allPosts.filter { it.isReel }
             Triple(reelPosts, "Chưa có Reels", "Reels của bạn sẽ xuất hiện ở đây.")
         }
 
-        // Cập nhật Adapter
         postAdapter.submitList(postsToShow)
 
-        // Cập nhật trạng thái rỗng
         if (postsToShow.isNotEmpty()) {
             binding.rvPhotos.visibility = View.VISIBLE
             binding.llEmptyPhotos.visibility = View.GONE
@@ -139,7 +186,6 @@ class PersonalProfileFragment : Fragment() {
             binding.tvEmptySubMessage.text = emptyMessageSub
         }
     }
-    // === KẾT THÚC CẬP NHẬT ===
 
     private fun setupClickListeners() {
         binding.ivBackButton.setOnClickListener {
@@ -265,6 +311,7 @@ class PersonalProfileFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         binding.rvPhotos.adapter = null
+        binding.rvStoryHighlights.adapter = null
         _binding = null
     }
 }

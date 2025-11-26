@@ -3,21 +3,20 @@ package com.example.socialmedia.project.Fragment
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager // [MỚI]
 import com.bumptech.glide.Glide
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentProfileBinding
 import com.example.socialmedia.project.Adapter.ProfilePostAdapter
-import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Adapter.StoryHighlightAdapter // [MỚI] Import
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.ViewModel.ProfileViewModel
 import com.google.android.material.tabs.TabLayout
@@ -31,6 +30,8 @@ class ProfileFragment : Fragment() {
     private val viewModel: ProfileViewModel by navGraphViewModels(R.id.nav_graph)
 
     private lateinit var postAdapter: ProfilePostAdapter
+    private lateinit var highlightAdapter: StoryHighlightAdapter // [MỚI] Khai báo Adapter
+
     private var targetUserId: String? = null
 
     override fun onCreateView(
@@ -56,40 +57,50 @@ class ProfileFragment : Fragment() {
 
         viewModel.loadProfile(targetUserId)
 
-        setupUI() // <-- SỬA LỖI TRONG HÀM NÀY
+        setupUI()
         setupListeners()
         setupObservers()
         setupTabs()
     }
 
-    // === HÀM ĐÃ SỬA LỖI ===
     private fun setupUI() {
+        // Setup Grid Ảnh
         postAdapter = ProfilePostAdapter { post ->
-            // --- SỬA LỖI TẠI ĐÂY ---
-            // Dòng code cũ:
-            // Toast.makeText(context, "Clicked post ${post.postId}", Toast.LENGTH_SHORT).show()
-
-            // Dòng code mới:
             Log.d("ProfileFragment", "Đã nhấp vào postId: ${post.postId}")
             try {
-                // 1. Tạo bundle
                 val bundle = Bundle().apply {
-                    putString("postId", post.postId) // Key "postId" phải khớp với nav_graph
+                    putString("postId", post.postId)
                 }
-
-                // 2. Điều hướng (Sử dụng action bạn đã tạo trong nav_graph)
                 findNavController().navigate(R.id.action_profileFragment_to_postDetailFragment, bundle)
-
             } catch (e: Exception) {
                 Toast.makeText(context, "Lỗi điều hướng: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-            // --- KẾT THÚC SỬA LỖI ---
         }
-
         binding.rvPhotos.apply {
             layoutManager = GridLayoutManager(context, 3)
             adapter = postAdapter
             isNestedScrollingEnabled = false
+        }
+
+        // [CẬP NHẬT] Setup Highlights với sự kiện Click
+        highlightAdapter = StoryHighlightAdapter(emptyList()) { highlight ->
+            val bundle = Bundle().apply {
+                putString("highlightId", highlight.id)
+                putString("userId", targetUserId)
+            }
+            try {
+                // Điều hướng sang màn hình xem highlight
+                findNavController().navigate(R.id.action_profileFragment_to_highlightViewerFragment, bundle)
+            } catch (e: Exception) {
+                // Log lỗi nếu action chưa được khai báo trong nav_graph
+                Log.e("ProfileFragment", "Lỗi mở highlight: ${e.message}")
+                Toast.makeText(context, "Không thể mở highlight này", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.rvStoryHighlights.apply {
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = highlightAdapter
         }
     }
 
@@ -160,47 +171,57 @@ class ProfileFragment : Fragment() {
 
         viewModel.userProfile.observe(viewLifecycleOwner) { user ->
             if (user == null) {
-                // (Xử lý bị chặn / không tìm thấy)
                 Toast.makeText(context, "Không tìm thấy người dùng.", Toast.LENGTH_LONG).show()
                 binding.llStats.visibility = View.GONE
                 binding.llUserInfo.visibility = View.GONE
                 binding.llActionButtons.visibility = View.GONE
                 binding.tabLayout.visibility = View.GONE
                 binding.rvPhotos.visibility = View.GONE
+                binding.rvStoryHighlights.visibility = View.GONE // [MỚI] Ẩn highlights khi lỗi
                 binding.llEmptyPhotos.visibility = View.VISIBLE
                 binding.tvEmptyMessage.text = "Không tìm thấy"
                 binding.tvEmptySubMessage.text = "Người dùng này không tồn tại hoặc đã chặn bạn."
 
             } else if (user.userId == targetUserId) {
-                // (Hiển thị UI)
                 binding.llStats.visibility = View.VISIBLE
                 binding.llUserInfo.visibility = View.VISIBLE
                 binding.llActionButtons.visibility = View.VISIBLE
                 binding.tabLayout.visibility = View.VISIBLE
 
                 updateProfileUI(user)
-                filterAndDisplayPosts() // GỌI LỌC KHI USER THAY ĐỔI
+                filterAndDisplayPosts()
             }
         }
 
         viewModel.userPosts.observe(viewLifecycleOwner) { posts ->
             if (view == null) return@observe
             binding.tvPostCount.text = posts.size.toString()
-            filterAndDisplayPosts() // GỌI LỌC KHI BÀI ĐĂNG THAY ĐỔI
+            filterAndDisplayPosts()
+        }
+
+        // [MỚI] Lắng nghe Highlights
+        viewModel.userHighlights.observe(viewLifecycleOwner) { highlights ->
+            highlightAdapter.submitList(highlights)
+            // Logic ẩn/hiện tùy thuộc vào quyền riêng tư (xử lý dưới filterAndDisplayPosts)
+            // Tạm thời nếu có data thì hiện:
+            if (highlights.isNotEmpty()) {
+                // Kiểm tra xem có đang bị Private không? (Đã xử lý ở filterAndDisplayPosts nhưng đây là Observer riêng)
+                // Tốt nhất để filterAndDisplayPosts xử lý visibility của toàn bộ phần Content
+                // Tuy nhiên, ở mức cơ bản, ta cứ set adapter
+            }
         }
 
         viewModel.isFollowing.observe(viewLifecycleOwner) { isFollowing ->
-            updateFollowButtonUI() // Chỉ cập nhật nút
+            updateFollowButtonUI()
         }
 
         viewModel.theyAreFollowingMe.observe(viewLifecycleOwner) { theyFollowMe ->
             updateFollowButtonUI()
         }
 
-        // Lắng nghe trạng thái bạn bè 2 chiều
         viewModel.isMutualFriend.observe(viewLifecycleOwner) { isFriend ->
             Log.d("ProfileFragment", "Trạng thái bạn bè 2 chiều: $isFriend")
-            filterAndDisplayPosts() // <<-- ĐÂY LÀ CHÌA KHÓA: Gọi lại hàm lọc
+            filterAndDisplayPosts()
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
@@ -220,9 +241,7 @@ class ProfileFragment : Fragment() {
         viewModel.unblockSuccess.observe(viewLifecycleOwner) { isSuccess ->
             if (isSuccess == true) {
                 Toast.makeText(context, "Đã bỏ chặn", Toast.LENGTH_SHORT).show()
-                targetUserId?.let {
-                    viewModel.loadProfile(it)
-                }
+                targetUserId?.let { viewModel.loadProfile(it) }
                 viewModel.resetUnblockSuccessStatus()
             } else if (isSuccess == false) {
                 Toast.makeText(context, "Bỏ chặn thất bại", Toast.LENGTH_SHORT).show()
@@ -241,45 +260,46 @@ class ProfileFragment : Fragment() {
         })
     }
 
-    // === HÀM QUAN TRỌNG NHẤT VỚI LOGIC ĐÚNG ===
     private fun filterAndDisplayPosts() {
         val user = viewModel.userProfile.value
         val allPosts = viewModel.userPosts.value ?: emptyList()
         val isMutualFriend = viewModel.isMutualFriend.value ?: false
+        // [MỚI] Lấy highlights
+        val allHighlights = viewModel.userHighlights.value ?: emptyList()
 
         if (user == null) {
-            // Trường hợp này xử lý user bị chặn, hoặc chưa kịp tải
             postAdapter.submitList(emptyList())
             binding.rvPhotos.visibility = View.GONE
-
-            if (binding.llStats.visibility == View.GONE) {
-                binding.llEmptyPhotos.visibility = View.VISIBLE
-            } else {
-                binding.llEmptyPhotos.visibility = View.GONE
-            }
+            binding.rvStoryHighlights.visibility = View.GONE // [MỚI]
+            if (binding.llStats.visibility == View.GONE) binding.llEmptyPhotos.visibility = View.VISIBLE
+            else binding.llEmptyPhotos.visibility = View.GONE
             return
         }
 
-        // === LOGIC MÀ BẠN YÊU CẦU NẰM Ở ĐÂY ===
         if (user.Private && !isMutualFriend) {
-            // NẾU: Tài khoản là RIÊNG TƯ (Private = true)
-            // VÀ:   Không phải là bạn 2 chiều (!isMutualFriend = true)
-
+            // RIÊNG TƯ -> Ẩn hết
             postAdapter.submitList(emptyList())
             binding.rvPhotos.visibility = View.GONE
+            binding.rvStoryHighlights.visibility = View.GONE // [MỚI]
 
-            // THÌ: Ẩn bài đăng và hiển thị thông báo
             binding.llEmptyPhotos.visibility = View.VISIBLE
             binding.tvEmptyMessage.text = "Tài khoản này là riêng tư"
-            binding.tvEmptySubMessage.text = "Hãy theo dõi và được ${user.fullName} chấp nhận (follow lại) để xem bài đăng."
-            return // Dừng hàm tại đây
+            binding.tvEmptySubMessage.text = "Hãy theo dõi và được ${user.fullName} chấp nhận để xem bài đăng."
+            return
         }
-        // ===================================
 
-        // NGƯỢC LẠI: (Nếu là tài khoản Public HOẶC là bạn bè 2 chiều)
-        // Hiển thị bài đăng bình thường
+        // CÔNG KHAI HOẶC BẠN BÈ -> Hiển thị
+
+        // 1. Xử lý Highlights
+        if (allHighlights.isNotEmpty()) {
+            binding.rvStoryHighlights.visibility = View.VISIBLE
+            highlightAdapter.submitList(allHighlights)
+        } else {
+            binding.rvStoryHighlights.visibility = View.GONE
+        }
+
+        // 2. Xử lý Posts
         val selectedTabPosition = binding.tabLayout.selectedTabPosition
-
         val (postsToShow, emptyMessageTitle, emptyMessageSub) = if (selectedTabPosition == 0) {
             val gridPosts = allPosts.filter { !it.isReel }
             Triple(gridPosts, "Chưa có bài đăng", "Người dùng này chưa đăng bài.")
@@ -315,10 +335,7 @@ class ProfileFragment : Fragment() {
         Glide.with(this).load(user.profilePictureUrl).placeholder(R.drawable.image_avata_user).circleCrop().into(binding.ivProfileImage)
     }
 
-    // === HÀM HIỂN THỊ "Follow Back" ===
     private fun updateFollowButtonUI() {
-        val context = context ?: return
-
         val isFollowing = viewModel.isFollowing.value ?: false
         val theyAreFollowingMe = viewModel.theyAreFollowingMe.value ?: false
 
@@ -335,17 +352,8 @@ class ProfileFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-
-        viewModel.userProfile.removeObservers(viewLifecycleOwner)
-        viewModel.userPosts.removeObservers(viewLifecycleOwner)
-        viewModel.isFollowing.removeObservers(viewLifecycleOwner)
-        viewModel.blockStatus.removeObservers(viewLifecycleOwner)
-        viewModel.unblockSuccess.removeObservers(viewLifecycleOwner)
-        viewModel.isTargetUserBlocked.removeObservers(viewLifecycleOwner)
-        viewModel.isMutualFriend.removeObservers(viewLifecycleOwner)
-        viewModel.theyAreFollowingMe.removeObservers(viewLifecycleOwner)
-
         binding.rvPhotos.adapter = null
+        binding.rvStoryHighlights.adapter = null // [MỚI]
         _binding = null
     }
 }

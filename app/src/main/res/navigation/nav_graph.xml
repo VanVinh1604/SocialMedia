@@ -6,6 +6,60 @@
     app:startDestination="@id/homeFragment">
 
     <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.socialmedia.project.Fragment.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile">
+
+        <action
+            android:id="@+id/action_profileFragment_to_reelsFragment"
+            app:destination="@id/reelsFragment"
+            app:enterAnim="@anim/slide_in_left"
+            app:exitAnim="@anim/slide_out_right"
+            app:popEnterAnim="@anim/slide_in_right"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/action_profileFragment_to_settingFragment"
+            app:destination="@id/settingFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <argument
+            android:name="userId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <action
+            android:id="@+id/action_profileFragment_to_followListFragment"
+            app:destination="@id/followListFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_profileFragment_to_postDetailFragment"
+            app:destination="@id/postDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_profileFragment_to_highlightViewerFragment"
+            app:destination="@id/highlightViewerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+    </fragment>
+
+    <fragment
         android:id="@+id/personalProfileFragment"
         android:name="com.example.socialmedia.project.Fragment.PersonalProfileFragment"
         android:label="Personal Profile"
@@ -51,6 +105,23 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_personalProfileFragment_to_createHighlightFragment"
+            app:destination="@id/createHighlightFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_personalProfileFragment_to_highlightViewerFragment"
+            app:destination="@id/highlightViewerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
     </fragment>
 
     <fragment
@@ -98,19 +169,13 @@
         <action
             android:id="@+id/action_homeFragment_to_storyViewerFragment"
             app:destination="@id/storyViewerFragment" />
-
-
     </fragment>
 
-    <!-- AddStoryFragment -->
     <fragment
         android:id="@+id/addStoryFragment"
         android:name="com.example.socialmedia.project.Fragment.AddStoryFragment"
         android:label="Add Story"
         tools:layout="@layout/fragment_add_story" />
-
-
-    <!-- SearchFragment -->
 
     <fragment
         android:id="@+id/searchFragment"
@@ -133,7 +198,6 @@
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
-
     <fragment
         android:id="@+id/storyViewerFragment"
         android:name="com.example.socialmedia.project.Fragment.StoryViewerFragment"
@@ -142,9 +206,6 @@
             android:name="userId"
             app:argType="string" />
     </fragment>
-
-
-    <!-- UploadFragment -->
 
     <fragment
         android:id="@+id/uploadFragment"
@@ -183,47 +244,6 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/profileFragment"
-        android:name="com.example.socialmedia.project.Fragment.ProfileFragment"
-        android:label="Profile"
-        tools:layout="@layout/fragment_profile">
-        <action
-            android:id="@+id/action_profileFragment_to_reelsFragment"
-            app:destination="@id/reelsFragment"
-            app:enterAnim="@anim/slide_in_left"
-            app:exitAnim="@anim/slide_out_right"
-            app:popEnterAnim="@anim/slide_in_right"
-            app:popExitAnim="@anim/slide_out_left" />
-        <action
-            android:id="@+id/action_profileFragment_to_settingFragment"
-            app:destination="@id/settingFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
-        <argument
-            android:name="userId"
-            app:argType="string"
-            app:nullable="true"
-            android:defaultValue="@null" />
-        <action
-            android:id="@+id/action_profileFragment_to_followListFragment"
-            app:destination="@id/followListFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
-
-        <action
-            android:id="@+id/action_profileFragment_to_postDetailFragment"
-            app:destination="@id/postDetailFragment" app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left"
-            app:popExitAnim="@anim/slide_out_right" />
-
     </fragment>
 
     <fragment
@@ -472,5 +492,25 @@
         android:name="com.example.socialmedia.project.Fragment.PrivacySettingsFragment"
         android:label="Privacy Settings"
         tools:layout="@layout/fragment_privacy_settings" />
+
+    <fragment
+        android:id="@+id/createHighlightFragment"
+        android:name="com.example.socialmedia.project.Fragment.CreateHighlightFragment"
+        android:label="Create Highlight"
+        tools:layout="@layout/fragment_create_highlight" />
+
+    <fragment
+        android:id="@+id/highlightViewerFragment"
+        android:name="com.example.socialmedia.project.Fragment.HighlightViewerFragment"
+        android:label="Highlight Viewer">
+        <argument
+            android:name="highlightId"
+            app:argType="string" />
+        <argument
+            android:name="userId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
 
 </navigation>

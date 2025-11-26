@@ -30,6 +30,8 @@ data class StoryModel(
     val userStoryViews: MutableMap<String, Boolean> = mutableMapOf(),
     val userLikes: MutableMap<String, Boolean> = mutableMapOf(), // ✅ thêm map like
 
+    var isArchived: Boolean = false,
+
     var isFollowing: Boolean = false,
     val isAddStory: Boolean = false,
     val isSuggestFriend: Boolean = false,
