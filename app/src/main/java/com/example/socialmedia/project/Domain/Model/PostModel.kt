@@ -5,7 +5,7 @@ import com.example.socialmedia.project.Domain.Enum.PostType
 import java.util.UUID
 
 data class PostModel(
-    val postId: String = UUID.randomUUID().toString(),
+    var postId: String = UUID.randomUUID().toString(),
     val userId: String? = null,
     val userName: String? = null,
     val userProfileUrl: String? = null,

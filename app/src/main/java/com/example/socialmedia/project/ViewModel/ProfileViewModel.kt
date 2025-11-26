@@ -9,8 +9,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.socialmedia.project.Domain.Enum.Gender
 import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Domain.Model.StoryHighlightModel
+import com.example.socialmedia.project.Domain.Model.StoryModel
 import com.example.socialmedia.project.Domain.Model.UserModel
-// import com.example.socialmedia.project.Repository.FollowRepository // <-- XÓA DÒNG NÀY
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -24,8 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
 import java.util.UUID
-
-// ... (các import của Cloudinary/OkHttp) ...
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -38,7 +37,8 @@ import org.json.JSONObject
 import java.io.IOException
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
-
+    private val _currentViewingStories = MutableLiveData<List<StoryModel>>()
+    val currentViewingStories: LiveData<List<StoryModel>> get() = _currentViewingStories
     private val CLOUD_NAME = "durfebos5"
     private val UPLOAD_PRESET = "unsigned_android_upload"
 
@@ -46,12 +46,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val database = FirebaseDatabase.getInstance()
     private val httpClient = OkHttpClient()
 
-    // private val followRepository: FollowRepository = FollowRepository() // <-- XÓA DÒNG NÀY
-
     private var userRef: DatabaseReference? = null
     private var userListener: ValueEventListener? = null
     private var postsRef: Query? = null
     private var postsListener: ValueEventListener? = null
+
+    // Listener cho Highlights
+    private var highlightsRef: DatabaseReference? = null
+    private var highlightsListener: ValueEventListener? = null
 
     // LiveData cho Profile
     private val _userProfile = MutableLiveData<UserModel?>()
@@ -61,22 +63,30 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _userPosts = MutableLiveData<List<PostModel>>()
     val userPosts: LiveData<List<PostModel>> get() = _userPosts
 
-    // LiveData cho trạng thái Follow (1 chiều: Tôi có theo dõi họ không?)
+    // LiveData cho Story Highlights
+    private val _userHighlights = MutableLiveData<List<StoryHighlightModel>>()
+    val userHighlights: LiveData<List<StoryHighlightModel>> get() = _userHighlights
+
+    // LiveData cho danh sách Story CÁ NHÂN (để chọn khi tạo highlight)
+    private val _myStories = MutableLiveData<List<StoryModel>>()
+    val myStories: LiveData<List<StoryModel>> get() = _myStories
+
+    // LiveData cho trạng thái Follow
     private val _isFollowing = MutableLiveData<Boolean>()
     val isFollowing: LiveData<Boolean> get() = _isFollowing
 
-    // Họ có theo dõi tôi không? (Để hiển thị "Follow Back")
     private val _theyAreFollowingMe = MutableLiveData<Boolean>(false)
     val theyAreFollowingMe: LiveData<Boolean> get() = _theyAreFollowingMe
 
-    // Trạng thái Bạn bè (2 chiều)
     private val _isMutualFriend = MutableLiveData<Boolean>(false)
     val isMutualFriend: LiveData<Boolean> get() = _isMutualFriend
 
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> get() = _errorMessage
+
     private val _updateStatus = MutableLiveData<Boolean>()
     val updateStatus: LiveData<Boolean> get() = _updateStatus
+
     private val _imageUpdateStatus = MutableLiveData<String?>()
     val imageUpdateStatus: LiveData<String?> get() = _imageUpdateStatus
 
@@ -91,13 +101,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
 
     // =================================================================
-    // PHẦN 1: LOGIC TẢI PROFILE (Đã sửa lỗi)
+    // PHẦN 1: LOGIC TẢI PROFILE & HIGHLIGHTS
     // =================================================================
 
     fun loadProfile(userId: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 1. Xác định ID cần tải
                 val uidToLoad = userId ?: auth.currentUser?.uid
                 val myUid = auth.currentUser?.uid
                 if (uidToLoad == null || myUid == null) {
@@ -122,32 +131,28 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
                 // === KIỂM TRA BẠN BÈ 2 CHIỀU ===
                 if (userId != null && userId != myUid) {
-
-                    // 4a. Tôi có theo dõi họ không? (Kiểm tra trực tiếp)
                     val iFollowThemSnap = database.reference.child("following").child(myUid).child(uidToLoad).get().await()
                     val iFollowThem = iFollowThemSnap.exists()
                     _isFollowing.postValue(iFollowThem)
 
-                    // 4b. Họ có theo dõi tôi không? (Kiểm tra trực tiếp)
                     val theyFollowMeSnap = database.reference.child("following").child(uidToLoad).child(myUid).get().await()
                     val theyFollowMe = theyFollowMeSnap.exists()
                     _theyAreFollowingMe.postValue(theyFollowMe)
 
-                    // 4c. Cập nhật trạng thái bạn bè
                     _isMutualFriend.postValue(iFollowThem && theyFollowMe)
                 } else {
                     _isFollowing.postValue(false)
                     _theyAreFollowingMe.postValue(false)
-                    _isMutualFriend.postValue(true) // Mình luôn là "bạn" của mình
+                    _isMutualFriend.postValue(true)
                 }
 
-                // === TẢI PROFILE (chạy song song) ===
+                // === TẢI PROFILE ===
                 userListener?.let { userRef?.removeEventListener(it) }
                 userRef = database.reference.child("InfoUser").child(uidToLoad)
                 userListener = object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         if (snapshot.exists()) {
-                            _userProfile.postValue(buildUserFromSnapshot(snapshot)) // <-- Hàm này đã được sửa
+                            _userProfile.postValue(buildUserFromSnapshot(snapshot))
                         } else {
                             _errorMessage.postValue("Không tìm thấy hồ sơ"); _userProfile.postValue(null)
                         }
@@ -158,8 +163,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 }
                 userRef?.addValueEventListener(userListener!!)
 
-                // === TẢI BÀI ĐĂNG (chạy song song) ===
+                // === TẢI BÀI ĐĂNG ===
                 attachPostsListener(uidToLoad)
+
+                // === TẢI STORY HIGHLIGHTS ===
+                attachHighlightsListener(uidToLoad)
 
             } catch (e: Exception) {
                 _errorMessage.postValue("Lỗi tải hồ sơ: ${e.message}")
@@ -191,17 +199,145 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         postsRef?.addValueEventListener(postsListener!!)
     }
 
-    // === HÀM ĐÃ SỬA LỖI ===
+    private fun attachHighlightsListener(userId: String) {
+        highlightsListener?.let { highlightsRef?.removeEventListener(it) }
+        highlightsRef = database.reference.child("StoryHighlights").child(userId)
+        highlightsListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<StoryHighlightModel>()
+                for (child in snapshot.children) {
+                    val item = child.getValue(StoryHighlightModel::class.java)
+                    if (item != null) {
+                        list.add(item)
+                    }
+                }
+                _userHighlights.postValue(list.sortedByDescending { it.createdAt })
+            }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("ProfileViewModel", "Lỗi tải highlights: ${error.message}")
+            }
+        }
+        highlightsRef?.addValueEventListener(highlightsListener!!)
+    }
+
+    // =================================================================
+    // HÀM TẢI STORY
+    // =================================================================
+    fun loadUserStories() {
+        val uid = auth.currentUser?.uid ?: return
+        val foundStories = mutableListOf<StoryModel>()
+
+        database.reference.child("story").orderByChild("userId").equalTo(uid)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    for (child in snapshot.children) child.getValue(StoryModel::class.java)?.let { foundStories.add(it) }
+
+                    database.reference.child("stories").orderByChild("userId").equalTo(uid)
+                        .addListenerForSingleValueEvent(object : ValueEventListener {
+                            override fun onDataChange(snap2: DataSnapshot) {
+                                for (child in snap2.children) {
+                                    val item = child.getValue(StoryModel::class.java)
+                                    if (item != null && foundStories.none { it.storyId == item.storyId }) foundStories.add(item)
+                                }
+                                _myStories.postValue(foundStories.sortedByDescending { it.createdAt })
+                            }
+                            override fun onCancelled(error: DatabaseError) {
+                                _myStories.postValue(foundStories.sortedByDescending { it.createdAt })
+                            }
+                        })
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            })
+    }
+
+    // 2. Tạo Highlight mới
+    fun createHighlight(name: String, coverUrl: String, storyIds: List<String>) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val highlightId = database.reference.child("StoryHighlights").child(uid).push().key ?: return@launch
+                val highlight = StoryHighlightModel(
+                    id = highlightId, userId = uid, name = name, coverUrl = coverUrl,
+                    storyIds = storyIds, createdAt = System.currentTimeMillis()
+                )
+                database.reference.child("StoryHighlights").child(uid).child(highlightId).setValue(highlight).await()
+            } catch (e: Exception) { Log.e("ViewModel", "Lỗi tạo: ${e.message}") }
+        }
+    }
+
+    // 3. Tải Story chi tiết cho 1 Highlight (Để xem lại)
+    fun loadStoriesForHighlight(highlightId: String, targetUserId: String? = null) {
+        val uid = targetUserId ?: auth.currentUser?.uid ?: return
+
+        database.reference.child("StoryHighlights").child(uid).child(highlightId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(highlightSnap: DataSnapshot) {
+                    val highlight = highlightSnap.getValue(StoryHighlightModel::class.java)
+                    val storyIds = highlight?.storyIds ?: emptyList()
+
+                    if (storyIds.isEmpty()) {
+                        _currentViewingStories.postValue(emptyList())
+                        return
+                    }
+
+                    val loadedStories = mutableListOf<StoryModel>()
+                    var loadedCount = 0
+
+                    for (id in storyIds) {
+                        database.reference.child("stories").child(id)
+                            .addListenerForSingleValueEvent(object : ValueEventListener {
+                                override fun onDataChange(snap: DataSnapshot) {
+                                    if (snap.exists()) {
+                                        snap.getValue(StoryModel::class.java)?.let {
+                                            loadedStories.add(it)
+                                        }
+                                        checkDone()
+                                    } else {
+                                        database.reference.child("story").child(id).get()
+                                            .addOnSuccessListener { sSnap ->
+                                                sSnap.getValue(StoryModel::class.java)?.let {
+                                                    loadedStories.add(it)
+                                                }
+                                                checkDone()
+                                            }
+                                            .addOnFailureListener { checkDone() }
+                                    }
+                                }
+
+                                override fun onCancelled(e: DatabaseError) {
+                                    checkDone()
+                                }
+
+                                fun checkDone() {
+                                    loadedCount++
+                                    if (loadedCount == storyIds.size) {
+                                        _currentViewingStories.postValue(
+                                            loadedStories.sortedBy { it.createdAt }
+                                        )
+                                    }
+                                }
+                            })
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("ProfileViewModel", "Lỗi tải highlight: ${error.message}")
+                    _currentViewingStories.postValue(emptyList())
+                }
+            })
+    }
+
+    // =================================================================
+    // PHẦN CÒN LẠI (HELPER, UPDATE, FOLLOW...)
+    // =================================================================
+
     private fun buildUserFromSnapshot(snap: DataSnapshot): UserModel {
         val email = snap.child("email").getValue(String::class.java) ?: ""
         val password = snap.child("password").getValue(String::class.java) ?: ""
         val firstName = snap.child("firstName").getValue(String::class.java) ?: ""
         val lastName = snap.child("lastName").getValue(String::class.java) ?: ""
         val langPref = snap.child("languagePreference").getValue(String::class.java) ?: "vi"
-
-        // === ĐỌC ĐÚNG NODE "Private" (viết hoa) ===
         val isPrivate = snap.child("Private").getValue(Boolean::class.java) ?: false
-
         val isVerified = snap.child("Verified").getValue(Boolean::class.java) ?: false
         val isActive = snap.child("Active").getValue(Boolean::class.java) ?: true
         val followers = snap.child("followerCount").getValue(Int::class.java) ?: 0
@@ -225,20 +361,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             firstName = firstName, lastName = lastName, fullName = "$firstName $lastName".trim(),
             bio = bio, profilePictureUrl = picUrl, headerPictureUrl = headerUrl,
             website = website, gender = gender, dateOfBirth = dob,
-
-            // Đảm bảo UserModel của bạn có 'val Private: Boolean' (viết hoa P)
             Private = isPrivate,
-
             Verified = isVerified, Active = isActive,
             createdAt = createdAt, updatedAt = updatedAt, lastLogin = lastLogin,
             languagePreference = langPref, themePreference = theme,
             followerCount = followers, followingCount = following, postCount = posts
         )
     }
-
-    // =================================================================
-    // PHẦN 2: LOGIC UPDATE PROFILE (Không thu gọn)
-    // =================================================================
 
     fun updateProfile(firstName: String, lastName: String, dob: Long?, gender: Gender, bio: String) {
         val uid = auth.currentUser?.uid ?: return
@@ -307,89 +436,43 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     fun resetImageUpdateStatus() { _imageUpdateStatus.value = null }
 
-    // =================================================================
-    // PHẦN 3: LOGIC FOLLOW (ĐÃ SỬA LỖI HOÀN TOÀN)
-    // =================================================================
-
     fun followUser(targetUserId: String) = viewModelScope.launch(Dispatchers.IO) {
-        val myUid = auth.currentUser?.uid
-        if (myUid == null) {
-            _errorMessage.postValue("Chưa đăng nhập"); return@launch
-        }
-
+        val myUid = auth.currentUser?.uid ?: run { _errorMessage.postValue("Chưa đăng nhập"); return@launch }
         try {
-            // 1. Tạo các đường dẫn (paths) bằng tay
-            val followingPath = "/following/$myUid/$targetUserId"
-            val followerPath = "/followers/$targetUserId/$myUid"
-            val myInfoPath = "/InfoUser/$myUid/followingCount"
-            val targetInfoPath = "/InfoUser/$targetUserId/followerCount"
-
-            // 2. Tạo map để cập nhật 4 nơi cùng lúc
             val updates = mapOf(
-                followingPath to true,
-                followerPath to true,
-                myInfoPath to ServerValue.increment(1),
-                targetInfoPath to ServerValue.increment(1)
+                "/following/$myUid/$targetUserId" to true,
+                "/followers/$targetUserId/$myUid" to true,
+                "/InfoUser/$myUid/followingCount" to ServerValue.increment(1),
+                "/InfoUser/$targetUserId/followerCount" to ServerValue.increment(1)
             )
-
-            // 3. Ghi lên Firebase
             database.reference.updateChildren(updates).await()
-
-            // 4. Cập nhật LiveData
-            _isFollowing.postValue(true) // Tôi follow họ = true
-
-            // 5. Kiểm tra lại 'theyFollowMe' (Họ có follow tôi không?)
-            val theyFollowMe = _theyAreFollowingMe.value ?: false // Lấy giá trị cũ
-            _isMutualFriend.postValue(true && theyFollowMe) // Bạn bè = (tôi vừa follow) VÀ (họ đã follow)
-
+            _isFollowing.postValue(true)
+            val theyFollowMe = _theyAreFollowingMe.value ?: false
+            _isMutualFriend.postValue(true && theyFollowMe)
         } catch (e: Exception) {
             _errorMessage.postValue(e.message)
         }
     }
 
     fun unfollowUser(targetUserId: String) = viewModelScope.launch(Dispatchers.IO) {
-        val myUid = auth.currentUser?.uid
-        if (myUid == null) {
-            _errorMessage.postValue("Chưa đăng nhập"); return@launch
-        }
-
+        val myUid = auth.currentUser?.uid ?: run { _errorMessage.postValue("Chưa đăng nhập"); return@launch }
         try {
-            // 1. Tạo các đường dẫn (paths) bằng tay
-            val followingPath = "/following/$myUid/$targetUserId"
-            val followerPath = "/followers/$targetUserId/$myUid"
-            val myInfoPath = "/InfoUser/$myUid/followingCount"
-            val targetInfoPath = "/InfoUser/$targetUserId/followerCount"
-
-            // 2. Tạo map để xóa 4 nơi cùng lúc
             val updates = mapOf(
-                followingPath to null,
-                followerPath to null,
-                myInfoPath to ServerValue.increment(-1),
-                targetInfoPath to ServerValue.increment(-1)
+                "/following/$myUid/$targetUserId" to null,
+                "/followers/$targetUserId/$myUid" to null,
+                "/InfoUser/$myUid/followingCount" to ServerValue.increment(-1),
+                "/InfoUser/$targetUserId/followerCount" to ServerValue.increment(-1)
             )
-
-            // 3. Ghi lên Firebase
             database.reference.updateChildren(updates).await()
-
-            // 4. Cập nhật LiveData
-            _isFollowing.postValue(false) // Tôi unfollow họ
-            _isMutualFriend.postValue(false) // Nếu tôi unfollow, chắc chắn không còn là bạn
-
+            _isFollowing.postValue(false)
+            _isMutualFriend.postValue(false)
         } catch (e: Exception) {
             _errorMessage.postValue(e.message)
         }
     }
 
-    // =================================================================
-    // PHẦN 4: LOGIC CHẶN (BLOCK) & BÁO CÁO (REPORT) (Không thu gọn)
-    // =================================================================
-
     fun checkBlockStatus(targetId: String) {
-        val currentUid = auth.currentUser?.uid
-        if (currentUid == null) {
-            _isTargetUserBlocked.postValue(false)
-            return
-        }
+        val currentUid = auth.currentUser?.uid ?: run { _isTargetUserBlocked.postValue(false); return }
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val iBlockedThemSnap = database.reference.child("block_list").child(currentUid).child(targetId).get().await()
@@ -401,76 +484,46 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun blockUser(targetId: String) {
-        val currentUid = auth.currentUser?.uid
-        if (currentUid == null) {
-            _errorMessage.postValue("Không thể chặn khi chưa đăng nhập")
-            return
-        }
-        if (currentUid == targetId) return // Không thể tự chặn
+        val currentUid = auth.currentUser?.uid ?: return
+        if (currentUid == targetId) return
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val myBlockListPath = "/block_list/$currentUid/$targetId"
-                val targetBlockedByPath = "/blocked_by/$targetId/$currentUid"
-
                 val updates = mapOf<String, Any?>(
-                    myBlockListPath to true,
-                    targetBlockedByPath to true
+                    "/block_list/$currentUid/$targetId" to true,
+                    "/blocked_by/$targetId/$currentUid" to true
                 )
                 database.reference.updateChildren(updates).await()
-                Log.d("ProfileViewModel", "Đã chặn 2 chiều: $targetId bởi $currentUid")
 
-                // Gọi hàm Unfollow (đã được sửa)
                 unfollowUser(targetId)
-                removeFollower(targetId, currentUid) // Gọi hàm private
-
+                removeFollower(targetId, currentUid)
                 _blockStatus.postValue(true)
-
             } catch (e: Exception) {
-                _errorMessage.postValue("Lỗi khi thực hiện chặn 2 chiều: ${e.message}")
+                _errorMessage.postValue("Lỗi chặn: ${e.message}")
             }
         }
     }
 
     fun unblockUser(targetId: String) {
-        val currentUid = auth.currentUser?.uid
-        if (currentUid == null) {
-            _errorMessage.postValue("Không thể bỏ chặn khi chưa đăng nhập")
-            return
-        }
-
+        val currentUid = auth.currentUser?.uid ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val myBlockListPath = "/block_list/$currentUid/$targetId"
-                val targetBlockedByPath = "/blocked_by/$targetId/$currentUid"
-
                 val updates = mapOf<String, Any?>(
-                    myBlockListPath to null,
-                    targetBlockedByPath to null
+                    "/block_list/$currentUid/$targetId" to null,
+                    "/blocked_by/$targetId/$currentUid" to null
                 )
                 database.reference.updateChildren(updates).await()
-                Log.d("ProfileViewModel", "Đã BỎ chặn 2 chiều: $targetId bởi $currentUid")
-
                 _unblockSuccess.postValue(true)
-
             } catch (e: Exception) {
-                _errorMessage.postValue("Lỗi khi bỏ chặn: ${e.message}")
                 _unblockSuccess.postValue(false)
             }
         }
     }
 
-    fun resetUnblockSuccessStatus() {
-        _unblockSuccess.value = null
-    }
+    fun resetUnblockSuccessStatus() { _unblockSuccess.value = null }
 
     fun reportUser(targetId: String) {
-        val currentUid = auth.currentUser?.uid
-        if (currentUid == null) {
-            _errorMessage.postValue("Không thể báo cáo khi chưa đăng nhập")
-            return
-        }
-
+        val currentUid = auth.currentUser?.uid ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val reportId = database.reference.child("Reports").push().key ?: UUID.randomUUID().toString()
@@ -481,44 +534,167 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     "status" to "pending"
                 )
                 database.reference.child("Reports").child(reportId).setValue(reportData).await()
-                Log.d("ProfileViewModel", "Đã báo cáo: $targetId bởi $currentUid")
             } catch (e: Exception) {
-                _errorMessage.postValue("Lỗi khi gửi báo cáo: ${e.message}")
+                _errorMessage.postValue("Lỗi báo cáo: ${e.message}")
             }
         }
     }
 
-    fun resetBlockStatus() {
-        _blockStatus.value = false
-    }
-
-    // =================================================================
-    // PHẦN 5: HÀM PRIVATE HELPER (Không thu gọn)
-    // =================================================================
+    fun resetBlockStatus() { _blockStatus.value = false }
 
     private suspend fun removeFollower(unfollowerId: String, unfollowedId: String) {
         try {
-            val followingPath = "/following/$unfollowerId/$unfollowedId"
-            val followerPath = "/followers/$unfollowedId/$unfollowerId"
-            val unfollowerInfoPath = "/InfoUser/$unfollowerId/followingCount"
-            val unfollowedInfoPath = "/InfoUser/$unfollowedId/followerCount"
-
             val snapshot = database.reference.child("following").child(unfollowerId).child(unfollowedId).get().await()
-
             if (snapshot.exists()) {
                 val updates = mapOf<String, Any?>(
-                    followingPath to null,
-                    followerPath to null,
-                    unfollowerInfoPath to ServerValue.increment(-1),
-                    unfollowedInfoPath to ServerValue.increment(-1)
+                    "/following/$unfollowerId/$unfollowedId" to null,
+                    "/followers/$unfollowedId/$unfollowerId" to null,
+                    "/InfoUser/$unfollowerId/followingCount" to ServerValue.increment(-1),
+                    "/InfoUser/$unfollowedId/followerCount" to ServerValue.increment(-1)
                 )
                 database.reference.updateChildren(updates).await()
-                Log.d("ProfileViewModel", "$unfollowerId đã bị buộc unfollow $unfollowedId")
-            } else {
-                Log.w("ProfileViewModel", "$unfollowerId không follow $unfollowedId, không cần buộc unfollow.")
             }
         } catch (e: Exception) {
-            Log.e("ProfileViewModel", "Lỗi khi buộc unfollow: ${e.message}")
+            Log.e("ProfileViewModel", "Lỗi buộc unfollow: ${e.message}")
+        }
+    }
+
+    // =================================================================
+    // [MỚI] PHẦN ADMIN: CẬP NHẬT HIGHLIGHT (Rename, Delete, Add Story)
+    // =================================================================
+
+    // 1. Đổi tên Highlight
+    fun updateHighlightName(highlightId: String, newName: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                database.reference.child("StoryHighlights")
+                    .child(uid)
+                    .child(highlightId)
+                    .child("name")
+                    .setValue(newName)
+                    .await()
+            } catch (e: Exception) {
+                _errorMessage.postValue("Lỗi đổi tên: ${e.message}")
+            }
+        }
+    }
+
+    // 2. Xóa Highlight
+    fun deleteHighlight(highlightId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                database.reference.child("StoryHighlights")
+                    .child(uid)
+                    .child(highlightId)
+                    .removeValue()
+                    .await()
+            } catch (e: Exception) {
+                _errorMessage.postValue("Lỗi xóa highlight: ${e.message}")
+            }
+        }
+    }
+
+    // 3. Xóa 1 Story khỏi Highlight
+    fun removeStoryFromHighlight(highlightId: String, storyIdToRemove: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val highlightRef = database.reference.child("StoryHighlights").child(uid).child(highlightId)
+
+        highlightRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val highlight = snapshot.getValue(StoryHighlightModel::class.java) ?: return
+                // Fix null safety
+                val currentStoryIds = highlight.storyIds?.toMutableList() ?: mutableListOf()
+
+                if (currentStoryIds.contains(storyIdToRemove)) {
+                    currentStoryIds.remove(storyIdToRemove)
+                    highlightRef.child("storyIds").setValue(currentStoryIds)
+                        .addOnSuccessListener {
+                            // Reload UI để thấy thay đổi
+                            loadStoriesForHighlight(highlightId, uid)
+                        }
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {
+                _errorMessage.postValue(error.message)
+            }
+        })
+    }
+
+    // 4. Thêm Story Mới vào Highlight
+    fun addStoryToHighlight(highlightId: String, newStory: StoryModel) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Bước 1: Lưu Story mới vào bảng "stories"
+                database.reference.child("stories").child(newStory.storyId).setValue(newStory).await()
+
+                // Bước 2: Thêm ID vào Highlight
+                val highlightRef = database.reference.child("StoryHighlights").child(uid).child(highlightId)
+                val snapshot = highlightRef.get().await()
+                val highlight = snapshot.getValue(StoryHighlightModel::class.java)
+
+                if (highlight != null) {
+                    // Fix null safety
+                    val currentList = highlight.storyIds?.toMutableList() ?: mutableListOf()
+                    currentList.add(newStory.storyId)
+                    highlightRef.child("storyIds").setValue(currentList).await()
+
+                    // Reload lại UI
+                    loadStoriesForHighlight(highlightId, uid)
+                }
+            } catch (e: Exception) {
+                _errorMessage.postValue("Lỗi thêm story: ${e.message}")
+            }
+        }
+    }
+
+    // 5. Upload Ảnh Story (Trả về URL qua callback)
+    fun uploadStoryImage(imageUri: Uri, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) { onError("User not logged in"); return }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = getApplication<Application>().contentResolver.openInputStream(imageUri)
+                val imageBytes = inputStream?.readBytes()
+                inputStream?.close()
+
+                if (imageBytes == null) {
+                    launch(Dispatchers.Main) { onError("Không đọc được file ảnh") }
+                    return@launch
+                }
+
+                val requestBody = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("file", "story_image.jpg", imageBytes.toRequestBody("image/*".toMediaTypeOrNull()))
+                    .addFormDataPart("upload_preset", UPLOAD_PRESET)
+                    .build()
+
+                val request = Request.Builder()
+                    .url("https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload")
+                    .post(requestBody)
+                    .build()
+
+                httpClient.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        launch(Dispatchers.Main) { onError(e.message ?: "Upload failed") }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        if (response.isSuccessful) {
+                            val responseBody = response.body?.string()
+                            val imageUrl = JSONObject(responseBody ?: "").optString("secure_url")
+                            launch(Dispatchers.Main) { onSuccess(imageUrl) }
+                        } else {
+                            launch(Dispatchers.Main) { onError("Lỗi Server: ${response.code}") }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                launch(Dispatchers.Main) { onError(e.message ?: "Unknown error") }
+            }
         }
     }
 
@@ -526,5 +702,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         super.onCleared()
         userListener?.let { userRef?.removeEventListener(it) }
         postsListener?.let { postsRef?.removeEventListener(it) }
+        highlightsListener?.let { highlightsRef?.removeEventListener(it) }
     }
 }

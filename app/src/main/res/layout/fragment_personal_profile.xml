@@ -15,8 +15,7 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:fitsSystemWindows="true">
+            android:layout_height="220dp">
 
             <ImageView
                 android:id="@+id/ivHeaderImage"
@@ -24,12 +23,6 @@
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
                 android:src="@drawable/image_backgroud" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_alignParentBottom="true"
-                android:background="@drawable/gradient_overlay" />
 
             <ImageView
                 android:id="@+id/ivBackButton"
@@ -40,8 +33,7 @@
                 android:layout_marginTop="12dp"
                 android:padding="10dp"
                 android:src="@drawable/ic_back"
-                android:background="@drawable/rounded_button_bg"
-                android:elevation="2dp" />
+                android:background="@drawable/rounded_button_bg" />
 
             <ImageView
                 android:id="@+id/ivMenuButton"
@@ -52,15 +44,14 @@
                 android:layout_marginTop="12dp"
                 android:padding="10dp"
                 android:src="@drawable/ic_menu"
-                android:background="@drawable/rounded_button_bg"
-                android:elevation="2dp" />
+                android:background="@drawable/rounded_button_bg" />
         </RelativeLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="-50dp"
-            android:paddingBottom="24dp"
+            android:paddingBottom="12dp"
             android:clickable="true">
 
             <com.google.android.material.imageview.ShapeableImageView
@@ -68,7 +59,6 @@
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:layout_marginStart="16dp"
-                android:elevation="6dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/image_avata_user"
                 app:layout_constraintStart_toStartOf="parent"
@@ -83,93 +73,88 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:gravity="center"
                 android:orientation="horizontal"
-                app:layout_constraintBottom_toBottomOf="@id/ivProfileImage"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/ivProfileImage"
                 app:layout_constraintTop_toTopOf="@id/ivProfileImage"
+                app:layout_constraintBottom_toBottomOf="@id/ivProfileImage"
                 app:layout_constraintVertical_bias="2">
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center"
                     android:orientation="vertical"
+                    android:gravity="center"
                     android:padding="8dp">
-
                     <TextView
                         android:id="@+id/tvPostCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="#333333"
                         android:textSize="20sp"
+                        android:textColor="#333333"
                         android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
                         tools:text="10" />
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
                         android:text="Posts"
+                        android:textSize="12sp"
                         android:textColor="#777777"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
-
                 <LinearLayout
                     android:id="@+id/llFollowersWrapper"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center"
                     android:orientation="vertical"
+                    android:gravity="center"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
                     <TextView
                         android:id="@+id/tvFollowersCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="#333333"
                         android:textSize="20sp"
+                        android:textColor="#333333"
                         android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
                         tools:text="190k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
                         android:text="Followers"
+                        android:textSize="12sp"
                         android:textColor="#777777"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
-
                 <LinearLayout
                     android:id="@+id/llFollowingWrapper"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center"
                     android:orientation="vertical"
+                    android:gravity="center"
                     android:padding="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless">
                     <TextView
                         android:id="@+id/tvFollowingCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="#333333"
                         android:textSize="20sp"
+                        android:textColor="#333333"
                         android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
                         tools:text="15k" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
                         android:text="Following"
+                        android:textSize="12sp"
                         android:textColor="#777777"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -177,22 +162,20 @@
                 android:id="@+id/llUserInfo"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:orientation="vertical"
-                app:layout_constraintEnd_toEndOf="@id/llStats"
+                android:layout_marginTop="12dp"
                 app:layout_constraintStart_toStartOf="@id/ivProfileImage"
+                app:layout_constraintEnd_toEndOf="@id/llStats"
                 app:layout_constraintTop_toBottomOf="@id/ivProfileImage">
-
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="#1A1A1A"
                     android:textSize="22sp"
+                    android:textColor="#1A1A1A"
                     android:textStyle="bold"
-                    tools:text="Huy thui" />
-
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="Van Vinh" />
                 <TextView
                     android:id="@+id/tvBio"
                     android:layout_width="wrap_content"
@@ -202,7 +185,7 @@
                     android:textColor="#666666"
                     android:textSize="14sp"
                     android:visibility="gone"
-                    tools:text="Photography enthusiast 📸 | Traveler ✈️"
+                    tools:text="Đây là ghi chú"
                     tools:visibility="visible" />
             </LinearLayout>
 
@@ -210,8 +193,7 @@
                 android:id="@+id/llActionButtons"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:gravity="center"
+                android:layout_marginTop="16dp"
                 android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="@id/llStats"
                 app:layout_constraintStart_toStartOf="@id/llUserInfo"
@@ -219,17 +201,18 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnEditProfile"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
+                    android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    android:background="@drawable/btn_gradient"
-                    android:fontFamily="sans-serif-medium"
                     android:text="Edit profile"
-                    android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
-                    app:backgroundTint="@null"
+                    android:textAllCaps="false"
+                    android:fontFamily="sans-serif-medium"
                     app:cornerRadius="24dp"
+                    android:background="@drawable/btn_gradient"
+                    app:backgroundTint="@null"
                     app:icon="@drawable/ic_edit"
                     app:iconGravity="textStart"
                     app:iconSize="18dp"
@@ -237,16 +220,17 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShareProfile"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/btn_gradient"
-                    android:fontFamily="sans-serif-medium"
+                    android:layout_weight="1"
                     android:text="Share profile"
-                    android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
-                    app:backgroundTint="@null"
+                    android:textAllCaps="false"
+                    android:fontFamily="sans-serif-medium"
                     app:cornerRadius="24dp"
+                    android:background="@drawable/btn_gradient"
+                    app:backgroundTint="@null"
                     app:icon="@drawable/ic_share"
                     app:iconGravity="textStart"
                     app:iconSize="18dp"
@@ -254,83 +238,88 @@
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvStoryHighlights"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:orientation="vertical">
+            android:layout_marginTop="16dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="0dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_story_highlight" />
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
-                android:layout_width="match_parent"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:tabGravity="fill"
+            app:tabMode="fixed"
+            app:tabIndicatorColor="@color/purple_main"
+            app:tabSelectedTextColor="@color/purple_main"
+            app:tabTextColor="#888888">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:tabGravity="fill"
-                app:tabMode="fixed"
-                app:tabIndicatorColor="@color/purple_main"
-                app:tabSelectedTextColor="@color/purple_main"
-                app:tabTextColor="#888888">
+                android:text="Bài đăng"
+                android:icon="@drawable/ic_grid" />
 
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Bài đăng"
-                    android:icon="@drawable/ic_grid" />
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Reels"
-                    android:icon="@drawable/ic_reels" />
-
-            </com.google.android.material.tabs.TabLayout>
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvPhotos"
-                android:layout_width="match_parent"
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:importantForAccessibility="no"
-                android:nestedScrollingEnabled="false"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="16dp"
-                app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-                app:spanCount="3" />
+                android:text="Reels"
+                android:icon="@drawable/ic_reels" />
+        </com.google.android.material.tabs.TabLayout>
 
-            <LinearLayout
-                android:id="@+id/llEmptyPhotos"
-                android:layout_width="match_parent"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp"
+            android:nestedScrollingEnabled="false"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="3" />
+
+        <LinearLayout
+            android:id="@+id/llEmptyPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_camera"
+                app:tint="#888888" />
+            <TextView
+                android:id="@+id/tvEmptyMessage"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_marginTop="16dp"
+                android:text="Không có nội dung"
+                android:textColor="#1A1A1A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvEmptySubMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:padding="32dp"
-                android:visibility="gone"
-                tools:visibility="visible">
-
-                <ImageView
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:src="@drawable/ic_camera"
-                    app:tint="#888888" />
-                <TextView
-                    android:id="@+id/tvEmptyMessage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="Không có nội dung"
-                    android:textColor="#1A1A1A"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvEmptySubMessage"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center"
-                    android:text="Nội dung bạn đăng sẽ xuất hiện ở đây."
-                    android:textColor="#666666"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
+                android:text="Nội dung bạn đăng sẽ xuất hiện ở đây."
+                android:textColor="#666666"
+                android:textSize="14sp" />
         </LinearLayout>
+
     </LinearLayout>
 </ScrollView>
