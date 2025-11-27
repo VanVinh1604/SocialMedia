@@ -32,8 +32,13 @@ class ReelsFragment : Fragment() {
     // 🔄 BIẾN QUẢN LÝ LOAD MORE
     private var isLoadingMore = false
     private var hasMoreReels = true
-    private val BATCH_SIZE = 10              // Load 20 video mỗi lần
-    private val LOAD_MORE_THRESHOLD = 5      // Load thêm khi còn 5 video
+    private val BATCH_SIZE = 10
+    private val LOAD_MORE_THRESHOLD = 5
+
+    // 🆕 BIẾN MỚI: QUẢN LÝ CHẾ ĐỘ XEM PROFILE
+    private var isProfileMode = false
+    private var targetUserId: String? = null
+    private var startReelId: String? = null
 
     private val TAG = "ReelsFragment"
 
@@ -48,18 +53,32 @@ class ReelsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // 1. NHẬN DỮ LIỆU TỪ BUNDLE (NẾU CÓ)
+        arguments?.let {
+            targetUserId = it.getString("userId")
+            startReelId = it.getString("startReelId")
+        }
+
+        // Nếu có userId -> Đang xem từ Profile
+        if (targetUserId != null) {
+            isProfileMode = true
+        }
+
         hideBottomNavigation()
         removeNavHostPadding()
 
         viewPager = view.findViewById(R.id.viewPagerReels)
         progressBar = view.findViewById(R.id.progressBar)
 
+        // Ẩn nút debug nếu đang xem profile
+        view.findViewById<View>(R.id.btnDebug)?.visibility = if (isProfileMode) View.GONE else View.VISIBLE
+
         recommendationEngine = RecommendationEngine(database)
 
         setupAdapter()
         setupViewPager()
 
-        // 🐛 NÚT DEBUG
+        // 🐛 NÚT DEBUG (Chỉ hoạt động khi xem chế độ đề xuất)
         view.findViewById<View>(R.id.btnDebug)?.setOnClickListener {
             recommendationEngine.getHashtagScoresDebug { scores ->
                 Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -74,8 +93,12 @@ class ReelsFragment : Fragment() {
             }
         }
 
-        // 🎯 LOAD BATCH ĐẦU TIÊN
-        loadMoreRecommendedReels()
+        // 🎯 QUYẾT ĐỊNH LOAD DỮ LIỆU
+        if (isProfileMode) {
+            loadUserReels(targetUserId!!)
+        } else {
+            loadMoreRecommendedReels()
+        }
     }
 
     private fun hideBottomNavigation() {
@@ -123,7 +146,10 @@ class ReelsFragment : Fragment() {
             },
 
             onProfileClick = { reel, _ ->
-                Toast.makeText(requireContext(), "Profile: ${reel.userId}", Toast.LENGTH_SHORT).show()
+                // Nếu đang ở trang profile của người đó rồi thì không cần click nữa
+                if (!isProfileMode) {
+                    Toast.makeText(requireContext(), "Profile: ${reel.userId}", Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }
@@ -137,24 +163,27 @@ class ReelsFragment : Fragment() {
                 super.onPageSelected(position)
 
                 // ⏱️ XỬ LÝ VIDEO TRƯỚC ĐÓ
-                if (videoStartTime > 0 && position > 0) {
+                if (videoStartTime > 0 && position > 0 && position - 1 < reelsList.size) {
                     val watchDuration = System.currentTimeMillis() - videoStartTime
                     val previousReel = reelsList[position - 1]
 
                     Log.d(TAG, "⏱️ Watched ${previousReel.reelId.take(8)} for ${watchDuration}ms")
 
-                    if (watchDuration < 2000) {
-                        Log.d(TAG, "🚫 SKIPPED")
-                        recommendationEngine.recordInteraction(
-                            reelId = previousReel.reelId,
-                            interactionType = "SKIP"
-                        )
-                    } else {
-                        recommendationEngine.recordInteraction(
-                            reelId = previousReel.reelId,
-                            interactionType = "WATCH_TIME",
-                            duration = watchDuration
-                        )
+                    // Chỉ ghi nhận tương tác nếu KHÔNG PHẢI chế độ xem profile cá nhân (để tránh làm lệch thuật toán)
+                    if (!isProfileMode) {
+                        if (watchDuration < 2000) {
+                            Log.d(TAG, "🚫 SKIPPED")
+                            recommendationEngine.recordInteraction(
+                                reelId = previousReel.reelId,
+                                interactionType = "SKIP"
+                            )
+                        } else {
+                            recommendationEngine.recordInteraction(
+                                reelId = previousReel.reelId,
+                                interactionType = "WATCH_TIME",
+                                duration = watchDuration
+                            )
+                        }
                     }
                 }
 
@@ -163,10 +192,12 @@ class ReelsFragment : Fragment() {
                     val currentReel = reelsList[position]
                     Log.d(TAG, "👁️ VIEW: ${currentReel.reelId.take(8)} (${position + 1}/${reelsList.size})")
 
-                    recommendationEngine.recordInteraction(
-                        reelId = currentReel.reelId,
-                        interactionType = "VIEW"
-                    )
+                    if (!isProfileMode) {
+                        recommendationEngine.recordInteraction(
+                            reelId = currentReel.reelId,
+                            interactionType = "VIEW"
+                        )
+                    }
 
                     videoStartTime = System.currentTimeMillis()
                 }
@@ -191,10 +222,12 @@ class ReelsFragment : Fragment() {
 
     // 🔄 KIỂM TRA VÀ LOAD THÊM VIDEO
     private fun checkAndLoadMore(currentPosition: Int) {
+        // Nếu đang ở chế độ Profile thì KHÔNG load thêm video đề xuất
+        if (isProfileMode) return
+
         if (isLoadingMore || !hasMoreReels) return
 
         val remainingReels = reelsList.size - currentPosition - 1
-
         Log.d(TAG, "📊 Position: $currentPosition, Total: ${reelsList.size}, Remaining: $remainingReels")
 
         // Nếu còn <= 5 video → load thêm
@@ -204,7 +237,7 @@ class ReelsFragment : Fragment() {
         }
     }
 
-    // 📦 LOAD BATCH VIDEO MỚI
+    // 📦 LOAD BATCH VIDEO MỚI (CHO CHẾ ĐỘ ĐỀ XUẤT)
     private fun loadMoreRecommendedReels() {
         if (isLoadingMore) {
             Log.d(TAG, "⚠️ Already loading, skipping...")
@@ -223,7 +256,10 @@ class ReelsFragment : Fragment() {
             if (newReels.isEmpty()) {
                 Log.w(TAG, "⚠️ No more reels available")
                 hasMoreReels = false
-                Toast.makeText(requireContext(), "Đã hết video mới!", Toast.LENGTH_SHORT).show()
+                // Chỉ thông báo nếu list đang trống
+                if (reelsList.isEmpty()) {
+                    Toast.makeText(requireContext(), "Đã hết video mới!", Toast.LENGTH_SHORT).show()
+                }
                 return@getRecommendedReelsBatch
             }
 
@@ -244,13 +280,13 @@ class ReelsFragment : Fragment() {
         }
     }
 
-    // 📋 LOAD TẤT CẢ (BACKUP - KHI KHÔNG CÓ ĐỀ XUẤT)
-    private fun loadAllReels() {
+    // 🆕 HÀM MỚI: LOAD REELS CỦA MỘT USER CỤ THỂ
+    private fun loadUserReels(userId: String) {
         progressBar.visibility = View.VISIBLE
 
         database.reference.child("Reels")
-            .orderByChild("createdAt")
-            .limitToLast(50)
+            .orderByChild("userId")
+            .equalTo(userId)
             .addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     reelsList.clear()
@@ -258,21 +294,39 @@ class ReelsFragment : Fragment() {
                         val reel = child.getValue(ReelModel::class.java)
                         reel?.let { reelsList.add(it) }
                     }
-                    reelsList.reverse()
+
+                    // Sắp xếp video mới nhất lên đầu
+                    reelsList.sortByDescending { it.createdAt }
+
                     progressBar.visibility = View.GONE
                     adapter.notifyDataSetChanged()
 
+                    // SCROLL ĐẾN VIDEO ĐƯỢC CLICK TỪ PROFILE
                     if (reelsList.isNotEmpty()) {
+                        var startIndex = 0
+                        if (startReelId != null) {
+                            val foundIndex = reelsList.indexOfFirst { it.reelId == startReelId }
+                            if (foundIndex != -1) {
+                                startIndex = foundIndex
+                            }
+                        }
+
+                        // Scroll ngay lập tức (false = no smooth scroll) để user thấy ngay video đó
+                        viewPager.setCurrentItem(startIndex, false)
+
+                        // Play video đó
                         viewPager.post {
-                            getViewHolderAtPosition(0)?.let { adapter.playVideo(0, it) }
+                            getViewHolderAtPosition(startIndex)?.let { adapter.playVideo(startIndex, it) }
                             videoStartTime = System.currentTimeMillis()
                         }
+                    } else {
+                        Toast.makeText(context, "User này chưa có Reels", Toast.LENGTH_SHORT).show()
                     }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
                     progressBar.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Load failed: ${error.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Lỗi tải Reels: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
             })
     }
@@ -284,7 +338,8 @@ class ReelsFragment : Fragment() {
             val watchDuration = System.currentTimeMillis() - videoStartTime
             val currentReel = reelsList[viewPager.currentItem]
 
-            if (watchDuration > 2000) {
+            // Chỉ ghi nhận nếu không phải đang xem profile
+            if (!isProfileMode && watchDuration > 2000) {
                 recommendationEngine.recordInteraction(
                     reelId = currentReel.reelId,
                     interactionType = "WATCH_TIME",
@@ -298,6 +353,7 @@ class ReelsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // Đảm bảo video tiếp tục chạy khi quay lại
         getViewHolderAtPosition(viewPager.currentItem)?.let {
             adapter.playVideo(viewPager.currentItem, it)
         }
