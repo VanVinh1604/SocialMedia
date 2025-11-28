@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.socialmedia.project.Domain.Model.ConversationMemberModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -13,30 +14,78 @@ class GroupRepository {
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     fun createGroup(
-        users: List<UserModel>,   // truyền list UserModel
+        users: List<UserModel>,
         customName: String?,
         onComplete: (String?) -> Unit
     ) {
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-        val validUsers = (users + UserModel(userId = currentUserId, fullName = "")) // thêm chính user nếu chưa có
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+        // STEP 1: lấy thông tin user đang tạo nhóm
+        db.collection("InfoUser")
+            .document(currentUid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+
+                val currentUser = snapshot.toObject(UserModel::class.java)?.copy(userId = currentUid)
+
+                if (currentUser != null) {
+                    // tiếp tục tạo nhóm trực tiếp trong hàm
+                    buildGroup(users, currentUser, customName, onComplete)
+                } else {
+                    // Nếu Firestore không có → lấy từ RealTime
+                    FirebaseDatabase.getInstance().getReference("InfoUser")
+                        .child(currentUid)
+                        .get()
+                        .addOnSuccessListener { rtSnapshot ->
+
+                            val rtUser = rtSnapshot.getValue(UserModel::class.java)
+
+                            val finalUser = rtUser?.copy(userId = currentUid)
+                                ?: UserModel(userId = currentUid, fullName = "User")
+
+                            // Sync vào Firestore
+                            db.collection("InfoUser")
+                                .document(currentUid)
+                                .set(finalUser)
+
+                            buildGroup(users, finalUser, customName, onComplete)
+                        }
+                }
+            }
+            .addOnFailureListener {
+                onComplete(null)
+            }
+    }
+
+    private fun buildGroup(
+        users: List<UserModel>,
+        currentUser: UserModel,
+        customName: String?,
+        onComplete: (String?) -> Unit
+    ) {
+
+        val currentUid = currentUser.userId
+
+        // STEP 2: merge vào list
+        val validUsers = (users + currentUser)
             .filter { it.userId.isNotBlank() }
             .distinctBy { it.userId }
-            .sortedBy { it.userId }
+            .sortedBy { it.fullName }
 
         if (validUsers.isEmpty()) {
             onComplete(null)
             return
         }
 
+        // STEP 3: tạo tên nhóm
         val finalGroupName = if (!customName.isNullOrBlank()) {
             customName
         } else {
-            // Lấy tên user thay vì ID
             validUsers.take(3).joinToString(", ") { it.fullName.ifBlank { "User" } } +
                     if (validUsers.size > 3) "..." else ""
         }
 
-        val conversationId = FirebaseFirestore.getInstance().collection("conversations").document().id
+        val conversationId = db.collection("conversations").document().id
         val now = System.currentTimeMillis()
 
         val unreadMap = validUsers.associate { it.userId to 0L }
@@ -46,7 +95,7 @@ class GroupRepository {
             "type" to "GROUP",
             "name" to finalGroupName,
             "participants" to validUsers.map { it.userId },
-            "adminIds" to listOf(currentUserId),
+            "adminIds" to listOf(currentUid),
             "memberCount" to validUsers.size,
             "createdAt" to now,
             "updatedAt" to now,
@@ -56,21 +105,24 @@ class GroupRepository {
             "unreadCount" to unreadMap
         )
 
-        FirebaseFirestore.getInstance().collection("conversations")
+        // STEP 4: lưu vào Firestore
+        db.collection("conversations")
             .document(conversationId)
             .set(data)
             .addOnSuccessListener {
+
                 validUsers.forEach { user ->
                     val member = ConversationMemberModel(
                         conversationId = conversationId,
                         userId = user.userId,
-                        role = if (user.userId == currentUserId) "ADMIN" else "MEMBER"
+                        role = if (user.userId == currentUid) "ADMIN" else "MEMBER"
                     ).ensureId()
 
-                    FirebaseFirestore.getInstance().collection("conversation_members")
+                    db.collection("conversation_members")
                         .document(member.memberId)
                         .set(member)
                 }
+
                 pushSystemMessage(conversationId, "Nhóm '$finalGroupName' đã được tạo")
                 onComplete(conversationId)
             }

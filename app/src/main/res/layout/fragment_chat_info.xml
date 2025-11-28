@@ -178,6 +178,7 @@
                     android:layout_marginHorizontal="16dp">
 
                     <FrameLayout
+                        android:id="@+id/AddMember"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:background="@drawable/circle_background_gray">

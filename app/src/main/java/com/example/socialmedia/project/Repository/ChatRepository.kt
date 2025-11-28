@@ -6,6 +6,8 @@ import androidx.lifecycle.MutableLiveData
 import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.ConversationModel
 import com.example.socialmedia.project.Domain.Model.MessageModel
+import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Server.Firebase.FirebaseService
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.*
 import java.util.UUID
@@ -81,6 +83,13 @@ class ChatRepository {
                     if (count == limit.size) callback(result)
                 }
         }
+    }
+    fun leaveGroup(conversationId: String, userId: String, callback: (Boolean) -> Unit) {
+        val docRef = db.collection("conversations").document(conversationId)
+
+        docRef.update("participants", FieldValue.arrayRemove(userId))
+            .addOnSuccessListener { callback(true) }
+            .addOnFailureListener { callback(false) }
     }
 
     fun loadMoreMessages(conversationId: String?, oldestTimestamp: Long, onLoaded: (List<MessageModel>) -> Unit) {

@@ -20,6 +20,7 @@ class FirebaseService {
     fun getCurrentUserId(): String? {
         return FirebaseAuth.getInstance().currentUser?.uid
     }
+    
 
 
     fun listenStories(onResult: (List<StoryModel>) -> Unit, onError: (Exception) -> Unit) {

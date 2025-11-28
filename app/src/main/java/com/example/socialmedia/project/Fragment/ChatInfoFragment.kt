@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData
@@ -68,9 +69,35 @@ class ChatInfoFragment : Fragment() {
         }
 
         // Click listener cho action buttons
-        binding.layoutAdd.setOnClickListener { /* handle add */ }
+        // Nhấn nút thêm thành viên
+        binding.AddMember.setOnClickListener {
+            openAddMemberBottomSheet()
+        }
         binding.layoutNotification.setOnClickListener { /* handle notification */ }
         binding.layoutSearch.setOnClickListener { /* handle search */ }
+
+        binding.layoutLeaveGroup.setOnClickListener {
+            conversationId?.let { chatId ->
+                chatViewModel.leaveGroup(chatId)
+            }
+        }
+
+        chatViewModel.leaveGroupResult.observe(viewLifecycleOwner) { success ->
+            if (success) {
+                Toast.makeText(requireContext(), "Đã rời nhóm", Toast.LENGTH_SHORT).show()
+
+                findNavController().popBackStack(
+                    R.id.messageFragment,
+                    false   // không xoá chính messageFragment
+                )
+            } else {
+                Toast.makeText(requireContext(), "Rời nhóm thất bại", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        
+
+
     }
 
     private fun updateParticipantsUI(participants: List<UserModel>) {
@@ -81,6 +108,9 @@ class ChatInfoFragment : Fragment() {
             binding.tvMemberCount.visibility = View.VISIBLE
             binding.viewOnlineStatus.visibility = View.GONE
             setupGroupAvatars(participants)
+            binding.layoutLeaveGroup.visibility =
+                if (participants.size > 2) View.VISIBLE else View.GONE
+
         } else if (participants.size == 2) {
             // 1-1 chat: ưu tiên arguments, fallback mới lấy user khác
             val other = participants.firstOrNull { it.userId != chatViewModel.currentUserId }
@@ -90,6 +120,32 @@ class ChatInfoFragment : Fragment() {
 
             binding.tvMemberCount.visibility = View.GONE
             binding.viewOnlineStatus.visibility = View.VISIBLE
+        }
+    }
+
+
+    private fun openAddMemberBottomSheet() {
+
+        conversationId?.let { convId ->
+
+            // Lấy participants mới nhất từ Firestore trước khi mở BottomSheet
+            chatViewModel.getParticipantsLive(convId).observe(viewLifecycleOwner) { participants ->
+
+                val currentMembers = participants.map { it.userId }
+
+                // Lấy danh sách những user bạn đang follow
+                chatViewModel.getFollowedUsers().observe(viewLifecycleOwner) { followedUsers ->
+
+                    AddMemberBottomSheet(
+                        followedUsers = followedUsers,
+                        currentMembers = currentMembers
+                    ) { selectedNewUserIds ->
+                        if (selectedNewUserIds.isNotEmpty()) {
+                            chatViewModel.addMembersToConversation(convId, selectedNewUserIds)
+                        }
+                    }.show(parentFragmentManager, "AddMembers")
+                }
+            }
         }
     }
 

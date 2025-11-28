@@ -7,6 +7,10 @@ import androidx.lifecycle.ViewModel
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.Repository.ChatRepository
+import com.example.socialmedia.project.Repository.GroupRepository
+import com.example.socialmedia.project.Repository.UserRepository
+import com.example.socialmedia.project.Server.Firebase.FirebaseService
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -15,9 +19,18 @@ class ChatViewModel : ViewModel() {
     private val repository = ChatRepository()
     private val db = FirebaseFirestore.getInstance()
 
+    private val firebaseService = FirebaseService()
+
+    private val _leaveGroupResult = MutableLiveData<Boolean>()
+    val leaveGroupResult: LiveData<Boolean> get() = _leaveGroupResult
+    private val userRepo = UserRepository()
+
     val messages: LiveData<List<MessageModel>> get() = repository.messagesLiveData
 
-    val currentUserId: String = "CURRENT_USER_ID" // Replace with actual userId
+    val currentUserId: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    private val _currentParticipants = MutableLiveData<List<UserModel>>()
+    val currentParticipants: LiveData<List<UserModel>> get() = _currentParticipants
 
     fun loadLatestMessages(conversationId: String?, limit: Long = 20, onLoaded: (List<MessageModel>) -> Unit) {
         repository.loadLatestMessages(conversationId, limit, onLoaded)
@@ -140,6 +153,78 @@ class ChatViewModel : ViewModel() {
     ) {
         repository.sendMessage(conversationId, participants, message, onComplete)
     }
+
+    fun addMembersToConversation(conversationId: String, newUserIds: List<String>) {
+        val repo = GroupRepository()
+        repo.addMembersToExistingGroup(conversationId, newUserIds) {
+            // reload để UI cập nhật ngay
+            listenParticipants(conversationId)
+        }
+    }
+    fun getFollowedUsers(): LiveData<List<UserModel>> {
+        val result = MutableLiveData<List<UserModel>>()
+        val uid = firebaseService.getCurrentUserId() ?: return result
+
+        userRepo.getFriends(uid) { users ->
+            result.postValue(users)
+        }
+
+        return result
+    }
+
+
+    fun leaveGroup(conversationId: String) {
+        repository.leaveGroup(conversationId, currentUserId) { success ->
+            _leaveGroupResult.postValue(success)
+        }
+    }
+
+    fun listenParticipants(conversationId: String) {
+        db.collection("conversations")
+            .document(conversationId)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val participantIds = snapshot.get("participants") as? List<String> ?: emptyList()
+                    getUsersByIds(participantIds) { users ->
+                        _currentParticipants.postValue(users)
+                    }
+                }
+            }
+    }
+
+    private fun getUsersByIds(
+        userIds: List<String>,
+        callback: (List<UserModel>) -> Unit
+    ) {
+        if (userIds.isEmpty()) {
+            callback(emptyList())
+            return
+        }
+
+        val users = mutableListOf<UserModel>()
+        var loaded = 0
+
+        userIds.forEach { uid ->
+            FirebaseDatabase.getInstance().getReference("InfoUser")
+                .child(uid)
+                .get()
+                .addOnSuccessListener { snap ->
+                    val fullName = snap.child("fullName").getValue(String::class.java) ?: "Người dùng"
+                    val avatar = snap.child("profilePictureUrl").getValue(String::class.java)
+
+                    users.add(UserModel(uid, fullName, avatar))
+
+                    loaded++
+                    if (loaded == userIds.size) callback(users)
+                }
+                .addOnFailureListener {
+                    loaded++
+                    if (loaded == userIds.size) callback(users)
+                }
+        }
+    }
+
+
 
     fun removeListener() {
         repository.removeListener()

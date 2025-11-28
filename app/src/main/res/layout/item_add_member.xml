@@ -1,0 +1,46 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="12dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/imgAvatar"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:src="@drawable/image_avata_user"
+        android:scaleType="centerCrop"
+        app:shapeAppearanceOverlay="@style/CircleImageView"/>
+
+    <TextView
+        android:id="@+id/tvName"
+        android:text="Tên người dùng"
+        android:textSize="16sp"
+        android:layout_marginStart="12dp"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"/>
+
+
+    <!-- Tag đã tham gia -->
+    <TextView
+        android:id="@+id/tvJoined"
+        android:text="Đã tham gia"
+        android:paddingVertical="4dp"
+        android:paddingHorizontal="10dp"
+        android:textSize="12sp"
+        android:background="@drawable/bg_joined"
+        android:textColor="#999999"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <!-- Checkbox chọn -->
+    <CheckBox
+        android:id="@+id/cbSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"/>
+</LinearLayout>

@@ -28,17 +28,8 @@ class CreateGroupViewModel : ViewModel() {
         }
     }
 
-    //    fun createGroup(users: List<UserModel>, callback: (String?) -> Unit) {
-//        val ids = users.map { it.userId }.toMutableList()
-//        ids.add(firebaseService.getCurrentUserId()!!)
-//
-//        val groupName = users.take(3).joinToString(", ") { it.fullName } +
-//                if (users.size > 3) "..." else ""
-//
-//        groupRepo.createGroup(ids, groupName) { result ->
-//            callback(result)  // luôn gọi callback, kể cả null
-//        }
-//    }
+
+
     fun createGroup(users: List<UserModel>, customName: String?, callback: (String?) -> Unit) {
         groupRepo.createGroup(users, customName, callback)
     }
