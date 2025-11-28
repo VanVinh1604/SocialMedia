@@ -1,11 +1,13 @@
 package com.example.socialmedia
-
+import android.widget.Button
+import android.content.Intent
+import android.view.View
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
-import android.view.View
+
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -25,6 +27,7 @@ import im.zego.zim.entity.ZIMError
 import im.zego.zim.entity.ZIMUserInfo
 import im.zego.zim.enums.ZIMErrorCode
 import com.example.socialmedia.project.Utils.DatabaseMigration
+import com.example.socialmedia.project.Activity.RecommendationDebugActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +47,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        findViewById<Button>(R.id.btnDebug).setOnClickListener {
+            startActivity(Intent(this, RecommendationDebugActivity::class.java))
+        }
         sharedUserViewModel = ViewModelProvider(this)[SharedUserViewModel::class.java]
 
         setupUserPresence()

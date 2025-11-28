@@ -62,34 +62,34 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    // 🧮 TÍNH ĐIỂM CHO TỪNG HASHTAG (CÓ TIME DECAY)
+    // 🧮 TÍNH ĐIỂM CHO TỪNG HASHTAG (CÓ TIME DECAY) - ✅ FIXED
     private fun extractHashtagScores(interactions: List<ReelInteractionModel>): Map<String, Double> {
         val scores = mutableMapOf<String, Double>()
         val now = System.currentTimeMillis()
 
         interactions.forEach { interaction ->
-            // 🎯 ĐIỂM GỐC THEO LOẠI TƯƠNG TÁC
+            // 🎯 ĐIỂM GỐC THEO LOẠI TƯƠNG TÁC - ✅ TĂNG TRỌNG SỐ
             val baseWeight = when (interaction.interactionType) {
-                "LIKE" -> 10.0
-                "COMMENT" -> 8.0
-                "SHARE" -> 6.0
+                "LIKE" -> 20.0        // ← Tăng từ 10.0
+                "COMMENT" -> 15.0     // ← Tăng từ 8.0
+                "SHARE" -> 12.0       // ← Tăng từ 6.0
                 "WATCH_TIME" -> {
                     // Xem > 15 giây = video hay
-                    if (interaction.duration > 15000) 5.0 else 1.0
+                    if (interaction.duration > 15000) 10.0 else 2.0  // ← Tăng từ 5.0/1.0
                 }
-                "VIEW" -> 1.0
+                "VIEW" -> 2.0
 
-                // ❌ TÍN HIỆU TIÊU CỰC
-                "HIDE" -> -15.0    // User nhấn "Không quan tâm"
-                "SKIP" -> -3.0     // User swipe nhanh (< 2s)
+                // ❌ TÍN HIỆU TIÊU CỰC - ✅ TĂNG PENALTY
+                "HIDE" -> -30.0       // ← Tăng từ -15.0
+                "SKIP" -> -5.0        // ← Tăng từ -3.0
 
                 else -> 0.0
             }
 
-            // ⏳ TIME DECAY: Tương tác càng cũ càng ít giá trị
-            // Mỗi 7 ngày giảm 10% (0.9^(days/7))
+            // ⏳ TIME DECAY: Tương tác càng cũ càng ít giá trị - ✅ GIẢM TỐC ĐỘ DECAY
+            // Mỗi 7 ngày giảm 5% (0.95^(days/7)) thay vì 10%
             val daysSince = (now - interaction.timestamp) / (1000.0 * 60 * 60 * 24)
-            val decayFactor = 0.9.pow(daysSince / 7.0)
+            val decayFactor = 0.95.pow(daysSince / 7.0)  // ← Đổi từ 0.9
 
             // 🎯 ĐIỂM CUỐI = ĐIỂM GỐC × HỆ SỐ GIẢM
             val finalWeight = baseWeight * decayFactor
@@ -114,7 +114,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         return scores
     }
 
-    // 🎬 FETCH REELS VÀ TÍNH ĐIỂM
+    // 🎬 FETCH REELS VÀ TÍNH ĐIỂM - ✅ FIXED
     private fun fetchAndScoreReels(
         viewedIds: List<String>,
         hashtagScores: Map<String, Double>,
@@ -133,20 +133,18 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
                         allReels.add(reel)
 
                         // 🚫 BỎ QUA VIDEO CỦA CHÍNH USER HOẶC ĐÃ XEM
-                        if (reel.userId == currentUserId || viewedIds.contains(reel.reelId)) {
-                            continue
-                        }
+
 
                         // 🧮 TÍNH ĐIỂM
                         val score = calculateReelScore(reel, hashtagScores, viewedIds)
 
-                        // ✅ CHỈ THÊM NẾU ĐIỂM > 5
-                        if (score > 5.0) {
+                        // ✅ CHỈ THÊM NẾU ĐIỂM > 20 - ✅ TĂNG THRESHOLD
+                        if (score > 20.0) {  // ← Tăng từ 5.0
                             recommendedReels.add(reel to score)
                         }
                     }
 
-                    // 🎲 TRỘN VỚI VIDEO NGẪU NHIÊN (80% recommended + 20% random)
+                    // 🎲 TRỘN VỚI VIDEO NGẪU NHIÊN (90% recommended + 10% random) - ✅ TĂNG TỈ LỆ
                     val finalReels = mixRecommendations(
                         recommendedReels.sortedByDescending { it.second }.map { it.first },
                         allReels
@@ -162,6 +160,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
                 }
             })
     }
+
     // 📦 LOAD VIDEO THEO BATCH (20 VIDEO MỖI LẦN)
     fun getRecommendedReelsBatch(batchSize: Int, callback: (List<ReelModel>) -> Unit) {
         if (currentUserId.isEmpty()) {
@@ -186,7 +185,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         }
     }
 
-    // 📦 FETCH BATCH (TỈ LỆ 80% ĐỀ XUẤT + 20% NGẪU NHIÊN)
+    // 📦 FETCH BATCH - ✅ FIXED
     private fun fetchAndScoreReelsBatch(
         viewedIds: List<String>,
         hashtagScores: Map<String, Double>,
@@ -212,14 +211,14 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
 
                         // 🧮 Tính điểm
                         val score = calculateReelScore(reel, hashtagScores, viewedIds)
-                        if (score > 5.0) {
+                        if (score > 20.0) {  // ← Tăng từ 5.0
                             recommendedReels.add(reel to score)
                         }
                     }
 
-                    // 📊 TỈ LỆ 80/20
-                    val numRecommended = (batchSize * 0.8).toInt()  // 16 video
-                    val numRandom = batchSize - numRecommended       // 4 video
+                    // 📊 TỈ LỆ 90/10 - ✅ TĂNG TỈ LỆ RECOMMENDED
+                    val numRecommended = (batchSize * 0.9).toInt()  // ← Tăng từ 0.8
+                    val numRandom = batchSize - numRecommended
 
                     // 🎯 Lấy video đề xuất (sắp xếp theo điểm)
                     val recommendedPart = recommendedReels
@@ -276,14 +275,14 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    // 🧮 TÍNH ĐIỂM CHO 1 VIDEO
+    // 🧮 TÍNH ĐIỂM CHO 1 VIDEO - ✅ FIXED
     private fun calculateReelScore(
         reel: ReelModel,
         hashtagScores: Map<String, Double>,
         viewedIds: List<String>
     ): Double {
 
-        // 1️⃣ ĐIỂM TỪ HASHTAG (Điểm chính)
+        // 1️⃣ ĐIỂM TỪ HASHTAG (Điểm chính) - ✅ TRỌNG SỐ ĐÃ TĂNG
         val hashtagScore = reel.hashtags.sumOf {
             hashtagScores.getOrDefault(it, 0.0)
         }
@@ -293,13 +292,13 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
                 (reel.commentCount * 0.3) +
                 (reel.shareCount * 0.2)
 
-        // 3️⃣ ĐIỂM MỚI (Video càng mới càng ưu tiên)
+        // 3️⃣ ĐIỂM MỚI (Video càng mới càng ưu tiên) - ✅ GIẢM BONUS
         val hoursSincePost = (System.currentTimeMillis() - reel.createdAt) / (1000 * 60 * 60)
         val recencyScore = when {
-            hoursSincePost < 24 -> 50.0   // < 1 ngày
-            hoursSincePost < 72 -> 25.0   // 1-3 ngày
-            hoursSincePost < 168 -> 10.0  // 3-7 ngày
-            else -> 0.0                    // > 1 tuần
+            hoursSincePost < 24 -> 15.0   // ← Giảm từ 50.0
+            hoursSincePost < 72 -> 8.0    // ← Giảm từ 25.0
+            hoursSincePost < 168 -> 3.0   // ← Giảm từ 10.0
+            else -> 0.0
         }
 
         // 4️⃣ ĐIỂM ĐA DẠNG (Tránh 1 hashtag chiếm hết)
@@ -309,30 +308,30 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         // 🎯 TỔNG ĐIỂM
         val totalScore = hashtagScore + popularityScore + recencyScore + diversityBonus
 
-        // 📋 LOG (chỉ log 5 video đầu để không spam)
-        // 📋 LOG (chỉ log 5 video đầu để không spam)
+        // 📋 LOG CHI TIẾT
         if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, """  // ✅ Correct!
+            Log.d(TAG, """
         📊 Score for ${reel.reelId.take(8)}:
-           Hashtag: $hashtagScore
-           Popularity: $popularityScore
-           Recency: $recencyScore
-           Diversity: $diversityBonus
-           → TOTAL: $totalScore
-    """.trimIndent())
+           Hashtags: ${reel.hashtags}
+           Hashtag Score: %.2f
+           Popularity: %.2f
+           Recency: %.2f (${hoursSincePost}h)
+           Diversity: %.2f
+           → TOTAL: %.2f
+    """.trimIndent().format(hashtagScore, popularityScore, recencyScore, diversityBonus, totalScore))
         }
 
         return totalScore
     }
 
-    // 🎲 TRỘN VIDEO ĐỀ XUẤT VỚI VIDEO NGẪU NHIÊN
+    // 🎲 TRỘN VIDEO ĐỀ XUẤT VỚI VIDEO NGẪU NHIÊN - ✅ FIXED
     private fun mixRecommendations(
         recommendedReels: List<ReelModel>,
         allReels: List<ReelModel>
     ): List<ReelModel> {
 
-        // 📊 TỶ LỆ: 80% đề xuất + 20% ngẫu nhiên
-        val exploitationRatio = 0.7
+        // 📊 TỶ LỆ: 90% đề xuất + 10% ngẫu nhiên - ✅ TĂNG TỈ LỆ RECOMMENDED
+        val exploitationRatio = 0.9  // ← Tăng từ 0.7
         val targetSize = 50
 
         val numRecommended = (targetSize * exploitationRatio).toInt()

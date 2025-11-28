@@ -49,7 +49,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
+        <activity
+            android:name=".project.Activity.RecommendationDebugActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"/>
         <activity
             android:name=".project.UserManagementActivity"
             android:exported="true">
