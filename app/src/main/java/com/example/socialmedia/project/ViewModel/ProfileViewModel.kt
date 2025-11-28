@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.socialmedia.project.Domain.Enum.Gender
 import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Domain.Model.ReelModel // <--- Import này bắt buộc
 import com.example.socialmedia.project.Domain.Model.StoryHighlightModel
 import com.example.socialmedia.project.Domain.Model.StoryModel
 import com.example.socialmedia.project.Domain.Model.UserModel
@@ -37,6 +38,12 @@ import org.json.JSONObject
 import java.io.IOException
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
+
+    // 1. LiveData chứa danh sách Story của người đang xem
+    private val _targetUserStories = MutableLiveData<List<StoryModel>>()
+    val targetUserStories: LiveData<List<StoryModel>> get() = _targetUserStories
+
+
     private val _currentViewingStories = MutableLiveData<List<StoryModel>>()
     val currentViewingStories: LiveData<List<StoryModel>> get() = _currentViewingStories
     private val CLOUD_NAME = "durfebos5"
@@ -55,6 +62,11 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private var highlightsRef: DatabaseReference? = null
     private var highlightsListener: ValueEventListener? = null
 
+    // --- [SỬA 1: THÊM QUẢN LÝ LISTENER CHO REELS] ---
+    private var reelsRef: Query? = null
+    private var reelsListener: ValueEventListener? = null
+    // ------------------------------------------------
+
     // LiveData cho Profile
     private val _userProfile = MutableLiveData<UserModel?>()
     val userProfile: LiveData<UserModel?> get() = _userProfile
@@ -62,6 +74,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     // LiveData cho danh sách bài đăng
     private val _userPosts = MutableLiveData<List<PostModel>>()
     val userPosts: LiveData<List<PostModel>> get() = _userPosts
+
+    // LiveData cho Reels
+    private val _userReels = MutableLiveData<List<ReelModel>>()
+    val userReels: LiveData<List<ReelModel>> get() = _userReels
 
     // LiveData cho Story Highlights
     private val _userHighlights = MutableLiveData<List<StoryHighlightModel>>()
@@ -100,13 +116,50 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val unblockSuccess: LiveData<Boolean?> get() = _unblockSuccess
 
 
+
+
+
+    fun loadTargetUserStories(userId: String) {
+        Log.d("CheckStory", "Bắt đầu tải story cho user: $userId") // Log 1
+
+        database.reference.child("story")
+            .orderByChild("userId")
+            .equalTo(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val stories = ArrayList<StoryModel>()
+                    for (child in snapshot.children) {
+                        child.getValue(StoryModel::class.java)?.let { stories.add(it) }
+                    }
+
+                    // --- [THÊM LOG NÀY] ---
+                    Log.d("CheckStory", "Đã tìm thấy ${stories.size} tin trên Firebase")
+                    // ---------------------
+
+                    stories.sortByDescending { it.createdAt }
+                    _targetUserStories.postValue(stories)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("CheckStory", "Lỗi tải story: ${error.message}")
+                    _targetUserStories.postValue(emptyList())
+                }
+            })
+    }
+
+
+
     // =================================================================
-    // PHẦN 1: LOGIC TẢI PROFILE & HIGHLIGHTS
+    // PHẦN 1: LOGIC TẢI PROFILE & HIGHLIGHTS & REELS
     // =================================================================
 
     fun loadProfile(userId: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // --- [SỬA 2: RESET DATA CŨ ĐỂ KHÔNG BỊ TRỘN LẪN] ---
+                _userReels.postValue(emptyList())
+                // ----------------------------------------------------
+
                 val uidToLoad = userId ?: auth.currentUser?.uid
                 val myUid = auth.currentUser?.uid
                 if (uidToLoad == null || myUid == null) {
@@ -169,6 +222,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 // === TẢI STORY HIGHLIGHTS ===
                 attachHighlightsListener(uidToLoad)
 
+                // === TẢI REELS ===
+                loadUserReels(uidToLoad)
+
             } catch (e: Exception) {
                 _errorMessage.postValue("Lỗi tải hồ sơ: ${e.message}")
                 _userProfile.postValue(null)
@@ -219,6 +275,39 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
         highlightsRef?.addValueEventListener(highlightsListener!!)
     }
+
+    // --- [SỬA 3: HÀM LOAD REELS CÓ QUẢN LÝ LISTENER] ---
+    private fun loadUserReels(userId: String) {
+        // Gỡ listener của user cũ (Fix lỗi Reels user cũ hiện sang user mới)
+        reelsListener?.let { reelsRef?.removeEventListener(it) }
+
+        reelsRef = database.reference.child("Reels")
+            .orderByChild("userId")
+            .equalTo(userId)
+
+        reelsListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val reelsList = ArrayList<ReelModel>()
+                for (child in snapshot.children) {
+                    try {
+                        val reel = child.getValue(ReelModel::class.java)
+                        // Firebase tự mapping các trường likeCount, commentCount
+                        reel?.let { reelsList.add(it) }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                reelsList.sortByDescending { it.createdAt }
+                _userReels.postValue(reelsList)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("ProfileViewModel", "Lỗi tải Reels: ${error.message}")
+            }
+        }
+        reelsRef?.addValueEventListener(reelsListener!!)
+    }
+    // ----------------------------------------------------
 
     // =================================================================
     // HÀM TẢI STORY
@@ -703,5 +792,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         userListener?.let { userRef?.removeEventListener(it) }
         postsListener?.let { postsRef?.removeEventListener(it) }
         highlightsListener?.let { highlightsRef?.removeEventListener(it) }
+
+        // --- [SỬA 4: HỦY LISTENER REELS KHI THOÁT] ---
+        reelsListener?.let { reelsRef?.removeEventListener(it) }
+        // ---------------------------------------------
     }
 }

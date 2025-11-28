@@ -54,18 +54,26 @@
             android:paddingBottom="12dp"
             android:clickable="true">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivProfileImage"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+            <FrameLayout
+                android:id="@+id/flProfileImageContainer"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
                 android:layout_marginStart="16dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/image_avata_user"
+                android:padding="3dp"
+                android:background="@drawable/bg_story_ring"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:shapeAppearanceOverlay="@style/CircularImageView"
-                app:strokeColor="#FFFFFF"
-                app:strokeWidth="4dp" />
+                app:layout_constraintTop_toTopOf="parent">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivProfileImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:padding="3dp"
+                    android:background="@android:color/white"
+                    android:src="@drawable/image_avata_user"
+                    app:shapeAppearanceOverlay="@style/CircularImageView" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/llStats"
@@ -75,9 +83,9 @@
                 android:layout_marginEnd="16dp"
                 android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/ivProfileImage"
-                app:layout_constraintTop_toTopOf="@id/ivProfileImage"
-                app:layout_constraintBottom_toBottomOf="@id/ivProfileImage"
+                app:layout_constraintStart_toEndOf="@id/flProfileImageContainer"
+                app:layout_constraintTop_toTopOf="@id/flProfileImageContainer"
+                app:layout_constraintBottom_toBottomOf="@id/flProfileImageContainer"
                 app:layout_constraintVertical_bias="2">
 
                 <LinearLayout
@@ -164,9 +172,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginTop="12dp"
-                app:layout_constraintStart_toStartOf="@id/ivProfileImage"
+                app:layout_constraintStart_toStartOf="@id/flProfileImageContainer"
                 app:layout_constraintEnd_toEndOf="@id/llStats"
-                app:layout_constraintTop_toBottomOf="@id/ivProfileImage">
+                app:layout_constraintTop_toBottomOf="@id/flProfileImageContainer">
                 <TextView
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"

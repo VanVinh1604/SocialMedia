@@ -20,6 +20,7 @@ import com.example.socialmedia.databinding.FragmentPersonalProfileBinding
 import com.example.socialmedia.project.Adapter.ProfilePostAdapter
 import com.example.socialmedia.project.Adapter.StoryHighlightAdapter
 import com.example.socialmedia.project.Domain.Model.PostModel
+import com.example.socialmedia.project.Domain.Model.ReelModel
 import com.example.socialmedia.project.Domain.Model.StoryHighlightModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.ViewModel.ProfileViewModel
@@ -34,9 +35,11 @@ class PersonalProfileFragment : Fragment() {
     private val viewModel: ProfileViewModel by navGraphViewModels(R.id.nav_graph)
 
     private lateinit var postAdapter: ProfilePostAdapter
-    private lateinit var highlightAdapter: StoryHighlightAdapter // Adapter cho Story Highlight
+    private lateinit var highlightAdapter: StoryHighlightAdapter
 
-    private var allPosts: List<PostModel> = emptyList()
+    // 🆕 BIẾN MỚI: Tách list Posts (bài viết thường) và Reels
+    private var allPosts: List<PostModel> = emptyList() // Bài viết thường (ảnh/video dài)
+    private var allReels: List<PostModel> = emptyList() // Reels đã được convert sang PostModel
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -50,7 +53,7 @@ class PersonalProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupPostGrid()
-        setupHighlights() // Cài đặt adapter cho Highlight
+        setupHighlights()
         setupObservers()
         setupClickListeners()
         setupTabs()
@@ -58,24 +61,24 @@ class PersonalProfileFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.loadProfile(null) // Tải profile của chính mình
+        viewModel.loadProfile(null)
+
+        // --- [THÊM VÀO] Tải danh sách Story để kiểm tra vòng sáng ---
+        viewModel.loadUserStories()
+        // ----------------------------------------------------------
     }
 
-    // === [QUAN TRỌNG] CÀI ĐẶT HIGHLIGHT ===
     private fun setupHighlights() {
         highlightAdapter = StoryHighlightAdapter(emptyList()) { highlight ->
-            // Kiểm tra xem user bấm vào nút "Mới" hay bấm vào tin đã có
             if (highlight.id == "ADD_NEW") {
-                // 1. Tạo mới Highlight
                 try {
                     findNavController().navigate(R.id.action_personalProfileFragment_to_createHighlightFragment)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             } else {
-                // 2. [MỚI] Xem Highlight đã có
                 val bundle = Bundle().apply {
-                    putString("highlightId", highlight.id) // Truyền ID để ViewModel tải dữ liệu
+                    putString("highlightId", highlight.id)
                 }
                 try {
                     findNavController().navigate(R.id.action_personalProfileFragment_to_highlightViewerFragment, bundle)
@@ -90,22 +93,41 @@ class PersonalProfileFragment : Fragment() {
             adapter = highlightAdapter
         }
     }
+
     private fun setupPostGrid() {
         postAdapter = ProfilePostAdapter { post ->
             val postId = post.postId
 
-            // === SỬA Ở ĐÂY ===
-            // Thêm "userId" to post.userId vào trong bundleOf
-            val bundle = bundleOf(
-                "postId" to postId,
-                "userId" to post.userId  // <--- Dòng bạn cần thêm nằm ở đây
-            )
-            // =================
+            // LOGIC CLICK ĐÃ ĐƯỢC CẬP NHẬT: PHÂN LOẠI REEL VÀ ẢNH
+            if (post.isReel) {
+                // TRƯỜNG HỢP LÀ REELS -> Mở ReelsFragment
+                val bundle = Bundle().apply {
+                    // Dùng post.userId và post.postId (đã được mapping từ reelId)
+                    putString("userId", post.userId)
+                    putString("startReelId", post.postId)
+                }
 
-            try {
-                findNavController().navigate(R.id.action_personalProfileFragment_to_postDetailFragment, bundle)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
+                try {
+                    findNavController().navigate(R.id.reelsFragment, bundle)
+                } catch (e: Exception) {
+                    try {
+                        findNavController().navigate(R.id.action_personalProfileFragment_to_reelsFragment, bundle)
+                    } catch (e2: Exception) {
+                        Toast.makeText(context, "Chưa cấu hình điều hướng Reels trong NavGraph", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+            } else {
+                // TRƯỜNG HỢP LÀ ẢNH/POST THƯỜNG -> Mở PostDetailFragment (Code cũ)
+                val bundle = bundleOf(
+                    "postId" to postId,
+                    "userId" to post.userId
+                )
+                try {
+                    findNavController().navigate(R.id.action_personalProfileFragment_to_postDetailFragment, bundle)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Lỗi NavGraph: " + e.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -125,34 +147,48 @@ class PersonalProfileFragment : Fragment() {
             }
         })
 
+        // 1. Lắng nghe Posts thường (Ảnh/Video dài)
         viewModel.userPosts.observe(viewLifecycleOwner, Observer { posts ->
             if (view == null) return@Observer
             allPosts = posts
-            binding.tvPostCount.text = posts.size.toString()
-            filterAndDisplayPosts()
+            updateCountsAndFilter()
         })
 
-        // === [QUAN TRỌNG] OBSERVER HIGHLIGHTS VỚI NÚT ADD ===
-        viewModel.userHighlights.observe(viewLifecycleOwner) { firebaseHighlights ->
-            // 1. Tạo danh sách hiển thị
-            val displayList = ArrayList<StoryHighlightModel>()
+        // 2. Lắng nghe Reels và CONVERT sang PostModel
+        viewModel.userReels.observe(viewLifecycleOwner, Observer { reels ->
+            // Nếu list null thì gán rỗng để tránh crash
+            val safeReels = reels ?: emptyList()
 
-            // 2. Luôn chèn nút "Mới" vào vị trí đầu tiên
+            allReels = safeReels.map { reel ->
+                PostModel(
+                    postId = reel.reelId,
+                    userId = reel.userId,
+                    isReel = true,
+                    thumbnail = reel.thumbnailUrl,
+                    videoUrl = reel.videoUrl,
+                    caption = reel.caption,
+                    likeCount = reel.likeCount,
+                    commentCount = reel.commentCount,
+                    shareCount = reel.shareCount,
+                    viewCount = reel.viewCount,
+                    createdAt = reel.createdAt
+                )
+            }
+            updateCountsAndFilter()
+        })
+
+
+        viewModel.userHighlights.observe(viewLifecycleOwner) { firebaseHighlights ->
+            val displayList = ArrayList<StoryHighlightModel>()
             displayList.add(
                 StoryHighlightModel(
                     id = "ADD_NEW",
                     name = "Mới",
-                    coverUrl = "" // Adapter sẽ tự xử lý để hiện icon dấu cộng
+                    coverUrl = ""
                 )
             )
-
-            // 3. Chèn tiếp dữ liệu thật từ Firebase (nếu có)
             displayList.addAll(firebaseHighlights)
-
-            // 4. Cập nhật Adapter
             highlightAdapter.submitList(displayList)
-
-            // 5. Luôn hiện RecyclerView vì luôn có ít nhất nút "Mới"
             binding.rvStoryHighlights.visibility = View.VISIBLE
         }
 
@@ -161,31 +197,56 @@ class PersonalProfileFragment : Fragment() {
                 Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
             }
         })
+
+        // --- [THÊM VÀO] Lắng nghe Story của tôi để Bật/Tắt vòng sáng ---
+        // --- [SỬA LẠI ĐOẠN NÀY] ---
+        viewModel.myStories.observe(viewLifecycleOwner) { stories ->
+            // 1. Lấy thời gian hiện tại
+            val currentTime = System.currentTimeMillis()
+            val twentyFourHoursInMillis = 24 * 60 * 60 * 1000L // 24 giờ đổi ra mili-giây
+
+            // 2. Lọc danh sách: Chỉ lấy những story chưa quá 24h
+            val activeStories = stories.filter { story ->
+                val timeDiff = currentTime - story.createdAt
+                timeDiff < twentyFourHoursInMillis
+            }
+
+            // 3. Kiểm tra danh sách ĐÃ LỌC
+            if (activeStories.isNotEmpty()) {
+                // Chỉ sáng đèn nếu còn story "sống" (chưa hết hạn)
+                updateStoryRing(true)
+            } else {
+                // Tắt đèn nếu không có story nào hoặc toàn story cũ
+                updateStoryRing(false)
+            }
+        }
+        // -------------------------------------------------------------
+        // -------------------------------------------------------------
     }
 
     private fun setupTabs() {
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                filterAndDisplayPosts()
+                updateCountsAndFilter() // Gọi hàm cập nhật chung
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
     }
 
-    private fun filterAndDisplayPosts() {
+    private fun updateCountsAndFilter() {
+        binding.tvPostCount.text = allPosts.size.toString()
         val selectedTabPosition = binding.tabLayout.selectedTabPosition
-        val (postsToShow, emptyMessageTitle, emptyMessageSub) = if (selectedTabPosition == 0) {
-            val gridPosts = allPosts.filter { !it.isReel }
-            Triple(gridPosts, "Chưa có bài đăng", "Ảnh và video của bạn sẽ ở đây.")
+
+        val (listToShow, emptyMessageTitle, emptyMessageSub) = if (selectedTabPosition == 0) {
+            Triple(allPosts, "Chưa có bài đăng", "Ảnh và video của bạn sẽ ở đây.")
         } else {
-            val reelPosts = allPosts.filter { it.isReel }
-            Triple(reelPosts, "Chưa có Reels", "Reels của bạn sẽ xuất hiện ở đây.")
+            Triple(allReels, "Chưa có Reels", "Reels của bạn sẽ xuất hiện ở đây.")
         }
 
-        postAdapter.submitList(postsToShow)
+        postAdapter.submitList(listToShow)
 
-        if (postsToShow.isNotEmpty()) {
+        if (listToShow.isNotEmpty()) {
             binding.rvPhotos.visibility = View.VISIBLE
             binding.llEmptyPhotos.visibility = View.GONE
         } else {
@@ -250,7 +311,6 @@ class PersonalProfileFragment : Fragment() {
             if (userId != null) {
                 val bundle = Bundle().apply {
                     putString("userId", userId)
-
                     putString("listType", "following")
                 }
                 try {
@@ -306,6 +366,8 @@ class PersonalProfileFragment : Fragment() {
             .error(R.drawable.image_avata_user)
             .circleCrop()
             .into(binding.ivProfileImage)
+
+        // --- [ĐÃ XÓA] dòng val userHasStory = true gây lỗi luôn sáng ---
     }
 
     private fun formatCount(count: Int): String {
@@ -315,6 +377,25 @@ class PersonalProfileFragment : Fragment() {
             count >= 10_000 -> String.format("%.1fk", count / 1_000.0)
             count >= 1_000 -> "${count / 1_000}k"
             else -> count.toString()
+        }
+    }
+
+
+    private fun updateStoryRing(hasStory: Boolean) {
+        val container = binding.flProfileImageContainer // FrameLayout vừa tạo
+
+        if (hasStory) {
+            // Có Story: Hiện vòng Gradient
+            container.setBackgroundResource(R.drawable.bg_story_ring)
+
+            // Tùy chọn: Thêm padding để vòng sáng hiện ra (nếu bị mất padding khi set background)
+            container.setPadding(8, 8, 8, 8) // 8px ~ 3dp
+        } else {
+            // Không có Story: Ẩn vòng (Set background null hoặc màu trắng/trong suốt)
+            container.background = null
+
+            // Reset padding về 0 để ảnh to ra bình thường hoặc giữ nguyên tùy thiết kế
+            container.setPadding(0, 0, 0, 0)
         }
     }
 
