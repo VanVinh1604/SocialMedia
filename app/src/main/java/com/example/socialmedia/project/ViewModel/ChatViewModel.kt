@@ -126,8 +126,8 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun editMessage(conversationId: String, message: MessageModel) {
-        repository.editMessage(conversationId, message) { success ->
+    fun editMessage(conversationId: String, message: MessageModel,conversationKey:String) {
+        repository.editMessage(conversationId, message,conversationKey) { success ->
             if (success) updateMessageLocal(message) // cập nhật local LiveData
         }
     }

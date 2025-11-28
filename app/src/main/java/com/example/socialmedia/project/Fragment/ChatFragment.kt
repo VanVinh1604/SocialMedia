@@ -38,6 +38,7 @@ import com.example.socialmedia.project.Adapter.ChatAdapter
 import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Helper.AesHelper
 import com.example.socialmedia.project.Utils.ChatCloudinaryHelper
 import com.example.socialmedia.project.ViewModel.ChatViewModel
 import com.example.socialmedia.project.ViewModel.SharedUserViewModel
@@ -49,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.util.*
+import javax.crypto.SecretKey
 
 class ChatFragment : Fragment() {
 
@@ -78,6 +80,7 @@ class ChatFragment : Fragment() {
     private var audioFilePath: String? = null
     private var isRecording = false
 
+
     private var editingMessage: MessageModel? = null
 
     private lateinit var llEditPreview: LinearLayout
@@ -97,6 +100,7 @@ class ChatFragment : Fragment() {
     private val handler = Handler(Looper.getMainLooper())
     val userMap = mutableMapOf<String, UserModel>()
 
+    private lateinit var conversationKey: SecretKey
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -132,10 +136,14 @@ class ChatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupUI()
+        conversationKey = AesHelper.generateKey()
+
         chatAdapter = ChatAdapter(
             messages,
             currentUserId,
             userMap,
+            conversationKey = conversationKey, // ✅ truyền key vào adapter
+
             onReply = { msg ->
                 showReplyPreview(msg)
             },
@@ -183,6 +191,8 @@ class ChatFragment : Fragment() {
             cancelReplyMessage()
         }
 
+        initConversationKey()
+
 
         initMessages()
         initSendMessage()
@@ -192,12 +202,7 @@ class ChatFragment : Fragment() {
             viewModel.markMessagesAsRead(convId, currentUserId)
         }
 
-//        binding.rlChatHeader.setOnClickListener {
-//            conversationId?.let {
-//                val action = ChatFragmentDirections.actionChatFragmentToChatInfoFragment(it)
-//                findNavController().navigate(action)
-//            }
-//        }
+
         binding.rlChatHeader.setOnClickListener {
             conversationId?.let { convId ->
                 val action = ChatFragmentDirections
@@ -215,6 +220,59 @@ class ChatFragment : Fragment() {
 
     }
 
+
+    private fun initConversationKey() {
+        if (conversationId.isNullOrEmpty()) {
+            Log.e(TAG, "❌ conversationId is null/empty")
+            conversationKey = AesHelper.generateKey()
+            return
+        }
+
+        val keyRef = FirebaseDatabase.getInstance()
+            .getReference("ConversationKeys")
+            .child(conversationId!!)
+
+        keyRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                // ✅ Key đã tồn tại, load ra
+                val keyString = snapshot.getValue(String::class.java)
+                conversationKey = if (!keyString.isNullOrEmpty()) {
+                    try {
+                        AesHelper.stringToKey(keyString)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Failed to parse key", e)
+                        AesHelper.generateKey()
+                    }
+                } else {
+                    Log.e(TAG, "❌ Key string is null/empty")
+                    AesHelper.generateKey()
+                }
+                Log.d(TAG, "✅ Loaded existing key for conversation: $conversationId")
+            } else {
+                // ✅ Chưa có key, tạo mới và lưu
+                conversationKey = AesHelper.generateKey()
+                val keyString = AesHelper.keyToString(conversationKey)
+                keyRef.setValue(keyString).addOnSuccessListener {
+                    Log.d(TAG, "✅ Saved new key for conversation: $conversationId")
+                }.addOnFailureListener { e ->
+                    Log.e(TAG, "❌ Failed to save key", e)
+                }
+            }
+
+            // ✅ Update key cho adapter nếu đã init
+            if (::chatAdapter.isInitialized) {
+                chatAdapter.updateConversationKey(conversationKey)
+            }
+
+        }.addOnFailureListener { e ->
+            Log.e(TAG, "❌ Failed to load conversation key", e)
+            conversationKey = AesHelper.generateKey()
+
+            if (::chatAdapter.isInitialized) {
+                chatAdapter.updateConversationKey(conversationKey)
+            }
+        }
+    }
 
     private fun showReplyPreview(message: MessageModel) {
         replyingMessage = message
@@ -371,13 +429,15 @@ class ChatFragment : Fragment() {
                 return@launch
             }
 
+            val encryptedUrl = AesHelper.encrypt(uploadedUrl, conversationKey)
+
             val message = MessageModel(
                 messageId = UUID.randomUUID().toString(),
                 conversationId = conversationId!!,
                 senderId = currentUserId,
                 senderName = currentUserName,
                 senderAvatar = currentUserAvatar,
-                mediaUrl = uploadedUrl,
+                mediaUrl = encryptedUrl,
                 messageType = MessageType.IMAGE,
                 createdAt = System.currentTimeMillis()
             )
@@ -474,36 +534,41 @@ class ChatFragment : Fragment() {
         binding.etMessage.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) { sendTextMessage(); true } else false
         }
+
         binding.ivSend.setOnClickListener {
             val text = binding.etMessage.text.toString().trim()
             if (text.isEmpty()) return@setOnClickListener
 
-            binding.ivSend.setOnClickListener {
-                val text = binding.etMessage.text.toString().trim()
-                if (text.isEmpty()) return@setOnClickListener
+            // Tạo biến conversationKeyString từ SecretKey
+            val conversationKeyString = AesHelper.keyToString(conversationKey)
 
-                if (editingMessage != null) {
-                    val msg = editingMessage!!
-                    val updatedMessage = msg.copy(
-                        content = text,
-                        isEdited = true,
-                        editedAt = System.currentTimeMillis(),
-                        editHistory = (msg.editHistory.toMutableList().apply { add(msg.content) })
-                    )
-                    conversationId?.let { convId ->
-                        viewModel.editMessage(convId, updatedMessage)
-                    }
-                    cancelEditingMessage()
-                } else {
-                    sendTextMessage()
+            if (editingMessage != null) {
+                val msg = editingMessage!!
+                val updatedMessage = msg.copy(
+                    content = text,
+                    isEdited = true,
+                    editedAt = System.currentTimeMillis(),
+                    editHistory = (msg.editHistory?.toMutableList() ?: mutableListOf()).apply { add(msg.content) }
+                )
+
+                conversationId?.let { convId ->
+                    viewModel.editMessage(convId, updatedMessage, conversationKeyString)
                 }
+
+                cancelEditingMessage()
+            } else {
+                sendTextMessage()
             }
         }
     }
 
+
     private fun sendTextMessage() {
         val text = binding.etMessage.text.toString().trim()
         if (text.isEmpty() || conversationId.isNullOrEmpty()) return
+
+        val encryptedText = AesHelper.encrypt(text, conversationKey)
+
         val replyToId = replyingMessage?.messageId
 
         val message = MessageModel(
@@ -512,7 +577,7 @@ class ChatFragment : Fragment() {
             senderId = currentUserId,
             senderName = currentUserName,
             senderAvatar = currentUserAvatar,
-            content = text,
+            content = encryptedText,
             replyTo = replyToId, // thêm trường replyTo trong MessageModel
 
             createdAt = System.currentTimeMillis()
@@ -634,28 +699,40 @@ class ChatFragment : Fragment() {
         val file = File(filePath)
         if (!file.exists() || conversationId.isNullOrEmpty()) return
         binding.tvRecordingTime.text = "Uploading..."
+
         lifecycleScope.launch {
             val uploadedUrl = ChatCloudinaryHelper.uploadVoiceMessage(file)
-            if (!uploadedUrl.isNullOrEmpty()) {
-                val message = MessageModel(
-                    messageId = UUID.randomUUID().toString(),
-                    conversationId = conversationId!!,
-                    senderId = currentUserId,
-                    senderName = currentUserName,
-                    senderAvatar = currentUserAvatar,
-                    mediaUrl = uploadedUrl,
-                    messageType = MessageType.VOICE,
-                    duration = duration,
-                    createdAt = System.currentTimeMillis()
-                )
-                val participants = listOf(currentUserId, otherUserId ?: "")
+            if (uploadedUrl.isNullOrEmpty()) {
+                resetRecordingUI()
+                return@launch
+            }
 
-                viewModel.sendMessage(conversationId!!, participants, message){ success ->
-                    if (success) { file.delete(); resetRecordingUI() } else resetRecordingUI()
-                }
-            } else resetRecordingUI()
+            // Encrypt URL
+            val encryptedUrl = AesHelper.encrypt(uploadedUrl, conversationKey)
+
+            val message = MessageModel(
+                messageId = UUID.randomUUID().toString(),
+                conversationId = conversationId!!,
+                senderId = currentUserId,
+                senderName = currentUserName,
+                senderAvatar = currentUserAvatar,
+                mediaUrl = encryptedUrl,
+                messageType = MessageType.VOICE,
+                duration = duration,
+                createdAt = System.currentTimeMillis()
+            )
+
+            val participants = listOf(currentUserId, otherUserId ?: "")
+
+            viewModel.sendMessage(conversationId!!, participants, message) { success ->
+                if (success) {
+                    file.delete()
+                    resetRecordingUI()
+                } else resetRecordingUI()
+            }
         }
     }
+
 
     private fun getAudioDuration(context: Context, path: String): String {
         return try {
@@ -714,10 +791,24 @@ class ChatFragment : Fragment() {
         }
     }
 
+//    override fun onDestroyView() {
+//        super.onDestroyView()
+//        if (isRecording) cancelRecording()
+//        chatAdapter.releasePlayer()
+//        viewModel.removeListener()
+//    }
     override fun onDestroyView() {
         super.onDestroyView()
-        if (isRecording) cancelRecording()
-        chatAdapter.releasePlayer()
+
+        if (isRecording) {
+            cancelRecording()
+        }
+
+        // ✅ Kiểm tra trước khi dùng
+        if (::chatAdapter.isInitialized) {
+            chatAdapter.releasePlayer()
+        }
+
         viewModel.removeListener()
     }
 }

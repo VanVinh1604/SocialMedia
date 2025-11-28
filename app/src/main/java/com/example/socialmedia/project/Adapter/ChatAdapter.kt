@@ -1,6 +1,7 @@
 package com.example.socialmedia.project.Adapter
 
 import android.R.attr.fragment
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Color
 import android.media.MediaMetadataRetriever
@@ -25,16 +26,20 @@ import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.Fragment.ChatMessageBottomSheet
+import com.example.socialmedia.project.Helper.AesHelper
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.crypto.SecretKey
 
 class ChatAdapter(
     private var messages: List<MessageModel>,
     private val currentUserId: String,
     private val userMap: Map<String, UserModel>,
     private val onMessageClick: ((message: MessageModel) -> Unit)? = null, // ✅ callback
+    private var conversationKey: SecretKey,
+
     private val onReply: ((MessageModel) -> Unit)? = null,
     private val onEdit: ((MessageModel) -> Unit)? = null,
     private val onDelete: ((MessageModel) -> Unit)? = null
@@ -103,14 +108,6 @@ class ChatAdapter(
 
         fun bind(msg: MessageModel, sender: UserModel) {
 
-//        // Load avatar đúng người gửi
-//        Glide.with(binding.root.context)
-//            .load(sender.profilePictureUrl ?: msg.senderAvatar)
-//            .placeholder(R.drawable.image_avata_user)
-//            .error(R.drawable.image_avata_user)
-//            .circleCrop()
-//            .into(binding.ivAvatar)
-
         binding.tvDeleted.text = "Tin nhắn đã bị thu hồi"
     }}
 
@@ -166,8 +163,6 @@ class ChatAdapter(
         private val binding: ItemChatStoryIncomingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         fun getContainer(): View = binding.root
-
-
         fun bind(message: MessageModel, sender: UserModel) {
             val story = message.story
 
@@ -198,33 +193,53 @@ class ChatAdapter(
     // --- ViewHolder cho ảnh ---
     inner class OutgoingImageViewHolder(private val binding: ItemChatImageOutgoingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
         fun getContainer(): View = binding.root
 
         fun bind(item: MessageModel, sender: UserModel) {
-            item.mediaUrl?.let {
+            item.mediaUrl?.let { encryptedUrl ->
+                val decryptedUrl = try {
+                    AesHelper.decrypt(encryptedUrl, conversationKey)
+                } catch (e: Exception) {
+                    Log.e("ChatAdapter", "Failed to decrypt image URL", e)
+                    null
+                }
+
                 Glide.with(binding.root.context)
-                    .load(it)
+                    .load(decryptedUrl ?: R.drawable.image_placeholder)
                     .placeholder(R.drawable.image_placeholder)
                     .error(R.drawable.background_header)
                     .into(binding.ivImage)
             }
+
             binding.tvTime.text = SimpleDateFormat("hh a", Locale.getDefault()).format(Date(item.createdAt))
         }
     }
 
+
     inner class IncomingImageViewHolder(private val binding: ItemChatImageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
         fun getContainer(): View = binding.root
 
         fun bind(item: MessageModel, sender: UserModel) {
-            item.mediaUrl?.let {
+            item.mediaUrl?.let { encryptedUrl ->
+                val decryptedUrl = try {
+                    AesHelper.decrypt(encryptedUrl, conversationKey)
+                } catch (e: Exception) {
+                    Log.e("ChatAdapter", "Failed to decrypt image URL", e)
+                    null
+                }
+
                 Glide.with(binding.root.context)
-                    .load(it)
+                    .load(decryptedUrl ?: R.drawable.image_placeholder)
                     .placeholder(R.drawable.image_placeholder)
                     .error(R.drawable.background_header)
                     .into(binding.ivImage)
             }
+
             binding.tvTime.text = SimpleDateFormat("hh a", Locale.getDefault()).format(Date(item.createdAt))
+
             Glide.with(binding.root.context)
                 .load(sender.profilePictureUrl ?: item.senderAvatar)
                 .placeholder(R.drawable.image_avata_user)
@@ -233,6 +248,7 @@ class ChatAdapter(
                 .into(binding.ivAvatar)
         }
     }
+
 
     // --- ViewHolder cho audio ---
     inner class OutgoingAudioViewHolder(private val binding: ItemChatAudioOutgoingBinding) :
@@ -243,7 +259,19 @@ class ChatAdapter(
             binding.tvDuration.text = item.duration ?: "0:00"
 
 
-            binding.ivPlay.setOnClickListener { item.mediaUrl?.let { url -> playAudio(url, this) } }
+            binding.ivPlay.setOnClickListener {
+                item.mediaUrl?.let { encryptedUrl ->
+                    val decryptedUrl = try {
+                        AesHelper.decrypt(encryptedUrl, conversationKey)
+                    } catch (e: Exception) {
+                        Log.e("ChatAdapter", "Failed to decrypt audio URL", e)
+                        null
+                    }
+                    decryptedUrl?.let { url ->
+                        playAudio(url, this)
+                    }
+                }
+            }
         }
         fun updatePlayButton(isPlaying: Boolean) {
             binding.ivPlay.setImageResource(if (isPlaying) R.drawable.ic_stop else R.drawable.ic_play)
@@ -252,6 +280,7 @@ class ChatAdapter(
 
     inner class IncomingAudioViewHolder(private val binding: ItemChatAudioIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
         fun getContainer(): View = binding.root
 
         fun bind(item: MessageModel, sender: UserModel) {
@@ -260,18 +289,29 @@ class ChatAdapter(
             Glide.with(binding.root.context)
                 .load(sender.profilePictureUrl ?: item.senderAvatar)
                 .placeholder(R.drawable.image_avata_user)
-                .error(R.drawable.image_avata_user)
                 .circleCrop()
                 .into(binding.ivAvatar)
 
-            binding.ivPlay.setOnClickListener { item.mediaUrl?.let { url -> playAudio(url, this) } }
-
+            binding.ivPlay.setOnClickListener {
+                item.mediaUrl?.let { encryptedUrl ->
+                    val decryptedUrl = try {
+                        AesHelper.decrypt(encryptedUrl, conversationKey)
+                    } catch (e: Exception) {
+                        Log.e("ChatAdapter", "Failed to decrypt audio URL", e)
+                        null
+                    }
+                    decryptedUrl?.let { url ->
+                        playAudio(url, this)
+                    }
+                }
+            }
         }
+
         fun updatePlayButton(isPlaying: Boolean) {
             binding.ivPlay.setImageResource(if (isPlaying) R.drawable.ic_stop else R.drawable.ic_play)
         }
-
     }
+
 
 
     // --- Trong OutgoingViewHolder ---
@@ -282,8 +322,11 @@ class ChatAdapter(
 
         fun bind(item: MessageModel, sender: UserModel) {
             // Hiển thị bình thường
-            binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
+//            binding.tvMessage.text = item.content.trim()
+            binding.tvMessage.text = decryptMessage(item.content).trim()
+
+            binding.tvTime.text =
+                SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
             binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
 
             bindReply(item, this)
@@ -306,28 +349,24 @@ class ChatAdapter(
                     replyLayoutField.visibility = View.VISIBLE
                     replySenderField.text = repliedMsg.senderName ?: "Người dùng"
                     replyContentField.text = when (repliedMsg.messageType) {
-                        MessageType.TEXT -> repliedMsg.content
+//                        MessageType.TEXT -> repliedMsg.content
+                        MessageType.TEXT -> decryptMessage(repliedMsg.content)
                         MessageType.IMAGE -> "[Hình ảnh]"
                         MessageType.VOICE -> "[Tin nhắn âm thanh]"
                         else -> "[Tin nhắn]"
                     }
                     replyLayoutField.setOnClickListener {
                         if (repliedMsgIndex != -1) {
-//                            val recycler = holder.itemView.parent as? RecyclerView
-//                            recycler?.scrollToPosition(repliedMsgIndex)
-//
-//                            // highlight tin nhắn
-//                            recycler?.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
-//                                highlightMessage(vh)
-//                            }
+
                             val recycler = holder.itemView.parent as? RecyclerView
                             recycler?.let { rv ->
                                 rv.post {
                                     rv.smoothScrollToPosition(repliedMsgIndex)
                                     rv.postDelayed({
-                                        rv.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
-                                            highlightMessage(vh)
-                                        }
+                                        rv.findViewHolderForAdapterPosition(repliedMsgIndex)
+                                            ?.let { vh ->
+                                                highlightMessage(vh)
+                                            }
                                     }, 200) // delay cho scroll hoàn tất
                                 }
                             }
@@ -346,9 +385,17 @@ class ChatAdapter(
         private fun bindHistory(item: MessageModel) {
             binding.layoutHistory.visibility = View.GONE
             binding.layoutHistory.removeAllViews()
-            item.editHistory?.forEach { oldText ->
+
+            item.editHistory?.forEach { encryptedOldText ->
+                val decryptedText = try {
+                    AesHelper.decrypt(encryptedOldText, conversationKey)
+                } catch (e: Exception) {
+                    Log.e("ChatAdapter", "Failed to decrypt edit history", e)
+                    "[Tin nhắn không thể đọc]"
+                }
+
                 val tv = TextView(binding.root.context).apply {
-                    text = oldText
+                    text = decryptedText
                     textSize = 13f
                     setTextColor(Color.parseColor("#555555"))
                     setPadding(12, 8, 12, 8)
@@ -357,101 +404,123 @@ class ChatAdapter(
                 }
                 binding.layoutHistory.addView(tv)
             }
+
+            // Toggle visibility khi bấm vào message
             binding.tvMessage.setOnClickListener {
-                binding.layoutHistory.visibility = if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                binding.layoutHistory.visibility =
+                    if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
             }
         }
     }
 
-    // --- IncomingViewHolder tương tự ---
+        // --- IncomingViewHolder tương tự ---
     inner class IncomingViewHolder(private val binding: ItemChatMessageIncomingBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        fun getContainer(): View = binding.root
+            fun getContainer(): View = binding.root
 
 
-        fun bind(item: MessageModel, sender: UserModel) {
-            binding.tvMessage.text = item.content.trim()
-            binding.tvTime.text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
-            Glide.with(binding.root.context)
-                .load(sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user)
-                .circleCrop()
-                .into(binding.ivAvatar)
-            binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
+            fun bind(item: MessageModel, sender: UserModel) {
+//            binding.tvMessage.text = item.content.trim
+                binding.tvMessage.text = decryptMessage(item.content).trim()
 
-            bindReply(item, this)
-            bindHistory(item)
+                binding.tvTime.text =
+                    SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(item.createdAt))
+                Glide.with(binding.root.context)
+                    .load(
+                        sender.profilePictureUrl ?: item.senderAvatar ?: R.drawable.image_avata_user
+                    )
+                    .circleCrop()
+                    .into(binding.ivAvatar)
+                binding.tvEdited.visibility = if (item.isEdited) View.VISIBLE else View.GONE
 
-            itemView.setOnLongClickListener { onReply?.invoke(item); true }
-        }
+                bindReply(item, this)
+                bindHistory(item)
 
-        private fun bindReply(message: MessageModel, holder: RecyclerView.ViewHolder) {
-            val replyLayoutField = holder.itemView.findViewById<LinearLayout>(R.id.layoutReply)
-            val replySenderField = holder.itemView.findViewById<TextView>(R.id.tvReplyUser)
-            val replyContentField = holder.itemView.findViewById<TextView>(R.id.tvReplyContent)
+                itemView.setOnLongClickListener { onReply?.invoke(item); true }
+            }
 
-            if (message.replyTo != null) {
-                val repliedMsgIndex = messages.indexOfFirst { it.messageId == message.replyTo }
-                val repliedMsg = messages.getOrNull(repliedMsgIndex)
+            private fun bindReply(message: MessageModel, holder: RecyclerView.ViewHolder) {
+                val replyLayoutField = holder.itemView.findViewById<LinearLayout>(R.id.layoutReply)
+                val replySenderField = holder.itemView.findViewById<TextView>(R.id.tvReplyUser)
+                val replyContentField = holder.itemView.findViewById<TextView>(R.id.tvReplyContent)
 
-                if (repliedMsg != null) {
-                    replyLayoutField.visibility = View.VISIBLE
-                    replySenderField.text = repliedMsg.senderName ?: "Người dùng"
-                    replyContentField.text = when (repliedMsg.messageType) {
-                        MessageType.TEXT -> repliedMsg.content
-                        MessageType.IMAGE -> "[Hình ảnh]"
-                        MessageType.VOICE -> "[Tin nhắn âm thanh]"
-                        else -> "[Tin nhắn]"
-                    }
+                if (message.replyTo != null) {
+                    val repliedMsgIndex = messages.indexOfFirst { it.messageId == message.replyTo }
+                    val repliedMsg = messages.getOrNull(repliedMsgIndex)
 
-                    // Khi bấm vào layoutReply -> scroll tới tin nhắn được reply và highlight
-                    replyLayoutField.setOnClickListener {
-                        if (repliedMsgIndex != -1) {
+                    if (repliedMsg != null) {
+                        replyLayoutField.visibility = View.VISIBLE
+                        replySenderField.text = repliedMsg.senderName ?: "Người dùng"
+                        replyContentField.text = when (repliedMsg.messageType) {
+//                        MessageType.TEXT -> repliedMsg.content
+                            MessageType.TEXT -> decryptMessage(repliedMsg.content)
 
-                            val recycler = holder.itemView.parent as? RecyclerView
-                            recycler?.let { rv ->
-                                rv.post {
-                                    rv.smoothScrollToPosition(repliedMsgIndex)
-                                    rv.postDelayed({
-                                        rv.findViewHolderForAdapterPosition(repliedMsgIndex)?.let { vh ->
-                                            highlightMessage(vh)
-                                        }
-                                    }, 200) // delay cho scroll hoàn tất
-                                }
-                            }
-
+                            MessageType.IMAGE -> "[Hình ảnh]"
+                            MessageType.VOICE -> "[Tin nhắn âm thanh]"
+                            else -> "[Tin nhắn]"
                         }
+
+                        // Khi bấm vào layoutReply -> scroll tới tin nhắn được reply và highlight
+                        replyLayoutField.setOnClickListener {
+                            if (repliedMsgIndex != -1) {
+
+                                val recycler = holder.itemView.parent as? RecyclerView
+                                recycler?.let { rv ->
+                                    rv.post {
+                                        rv.smoothScrollToPosition(repliedMsgIndex)
+                                        rv.postDelayed({
+                                            rv.findViewHolderForAdapterPosition(repliedMsgIndex)
+                                                ?.let { vh ->
+                                                    highlightMessage(vh)
+                                                }
+                                        }, 200) // delay cho scroll hoàn tất
+                                    }
+                                }
+
+                            }
+                        }
+                    } else {
+                        replyLayoutField.visibility = View.GONE
                     }
                 } else {
                     replyLayoutField.visibility = View.GONE
                 }
-            } else {
-                replyLayoutField.visibility = View.GONE
             }
-        }
 
 
-        private fun bindHistory(item: MessageModel) {
-            binding.layoutHistory.visibility = View.GONE
-            binding.layoutHistory.removeAllViews()
-            item.editHistory?.forEach { oldText ->
-                val tv = TextView(binding.root.context).apply {
-                    text = oldText
-                    textSize = 13f
-                    setTextColor(Color.parseColor("#555555"))
-                    setPadding(12, 8, 12, 8)
-                    background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
-                    maxWidth = 260
+            private fun bindHistory(item: MessageModel) {
+                binding.layoutHistory.visibility = View.GONE
+                binding.layoutHistory.removeAllViews()
+
+                item.editHistory?.forEach { encryptedOldText ->
+                    val decryptedText = try {
+                        AesHelper.decrypt(encryptedOldText, conversationKey)
+                    } catch (e: Exception) {
+                        Log.e("ChatAdapter", "Failed to decrypt edit history", e)
+                        "[Tin nhắn không thể đọc]"
+                    }
+
+                    val tv = TextView(binding.root.context).apply {
+                        text = decryptedText
+                        textSize = 13f
+                        setTextColor(Color.parseColor("#555555"))
+                        setPadding(12, 8, 12, 8)
+                        background = ContextCompat.getDrawable(context, R.drawable.bg_edit_history)
+                        maxWidth = 260
+                    }
+                    binding.layoutHistory.addView(tv)
                 }
-                binding.layoutHistory.addView(tv)
-            }
-            binding.tvMessage.setOnClickListener {
-                binding.layoutHistory.visibility = if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+
+                // Toggle visibility khi bấm vào message
+                binding.tvMessage.setOnClickListener {
+                    binding.layoutHistory.visibility =
+                        if (binding.layoutHistory.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+                }
             }
         }
-    }
 
 
-    // --- MediaPlayer ---
+            // --- MediaPlayer ---
     private fun playAudio(url: String, holder: RecyclerView.ViewHolder) {
         Log.d("ChatAdapter", "Attempting to play: $url")
         mediaPlayer?.release()
@@ -508,6 +577,7 @@ class ChatAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val msg = messages[position]
+
 
         if (msg.isDeleted) {
 
@@ -620,5 +690,23 @@ class ChatAdapter(
         currentlyPlayingUrl = null
         currentlyPlayingHolder = null
     }
+
+    fun updateConversationKey(newKey: SecretKey) {
+        this.conversationKey = newKey
+        notifyDataSetChanged()
+    }
+
+
+    private fun decryptMessage(content: String): String {
+        return try {
+            val decrypted = AesHelper.decrypt(content, conversationKey)
+            Log.d("ChatAdapter", "✅ Decrypted message: $decrypted")
+            decrypted
+        } catch (e: Exception) {
+            Log.e("ChatAdapter", "❌ Failed to decrypt message: $content", e)
+            "[Tin nhắn không thể đọc]"
+        }
+    }
+
 
 }

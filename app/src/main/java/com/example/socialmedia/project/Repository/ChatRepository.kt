@@ -7,6 +7,7 @@ import com.example.socialmedia.project.Domain.Enum.MessageType
 import com.example.socialmedia.project.Domain.Model.ConversationModel
 import com.example.socialmedia.project.Domain.Model.MessageModel
 import com.example.socialmedia.project.Domain.Model.UserModel
+import com.example.socialmedia.project.Helper.AesHelper
 import com.example.socialmedia.project.Server.Firebase.FirebaseService
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.*
@@ -123,7 +124,45 @@ class ChatRepository {
             }
     }
 
-    fun editMessage(conversationId: String, message: MessageModel, onComplete: (Boolean) -> Unit) {
+//    fun editMessage(conversationId: String, message: MessageModel, onComplete: (Boolean) -> Unit) {
+//        val msgRef = db.collection("conversations")
+//            .document(conversationId)
+//            .collection("messages")
+//            .document(message.messageId)
+//
+//        msgRef.get().addOnSuccessListener { snapshot ->
+//            val oldMessage = snapshot.toObject(MessageModel::class.java)
+//            if (oldMessage != null) {
+//                val newHistory = oldMessage.editHistory?.toMutableList() ?: mutableListOf()
+//                newHistory.add(oldMessage.content)
+//
+//                val updateMap = mapOf(
+//                    "content" to message.content,
+//                    "isEdited" to true,
+//                    "editedAt" to System.currentTimeMillis(),
+//                    "editHistory" to newHistory
+//                )
+//
+//                msgRef.update(updateMap)
+//                    .addOnSuccessListener { onComplete(true) }
+//                    .addOnFailureListener { e ->
+//                        Log.e("ChatRepository", "Failed to edit message", e)
+//                        onComplete(false)
+//                    }
+//            } else {
+//                onComplete(false)
+//            }
+//        }.addOnFailureListener {
+//            Log.e("ChatRepository", "Failed to get old message", it)
+//            onComplete(false)
+//        }
+//    }
+    fun editMessage(
+        conversationId: String,
+        message: MessageModel,
+        conversationKey: String, // key AES lưu dưới dạng String
+        onComplete: (Boolean) -> Unit
+    ) {
         val msgRef = db.collection("conversations")
             .document(conversationId)
             .collection("messages")
@@ -132,11 +171,23 @@ class ChatRepository {
         msgRef.get().addOnSuccessListener { snapshot ->
             val oldMessage = snapshot.toObject(MessageModel::class.java)
             if (oldMessage != null) {
+                // Tạo SecretKey từ String
+                val secretKey = AesHelper.stringToKey(conversationKey)
+
+                // Mã hóa content mới
+                val encryptedContent = try {
+                    AesHelper.encrypt(message.content, secretKey)
+                } catch (e: Exception) {
+                    Log.e("ChatRepository", "Failed to encrypt message", e)
+                    message.content // fallback: lưu thẳng nếu lỗi
+                }
+
+                // Lưu lịch sử: có thể lưu bản gốc hoặc bản đã mã hóa
                 val newHistory = oldMessage.editHistory?.toMutableList() ?: mutableListOf()
-                newHistory.add(oldMessage.content)
+                newHistory.add(oldMessage.content) // lưu bản cũ (đã mã hóa trước đó)
 
                 val updateMap = mapOf(
-                    "content" to message.content,
+                    "content" to encryptedContent,
                     "isEdited" to true,
                     "editedAt" to System.currentTimeMillis(),
                     "editHistory" to newHistory
@@ -156,6 +207,7 @@ class ChatRepository {
             onComplete(false)
         }
     }
+
 
     fun sendMessage(
         conversationId: String?,
