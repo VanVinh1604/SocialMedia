@@ -32,8 +32,8 @@ class ReelsFragment : Fragment() {
     // 🔄 BIẾN QUẢN LÝ LOAD MORE
     private var isLoadingMore = false
     private var hasMoreReels = true
-    private val BATCH_SIZE = 10              // Load 20 video mỗi lần
-    private val LOAD_MORE_THRESHOLD = 5      // Load thêm khi còn 5 video
+    private val BATCH_SIZE = 10
+    private val LOAD_MORE_THRESHOLD = 5
 
     private val TAG = "ReelsFragment"
 
@@ -48,6 +48,8 @@ class ReelsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // ✅ ẨN HOÀN TOÀN UI CỦA MAINACTIVITY
+        hideSystemUI()
         hideBottomNavigation()
         removeNavHostPadding()
 
@@ -59,7 +61,7 @@ class ReelsFragment : Fragment() {
         setupAdapter()
         setupViewPager()
 
-        // 🐛 NÚT DEBUG
+   /*     // 🐛 NÚT DEBUG
         view.findViewById<View>(R.id.btnDebug)?.setOnClickListener {
             recommendationEngine.getHashtagScoresDebug { scores ->
                 Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -72,19 +74,46 @@ class ReelsFragment : Fragment() {
                 Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 Toast.makeText(requireContext(), "Check Logcat!", Toast.LENGTH_SHORT).show()
             }
-        }
+        }*/
 
         // 🎯 LOAD BATCH ĐẦU TIÊN
         loadMoreRecommendedReels()
     }
 
+    // ✅ ẨN HOÀN TOÀN SYSTEM UI (STATUS BAR + NAVIGATION BAR)
+    private fun hideSystemUI() {
+        @Suppress("DEPRECATION")
+        activity?.window?.decorView?.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+    }
+
+    // ✅ KHÔI PHỤC LẠI SYSTEM UI
+    private fun showSystemUI() {
+        @Suppress("DEPRECATION")
+        activity?.window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+    }
+
+    // ✅ ẨN BOTTOM NAVIGATION + FAB
     private fun hideBottomNavigation() {
         activity?.findViewById<View>(R.id.container)?.visibility = View.GONE
     }
 
-    private fun removeNavHostPadding() {
-        activity?.findViewById<View>(R.id.navHostFragment)?.setPadding(0, 0, 0, 0)
+    // ✅ HIỆN LẠI BOTTOM NAVIGATION + FAB
+    private fun showBottomNavigation() {
+        activity?.findViewById<View>(R.id.container)?.visibility = View.VISIBLE
     }
+
+    // ✅ XÓA PADDING BOTTOM CỦA NAVHOSTFRAGMENT
+    private fun removeNavHostPadding() {
+        activity?.findViewById<View>(R.id.navHostFragment)?.apply {
+            setPadding(0, 0, 0, 0)
+        }
+    }
+
+
 
     private fun setupAdapter() {
         adapter = ReelsAdapter(
@@ -119,11 +148,12 @@ class ReelsFragment : Fragment() {
             },
 
             onFollowClick = { reel, _ ->
+                Log.d(TAG, "👥 FOLLOW: ${reel.userId}")
                 Toast.makeText(requireContext(), "Following ${reel.userId}", Toast.LENGTH_SHORT).show()
             },
 
             onProfileClick = { reel, _ ->
-                Toast.makeText(requireContext(), "Profile: ${reel.userId}", Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "👤 PROFILE CLICK: ${reel.userId}")
             }
         )
     }
@@ -197,7 +227,6 @@ class ReelsFragment : Fragment() {
 
         Log.d(TAG, "📊 Position: $currentPosition, Total: ${reelsList.size}, Remaining: $remainingReels")
 
-        // Nếu còn <= 5 video → load thêm
         if (remainingReels <= LOAD_MORE_THRESHOLD) {
             Log.d(TAG, "🔄 Triggering load more...")
             loadMoreRecommendedReels()
@@ -298,6 +327,13 @@ class ReelsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+
+        // ✅ ẨN LẠI UI KHI QUAY LẠI REELSFRAGMENT
+        hideSystemUI()
+        hideBottomNavigation()
+        removeNavHostPadding()
+
+        // Play video hiện tại
         getViewHolderAtPosition(viewPager.currentItem)?.let {
             adapter.playVideo(viewPager.currentItem, it)
         }
@@ -306,6 +342,12 @@ class ReelsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        // ✅ KHÔI PHỤC LẠI UI KHI RỜI KHỎI REELSFRAGMENT
+        showSystemUI()
+        showBottomNavigation()
+
+
         videoStartTime = 0
         viewPager.adapter = null
     }

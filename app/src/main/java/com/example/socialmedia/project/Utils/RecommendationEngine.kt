@@ -68,39 +68,38 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         val now = System.currentTimeMillis()
 
         interactions.forEach { interaction ->
-            // 🎯 ĐIỂM GỐC THEO LOẠI TƯƠNG TÁC - ✅ TĂNG TRỌNG SỐ
+            //  ĐIỂM GỐC THEO LOẠI TƯƠNG TÁC
             val baseWeight = when (interaction.interactionType) {
-                "LIKE" -> 20.0        // ← Tăng từ 10.0
-                "COMMENT" -> 15.0     // ← Tăng từ 8.0
-                "SHARE" -> 12.0       // ← Tăng từ 6.0
+                "LIKE" -> 20.0
+                "COMMENT" -> 15.0
+                "SHARE" -> 12.0
                 "WATCH_TIME" -> {
                     // Xem > 15 giây = video hay
-                    if (interaction.duration > 15000) 10.0 else 2.0  // ← Tăng từ 5.0/1.0
+                    if (interaction.duration > 15000) 10.0 else 2.0
                 }
                 "VIEW" -> 2.0
 
-                // ❌ TÍN HIỆU TIÊU CỰC - ✅ TĂNG PENALTY
-                "HIDE" -> -30.0       // ← Tăng từ -15.0
-                "SKIP" -> -5.0        // ← Tăng từ -3.0
+
+                "HIDE" -> -30.0
+                "SKIP" -> -5.0
 
                 else -> 0.0
             }
 
-            // ⏳ TIME DECAY: Tương tác càng cũ càng ít giá trị - ✅ GIẢM TỐC ĐỘ DECAY
-            // Mỗi 7 ngày giảm 5% (0.95^(days/7)) thay vì 10%
+            //  TIME DECAY
             val daysSince = (now - interaction.timestamp) / (1000.0 * 60 * 60 * 24)
-            val decayFactor = 0.95.pow(daysSince / 7.0)  // ← Đổi từ 0.9
+            val decayFactor = 0.95.pow(daysSince / 7.0)
 
-            // 🎯 ĐIỂM CUỐI = ĐIỂM GỐC × HỆ SỐ GIẢM
+            // ĐIỂM CUỐI = ĐIỂM GỐC × HỆ SỐ GIẢM
             val finalWeight = baseWeight * decayFactor
 
-            // 📊 CỘNG ĐIỂM CHO TỪNG HASHTAG
+            // CỘNG ĐIỂM CHO TỪNG HASHTAG
             interaction.hashtags.forEach { tag ->
                 scores[tag] = scores.getOrDefault(tag, 0.0) + finalWeight
             }
         }
 
-        // 📋 LOG TOP 10 HASHTAGS
+        //  LOG TOP 10 HASHTAGS
         Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━")
         Log.d(TAG, "📊 TOP HASHTAG SCORES:")
         scores.entries
@@ -114,7 +113,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         return scores
     }
 
-    // 🎬 FETCH REELS VÀ TÍNH ĐIỂM - ✅ FIXED
+    //  FETCH REELS VÀ TÍNH ĐIỂM
     private fun fetchAndScoreReels(
         viewedIds: List<String>,
         hashtagScores: Map<String, Double>,
@@ -132,14 +131,14 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
                         val reel = child.getValue(ReelModel::class.java) ?: continue
                         allReels.add(reel)
 
-                        // 🚫 BỎ QUA VIDEO CỦA CHÍNH USER HOẶC ĐÃ XEM
 
 
-                        // 🧮 TÍNH ĐIỂM
+
+                        //  TÍNH ĐIỂM
                         val score = calculateReelScore(reel, hashtagScores, viewedIds)
 
-                        // ✅ CHỈ THÊM NẾU ĐIỂM > 20 - ✅ TĂNG THRESHOLD
-                        if (score > 20.0) {  // ← Tăng từ 5.0
+                        //  CHỈ THÊM NẾU ĐIỂM > 20
+                        if (score > 20.0) {
                             recommendedReels.add(reel to score)
                         }
                     }
@@ -161,7 +160,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    // 📦 LOAD VIDEO THEO BATCH (20 VIDEO MỖI LẦN)
+
     fun getRecommendedReelsBatch(batchSize: Int, callback: (List<ReelModel>) -> Unit) {
         if (currentUserId.isEmpty()) {
             Log.w(TAG, "⚠️ User not logged in")
@@ -185,7 +184,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
         }
     }
 
-    // 📦 FETCH BATCH - ✅ FIXED
+    //  FETCH BATCH - ✅ FIXED
     private fun fetchAndScoreReelsBatch(
         viewedIds: List<String>,
         hashtagScores: Map<String, Double>,
@@ -211,16 +210,16 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
 
                         // 🧮 Tính điểm
                         val score = calculateReelScore(reel, hashtagScores, viewedIds)
-                        if (score > 20.0) {  // ← Tăng từ 5.0
+                        if (score > 20.0) {
                             recommendedReels.add(reel to score)
                         }
                     }
 
-                    // 📊 TỈ LỆ 90/10 - ✅ TĂNG TỈ LỆ RECOMMENDED
-                    val numRecommended = (batchSize * 0.9).toInt()  // ← Tăng từ 0.8
+                    // TỈ LỆ 90/10
+                    val numRecommended = (batchSize * 0.9).toInt()
                     val numRandom = batchSize - numRecommended
 
-                    // 🎯 Lấy video đề xuất (sắp xếp theo điểm)
+                    // Lấy video đề xuất (sắp xếp theo điểm)
                     val recommendedPart = recommendedReels
                         .sortedByDescending { it.second }
                         .map { it.first }
@@ -246,7 +245,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    // 🎲 LOAD VIDEO NGẪU NHIÊN (KHI USER CHƯA CÓ TƯƠNG TÁC)
+    //  LOAD VIDEO NGẪU NHIÊN (KHI USER CHƯA CÓ TƯƠNG TÁC)
     private fun loadRandomReelsBatch(batchSize: Int, callback: (List<ReelModel>) -> Unit) {
         database.reference.child("Reels")
             .orderByChild("createdAt")
@@ -275,56 +274,67 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             })
     }
 
-    // 🧮 TÍNH ĐIỂM CHO 1 VIDEO - ✅ FIXED
     private fun calculateReelScore(
         reel: ReelModel,
         hashtagScores: Map<String, Double>,
         viewedIds: List<String>
     ): Double {
 
-        // 1️⃣ ĐIỂM TỪ HASHTAG (Điểm chính) - ✅ TRỌNG SỐ ĐÃ TĂNG
-        val hashtagScore = reel.hashtags.sumOf {
-            hashtagScores.getOrDefault(it, 0.0)
+
+        if (reel.hashtags.isEmpty()) {
+            Log.d(TAG, "BLOCKED ${reel.reelId.take(8)}... – NO HASHTAGS → score = 0.0")
+            return 0.0
         }
 
-        // 2️⃣ ĐIỂM PHỔ BIẾN (Video nhiều tương tác)
-        val popularityScore = (reel.likeCount * 0.5) +
-                (reel.commentCount * 0.3) +
-                (reel.shareCount * 0.2)
+        // TÍNH ĐIỂM BÌNH THƯỜNG
+        val hashtagScore = reel.hashtags.sumOf { hashtagScores.getOrDefault(it, 0.0) }
 
-        // 3️⃣ ĐIỂM MỚI (Video càng mới càng ưu tiên) - ✅ GIẢM BONUS
-        val hoursSincePost = (System.currentTimeMillis() - reel.createdAt) / (1000 * 60 * 60)
-        val recencyScore = when {
-            hoursSincePost < 24 -> 15.0   // ← Giảm từ 50.0
-            hoursSincePost < 72 -> 8.0    // ← Giảm từ 25.0
-            hoursSincePost < 168 -> 3.0   // ← Giảm từ 10.0
+        // Boost mạnh video viral
+        val rawPop = reel.likeCount * 1.0 + reel.commentCount * 2.0 + reel.shareCount * 1.5
+        val popularityScore = when {
+            rawPop > 1000 -> rawPop * 0.9
+            rawPop > 500  -> rawPop * 0.7
+            rawPop > 100  -> rawPop * 0.5
+            else          -> rawPop * 0.2
+        }
+
+        // Time decay + bonus
+        val hoursOld = (System.currentTimeMillis() - reel.createdAt) / (1000.0 * 60 * 60)
+        val daysOld = hoursOld / 24.0
+
+        val decay = when {
+            daysOld < 1  -> 1.00
+            daysOld < 3  -> 0.80
+            daysOld < 5  -> 0.55
+            daysOld < 7  -> 0.35
+            daysOld < 14 -> 0.15
+            else         -> 0.05
+        }
+
+        val recencyBonus = when {
+            hoursOld < 6 -> 12.0
+            hoursOld < 12 -> 9.0
+            hoursOld < 24 -> 6.0
+            hoursOld < 48 -> 3.0
             else -> 0.0
         }
 
-        // 4️⃣ ĐIỂM ĐA DẠNG (Tránh 1 hashtag chiếm hết)
-        val uniqueMatchedHashtags = reel.hashtags.intersect(hashtagScores.keys).size
-        val diversityBonus = if (uniqueMatchedHashtags > 0) 5.0 else 0.0
+        val decayedHashtag = hashtagScore * decay
+        val decayedPop = popularityScore * decay
+        val diversityBonus = if (reel.hashtags.any { it in hashtagScores }) 6.0 * decay else 0.0
 
-        // 🎯 TỔNG ĐIỂM
-        val totalScore = hashtagScore + popularityScore + recencyScore + diversityBonus
+        val totalScore = decayedHashtag + decayedPop + recencyBonus + diversityBonus
 
-        // 📋 LOG CHI TIẾT
+        // Log đẹp
         if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, """
-        📊 Score for ${reel.reelId.take(8)}:
-           Hashtags: ${reel.hashtags}
-           Hashtag Score: %.2f
-           Popularity: %.2f
-           Recency: %.2f (${hoursSincePost}h)
-           Diversity: %.2f
-           → TOTAL: %.2f
-    """.trimIndent().format(hashtagScore, popularityScore, recencyScore, diversityBonus, totalScore))
+            Log.d(TAG, "Score ${reel.reelId.take(8)} | ${reel.caption?.take(20) ?: ""} | ${daysOld.toInt()}d")
+            Log.d(TAG, "   Tags:$reel.hashtags  H:%.1f→%.1f  P:%.1f  Bonus:+%.1f  → %.2f"
+                .format(hashtagScore, decayedHashtag, decayedPop, recencyBonus + diversityBonus, totalScore))
         }
 
         return totalScore
     }
-
-    // 🎲 TRỘN VIDEO ĐỀ XUẤT VỚI VIDEO NGẪU NHIÊN - ✅ FIXED
+    // TRỘN VIDEO ĐỀ XUẤT VỚI VIDEO NGẪU NHIÊN
     private fun mixRecommendations(
         recommendedReels: List<ReelModel>,
         allReels: List<ReelModel>
@@ -439,7 +449,7 @@ class RecommendationEngine(private val database: FirebaseDatabase) {
             }
     }
 
-    // 🐛 DEBUG: XEM ĐIỂM HASHTAG
+    // DEBUG: XEM ĐIỂM HASHTAG
     fun getHashtagScoresDebug(callback: (Map<String, Double>) -> Unit) {
         if (currentUserId.isEmpty()) {
             Log.w(TAG, "⚠️ User not logged in")

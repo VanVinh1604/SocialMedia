@@ -9,14 +9,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.socialmedia.R
 import com.example.socialmedia.databinding.FragmentSearchBinding
-import com.example.socialmedia.project.Adapter.ExploreGridAdapter
 import com.example.socialmedia.project.Adapter.SearchAdapter
 import com.example.socialmedia.project.Adapter.SearchHistoryAdapter
-import com.example.socialmedia.project.Domain.Model.PostMediaModel
 import com.example.socialmedia.project.Domain.Model.UserModel
 import com.example.socialmedia.project.Helper.SearchHistoryHelper
 import com.google.firebase.auth.FirebaseAuth
@@ -32,7 +29,6 @@ class SearchFragment : Fragment() {
 
     private lateinit var searchAdapter: SearchAdapter
     private lateinit var historyAdapter: SearchHistoryAdapter
-    private lateinit var exploreGridAdapter: ExploreGridAdapter
     private val database = FirebaseDatabase.getInstance()
     private lateinit var searchHistoryHelper: SearchHistoryHelper
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
@@ -62,9 +58,8 @@ class SearchFragment : Fragment() {
         setupSearchBar()
         loadFollowData()
 
-        // Hiển thị explore grid khi mới vào
-        showExploreGrid()
-        loadExplorePosts()
+        // ✅ Hiển thị history khi mới vào (thay vì explore grid)
+        showHistory()
     }
 
     private fun hideBottomNavigation() {
@@ -95,34 +90,14 @@ class SearchFragment : Fragment() {
     }
 
     private fun setupRecyclerViews() {
-        // Explore Grid Adapter
-        exploreGridAdapter = ExploreGridAdapter(
-            onPostClick = { postMediaModel ->
-                onPostClick(postMediaModel)
-            }
-        )
-
-        binding.recyclerViewExplore.apply {
-            // Sử dụng 3 columns để tạo layout 2x2 + 1 large
-            val gridLayoutManager = GridLayoutManager(requireContext(), 3)
-            gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                override fun getSpanSize(position: Int): Int {
-                    return exploreGridAdapter.getSpanSize(position)
-                }
-            }
-            layoutManager = gridLayoutManager
-            adapter = exploreGridAdapter
-
-            // Tắt animation để tránh glitch
-            itemAnimator = null
-        }
+        // ✅ XÓA PHẦN EXPLORE GRID ADAPTER
+        // Chỉ giữ lại Search và History Adapter
 
         // Search User Adapter
         searchAdapter = SearchAdapter(
             onUserClick = { user ->
                 searchHistoryHelper.addSearchHistory(user)
                 android.util.Log.d("SearchFragment", "User clicked: ${user.firstName} ${user.lastName}")
-                // TODO: Navigate to user profile
             }
         )
         binding.recyclerViewSearch.apply {
@@ -135,7 +110,6 @@ class SearchFragment : Fragment() {
             onUserClick = { user ->
                 searchHistoryHelper.addSearchHistory(user)
                 android.util.Log.d("SearchFragment", "History user clicked: ${user.firstName} ${user.lastName}")
-                // TODO: Navigate to user profile
             },
             onRemoveClick = { user ->
                 searchHistoryHelper.removeSearchHistory(user.userId)
@@ -146,16 +120,14 @@ class SearchFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = historyAdapter
         }
-    }
 
-    private fun onPostClick(postMediaModel: PostMediaModel) {
-        android.util.Log.d("SearchFragment", "Post clicked: ${postMediaModel.postId}")
-        // TODO: Navigate to post detail
+        // ✅ ẨN EXPLORE RECYCLERVIEW
+        binding.recyclerViewExplore.visibility = View.GONE
     }
 
     private fun loadFollowData() {
         currentUserId?.let { userId ->
-            database.reference.child(userId).child("following")
+            database.reference.child("Follow").child(userId).child("following")
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         followingList.clear()
@@ -170,7 +142,7 @@ class SearchFragment : Fragment() {
                     override fun onCancelled(error: DatabaseError) {}
                 })
 
-            database.reference.child(userId).child("followers")
+            database.reference.child("Follow").child(userId).child("followers")
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         followersList.clear()
@@ -214,7 +186,8 @@ class SearchFragment : Fragment() {
                     if (binding.editTextSearch.hasFocus()) {
                         showHistory()
                     } else {
-                        showExploreGrid()
+                        // ✅ Không còn showExploreGrid nữa, chỉ show history
+                        showHistory()
                     }
                 } else {
                     binding.btnClearSearch.visibility = View.VISIBLE
@@ -234,59 +207,12 @@ class SearchFragment : Fragment() {
 
         binding.textViewSeeMore.setOnClickListener {
             android.util.Log.d("SearchFragment", "See more clicked")
+            // TODO: Show all history
         }
     }
 
-    private fun loadExplorePosts() {
-        database.reference.child("posts")
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val mediaList = mutableListOf<PostMediaModel>()
-
-                    for (postSnapshot in snapshot.children) {
-                        val postId = postSnapshot.key ?: continue
-
-                        // Lấy media từ node mediaList
-                        val mediaListSnapshot = postSnapshot.child("mediaList")
-                        for (media in mediaListSnapshot.children) {
-                            val mediaType = media.child("mediaType").getValue(String::class.java)
-                            if (mediaType == "IMAGE") {
-                                val postMediaModel = PostMediaModel(
-                                    mediaId = media.child("mediaId").getValue(String::class.java) ?: "",
-                                    postId = postId,
-                                    mediaUrl = media.child("mediaUrl").getValue(String::class.java) ?: "",
-                                    mediaOrder = media.child("mediaOrder").getValue(Int::class.java) ?: 0,
-                                    width = media.child("width").getValue(Int::class.java) ?: 1080,
-                                    height = media.child("height").getValue(Int::class.java) ?: 1080
-                                )
-                                mediaList.add(postMediaModel)
-                            }
-                        }
-                    }
-
-                    // Shuffle để hiển thị ngẫu nhiên
-                    val shuffledList = mediaList.shuffled()
-                    exploreGridAdapter.submitList(shuffledList)
-
-                    android.util.Log.d("SearchFragment", "Loaded ${shuffledList.size} explore images")
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e("SearchFragment", "Error loading posts: ${error.message}")
-                }
-            })
-    }
-
-    private fun showExploreGrid() {
-        isSearchMode = false
-        binding.recyclerViewExplore.visibility = View.VISIBLE
-        binding.recyclerViewSearch.visibility = View.GONE
-        binding.recyclerViewHistory.visibility = View.GONE
-        binding.textViewSeeMore.visibility = View.GONE
-        binding.layoutHistoryHeader.visibility = View.GONE
-    }
-
     private fun searchUsers(query: String) {
+        // ✅ Ẩn explore và history
         binding.recyclerViewExplore.visibility = View.GONE
         binding.recyclerViewHistory.visibility = View.GONE
         binding.recyclerViewSearch.visibility = View.VISIBLE
@@ -350,6 +276,7 @@ class SearchFragment : Fragment() {
     }
 
     private fun showHistory() {
+        // ✅ Ẩn explore và search results
         binding.recyclerViewExplore.visibility = View.GONE
         binding.recyclerViewSearch.visibility = View.GONE
 

@@ -1,10 +1,9 @@
-// ========================================
-// FILE 1: ReelsAdapter.kt - COMPLETE FIXED VERSION
-// ========================================
+
 package com.example.socialmedia.project.Adapter
 
 import androidx.appcompat.app.AppCompatActivity
 import android.annotation.SuppressLint
+import android.os.Bundle
 import android.util.Log
 import android.view.*
 import android.widget.*
@@ -21,6 +20,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.common.util.UnstableApi
+import androidx.navigation.Navigation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import java.util.UUID
@@ -119,14 +119,13 @@ class ReelsAdapter(
             // ✅ FIX: Like button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutLike).setOnClickListener {
                 toggleLike(reel, position)
-                onLikeClick(reel, position) // ✅ Ghi nhận LIKE
+                onLikeClick(reel, position)
             }
 
             // ✅ FIX: Comment button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutComment).setOnClickListener {
-                onCommentClick(reel, position) // ✅ Ghi nhận COMMENT trước
+                onCommentClick(reel, position)
 
-                // Mở comment sheet
                 val fragment = CommentsBottomSheet.newInstance(reel.reelId, reel.userId)
                 (itemView.context as? androidx.fragment.app.FragmentActivity)?.let { activity ->
                     fragment.show(activity.supportFragmentManager, "CommentsBottomSheet")
@@ -135,11 +134,17 @@ class ReelsAdapter(
 
             // ✅ FIX: Share button - GỌI CALLBACK
             itemView.findViewById<View>(R.id.layoutShare).setOnClickListener {
-                onShareClick(reel, position) // ✅ Ghi nhận SHARE
+                onShareClick(reel, position)
             }
 
+            // ✅ THAY ĐỔI: Click vào avatar
             cvProfilePic.setOnClickListener {
-                onProfileClick(reel, position)
+                navigateToProfile(reel.userId)
+            }
+
+            // ✅ THAY ĐỔI: Click vào username
+            tvUsername.setOnClickListener {
+                navigateToProfile(reel.userId)
             }
 
             itemView.findViewById<ImageView>(R.id.ivBack).setOnClickListener {
@@ -152,7 +157,7 @@ class ReelsAdapter(
                 if (now - lastTapTime < 300) {
                     toggleLike(reel, position)
                     showHeartAnimation()
-                    onLikeClick(reel, position) // ✅ Ghi nhận LIKE khi double tap
+                    onLikeClick(reel, position)
                 } else {
                     togglePlayPause()
                     toggleController()
@@ -177,6 +182,42 @@ class ReelsAdapter(
                 }
             })
             itemView.setOnTouchListener { _, event -> gestureDetector.onTouchEvent(event) }
+        }
+
+        // ✅ HÀM MỚI: Điều hướng đến profile
+        private fun navigateToProfile(targetUserId: String) {
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+
+            if (currentUserId == null) {
+                Toast.makeText(itemView.context, "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val activity = itemView.context as? androidx.fragment.app.FragmentActivity
+            if (activity == null) {
+                Log.e("ReelsAdapter", "Activity is not FragmentActivity")
+                return
+            }
+
+            try {
+                val navController = Navigation.findNavController(activity, R.id.navHostFragment)
+
+                if (targetUserId == currentUserId) {
+                    // ✅ Chuyển đến PersonalProfileFragment (trang của chính mình)
+                    navController.navigate(R.id.personalProfileFragment)
+                    Log.d("ReelsAdapter", "Navigating to PersonalProfileFragment")
+                } else {
+                    // ✅ Chuyển đến ProfileFragment (trang của người khác)
+                    val bundle = Bundle().apply {
+                        putString("userId", targetUserId)
+                    }
+                    navController.navigate(R.id.action_reelsFragment_to_profileFragment, bundle)
+                    Log.d("ReelsAdapter", "Navigating to ProfileFragment with userId: $targetUserId")
+                }
+            } catch (e: Exception) {
+                Log.e("ReelsAdapter", "Navigation error: ${e.message}", e)
+                Toast.makeText(itemView.context, "Không thể mở trang cá nhân", Toast.LENGTH_SHORT).show()
+            }
         }
 
         private fun setupFollowButton(reel: ReelModel) {
@@ -206,6 +247,7 @@ class ReelsAdapter(
 
             btnFollow.setOnClickListener {
                 followUser(currentUserId, reelOwnerId)
+                onFollowClick(reel, bindingAdapterPosition)
             }
         }
 
@@ -431,4 +473,3 @@ class ReelsAdapter(
         super.onViewRecycled(holder)
     }
 }
-

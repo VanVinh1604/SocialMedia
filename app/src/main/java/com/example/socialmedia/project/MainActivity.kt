@@ -47,9 +47,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        findViewById<Button>(R.id.btnDebug).setOnClickListener {
+       /* findViewById<Button>(R.id.btnDebug).setOnClickListener {
             startActivity(Intent(this, RecommendationDebugActivity::class.java))
-        }
+        }*/
         sharedUserViewModel = ViewModelProvider(this)[SharedUserViewModel::class.java]
 
         setupUserPresence()

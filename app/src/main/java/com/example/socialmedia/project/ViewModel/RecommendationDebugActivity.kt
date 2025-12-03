@@ -270,9 +270,10 @@ class RecommendationDebugActivity : AppCompatActivity() {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 📈 4. PHÂN TÍCH SCORING CHI TIẾT
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 📈 4. PHÂN TÍCH SCORING CHI TIẾT - ✅ CẬP NHẬT DECAY
     private fun analyzeVideoScoring() {
         appendLog("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        appendLog("📈 DETAILED SCORING ANALYSIS")
+        appendLog("📈 DETAILED SCORING ANALYSIS (WITH STRONG DECAY)")
         appendLog("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         showProgress()
 
@@ -282,17 +283,30 @@ class RecommendationDebugActivity : AppCompatActivity() {
             // Lấy sample 10 videos để phân tích
             database.reference.child("Reels")
                 .orderByChild("createdAt")
-                .limitToLast(10)
+                .limitToLast(15)  // Tăng lên 15 để test decay
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         hideProgress()
 
-                        appendLog("\n🔍 Phân tích 10 videos gần nhất:\n")
+                        appendLog("\n🔍 Phân tích 15 videos với TIME DECAY MẠNH:\n")
 
                         snapshot.children.forEach { child ->
                             val reel = child.getValue(ReelModel::class.java) ?: return@forEach
 
-                            // Tính điểm thủ công để debug
+                            // 🎯 TÍNH ĐIỂM THEO CÔNG THỨC MỚI
+                            val hoursSincePost = (System.currentTimeMillis() - reel.createdAt) / (1000 * 60 * 60)
+                            val daysSincePost = hoursSincePost / 24.0
+
+                            // Hệ số decay
+                            val recencyDecay = when {
+                                daysSincePost < 1.0 -> 1.0
+                                daysSincePost < 3.0 -> 0.7
+                                daysSincePost < 5.0 -> 0.4
+                                daysSincePost < 7.0 -> 0.2
+                                daysSincePost < 14.0 -> 0.1
+                                else -> 0.05
+                            }
+
                             val hashtagScore = reel.hashtags.sumOf {
                                 hashtagScores.getOrDefault(it, 0.0)
                             }
@@ -301,30 +315,40 @@ class RecommendationDebugActivity : AppCompatActivity() {
                                     (reel.commentCount * 0.3) +
                                     (reel.shareCount * 0.2)
 
-                            val hoursSincePost = (System.currentTimeMillis() - reel.createdAt) / (1000 * 60 * 60)
-                            val recencyScore = when {
-                                hoursSincePost < 24 -> 50.0
-                                hoursSincePost < 72 -> 25.0
-                                hoursSincePost < 168 -> 10.0
+                            // Bonus cho video mới
+                            val recencyBonus = when {
+                                hoursSincePost < 12 -> 8.0
+                                hoursSincePost < 24 -> 5.0
+                                hoursSincePost < 48 -> 3.0
+                                hoursSincePost < 72 -> 1.0
                                 else -> 0.0
                             }
 
-                            val diversityBonus = if (reel.hashtags.intersect(hashtagScores.keys).isNotEmpty()) 5.0 else 0.0
+                            val decayedHashtagScore = hashtagScore * recencyDecay
+                            val decayedPopularityScore = popularityScore * recencyDecay
+                            val diversityBonus = if (reel.hashtags.intersect(hashtagScores.keys).isNotEmpty())
+                                5.0 * recencyDecay else 0.0
 
-                            val totalScore = hashtagScore + popularityScore + recencyScore + diversityBonus
+                            val totalScore = decayedHashtagScore + decayedPopularityScore + recencyBonus + diversityBonus
 
                             appendLog("📹 ${reel.caption?.take(30) ?: "No caption"}")
+                            appendLog("   Tuổi: ${daysSincePost.toInt()} ngày (${hoursSincePost.toInt()}h)")
                             appendLog("   Hashtags: ${reel.hashtags}")
-                            appendLog("   ├─ Hashtag Score: %.2f".format(hashtagScore))
-                            appendLog("   ├─ Popularity: %.2f (L:${reel.likeCount} C:${reel.commentCount})".format(popularityScore))
-                            appendLog("   ├─ Recency: %.2f (${hoursSincePost}h ago)".format(recencyScore))
+                            appendLog("   ├─ Hashtag Score: %.2f → %.2f (decay %.0f%%)".format(
+                                hashtagScore, decayedHashtagScore, recencyDecay * 100))
+                            appendLog("   ├─ Popularity: %.2f → %.2f (decay %.0f%%)".format(
+                                popularityScore, decayedPopularityScore, recencyDecay * 100))
+                            appendLog("   ├─ Recency Bonus: %.2f".format(recencyBonus))
                             appendLog("   ├─ Diversity: %.2f".format(diversityBonus))
                             appendLog("   └─ TOTAL: %.2f".format(totalScore))
 
-                            if (totalScore > 5.0) {
-                                appendLog("   ✅ PASS (>5.0) - Sẽ được đề xuất")
+                            // 🎯 THRESHOLD MỚI CHO DECAY
+                            val threshold = if (daysSincePost < 3) 20.0 else if (daysSincePost < 7) 30.0 else 50.0
+
+                            if (totalScore > threshold) {
+                                appendLog("   ✅ PASS (>${threshold.toInt()}) - SẼ TOP")
                             } else {
-                                appendLog("   ❌ FAIL (≤5.0) - Bị lọc")
+                                appendLog("   ❌ FAIL (≤${threshold.toInt()}) - BỊ LỌC")
                             }
                             appendLog("")
                         }
