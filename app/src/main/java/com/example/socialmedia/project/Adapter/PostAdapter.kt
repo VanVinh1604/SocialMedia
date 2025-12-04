@@ -19,6 +19,7 @@ class PostAdapter(
     private var postList: List<PostModel>,
     private val currentUserId: String,
     var onLikesClickListener: ((postId: String) -> Unit)? = null,
+    var onProfileClickListener: ((userId: String) -> Unit)? = null,
     var onCommentClickListener: ((postId: String, postAuthorId: String) -> Unit)? = null
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
@@ -50,6 +51,11 @@ class PostAdapter(
         b.layoutComment.setOnClickListener {
             val authorId = post.userId ?: return@setOnClickListener
             onCommentClickListener?.invoke(post.postId, authorId)
+        }
+
+        b.idProfile.setOnClickListener {
+            val authorId = post.userId ?: return@setOnClickListener
+            onProfileClickListener?.invoke(authorId)
         }
 
         // 💬 Đếm comment + replies (dùng ValueEventListener)

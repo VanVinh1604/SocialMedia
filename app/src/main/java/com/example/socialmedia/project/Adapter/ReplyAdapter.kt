@@ -28,6 +28,19 @@ class ReplyAdapter(
             binding.tvReplyContent.text = reply.content
             binding.tvReplyTime.text = TimeUtils.getTimeAgo(reply.createdAt)
 
+            binding.root.setOnLongClickListener {
+                when {
+                    // Người viết reply → sửa + xoá
+                    reply.userId == currentUserId -> showUserReplyMenu(binding.root.context, reply)
+                    // Chủ bài post → chỉ xoá reply người khác
+                    currentUserId == postAuthorId -> showAuthorDeleteReplyMenu(binding.root.context, reply)
+                    // Người khác → không làm gì
+                    else -> {}
+                }
+                true
+            }
+
+
             // Lấy thông tin user
             FirebaseDatabase.getInstance().getReference("InfoUser")
                 .child(reply.userId).get().addOnSuccessListener { snap ->
@@ -109,6 +122,73 @@ class ReplyAdapter(
     override fun onBindViewHolder(holder: ReplyViewHolder, position: Int) {
         holder.bind(replies[position])
     }
+
+    private fun showUserReplyMenu(context: android.content.Context, reply: CommentModel) {
+        val options = arrayOf("Chỉnh sửa", "Xóa")
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Tùy chọn")
+        builder.setItems(options) { _, which ->
+            when (which) {
+                0 -> showEditReplyDialog(context, reply)
+                1 -> showDeleteReplyConfirmDialog(context, reply)
+            }
+        }
+        builder.show()
+    }
+
+    private fun showAuthorDeleteReplyMenu(context: android.content.Context, reply: CommentModel) {
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Tùy chọn")
+        builder.setItems(arrayOf("Xóa")) { _, _ ->
+            showDeleteReplyConfirmDialog(context, reply)
+        }
+        builder.show()
+    }
+
+
+    private fun showEditReplyDialog(context: android.content.Context, reply: CommentModel) {
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Chỉnh sửa")
+
+        val input = android.widget.EditText(context)
+        input.setText(reply.content)
+        builder.setView(input)
+
+        builder.setPositiveButton("Lưu") { _, _ ->
+            val newText = input.text.toString().trim()
+            if (newText.isNotEmpty()) {
+                FirebaseDatabase.getInstance()
+                    .getReference("comments")
+                    .child(reply.commentableId)
+                    .child(reply.parentCommentId!!)
+                    .child("replies")
+                    .child(reply.commentId)
+                    .child("content")
+                    .setValue(newText)
+            }
+        }
+        builder.setNegativeButton("Hủy", null)
+        builder.show()
+    }
+
+    private fun showDeleteReplyConfirmDialog(context: android.content.Context, reply: CommentModel) {
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Xóa")
+        builder.setMessage("Bạn chắc chắn muốn xóa?")
+
+        builder.setPositiveButton("Xóa") { _, _ ->
+            FirebaseDatabase.getInstance()
+                .getReference("comments")
+                .child(reply.commentableId)
+                .child(reply.parentCommentId!!)
+                .child("replies")
+                .child(reply.commentId)
+                .removeValue()
+        }
+        builder.setNegativeButton("Hủy", null)
+        builder.show()
+    }
+
 
     override fun getItemCount(): Int = replies.size
 }

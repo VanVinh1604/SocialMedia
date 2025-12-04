@@ -94,6 +94,7 @@ class HomeFragment : Fragment() {
                         bundle
                     )
                 }
+
             )
         }
     }
@@ -113,7 +114,20 @@ class HomeFragment : Fragment() {
 
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-        postAdapter = PostAdapter(emptyList(), currentUserId,
+//        postAdapter = PostAdapter(emptyList(), currentUserId,
+//            onLikesClickListener = { postId ->
+//                LikedUsersBottomSheetFragment(postId)
+//                    .show(parentFragmentManager, "likedUsers")
+//            },
+//            onCommentClickListener = { postId, postAuthorId ->
+//                CommentBottomSheetFragment(postId, currentUserId, postAuthorId)
+//                    .show(parentFragmentManager, "comments")
+//            }
+//
+//        )
+        postAdapter = PostAdapter(
+            emptyList(),
+            currentUserId,
             onLikesClickListener = { postId ->
                 LikedUsersBottomSheetFragment(postId)
                     .show(parentFragmentManager, "likedUsers")
@@ -122,9 +136,32 @@ class HomeFragment : Fragment() {
                 CommentBottomSheetFragment(postId, currentUserId, postAuthorId)
                     .show(parentFragmentManager, "comments")
             }
-        )
+        ).apply {
+            onProfileClickListener = { authorId ->
+                handleProfileClick(authorId)
+            }
+        }
+
         binding.recyclerPost.adapter = postAdapter
     }
+
+    private fun handleProfileClick(authorId: String) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        if (authorId == currentUserId) {
+            // 👉 Nếu là tài khoản mình → vào ProfileFragment
+            findNavController().navigate(R.id.action_homeFragment_to_personalProfileFragment)
+        } else {
+            // 👉 Nếu là người khác → vào ProfilePersonFragment
+            val bundle = Bundle().apply {
+                putString("userId", authorId)            }
+            findNavController().navigate(
+                R.id.action_homeFragment_to_profileFragment,
+                bundle
+            )
+        }
+    }
+
 
     private fun observePosts() {
         postViewModel.posts.observe(viewLifecycleOwner) { posts ->

@@ -38,6 +38,24 @@ class CommentAdapter(
         b.tvTime.text = TimeUtils.getTimeAgo(comment.createdAt)
         b.tvReply.setOnClickListener { onReplyClick(comment) }
 
+        b.root.setOnLongClickListener {
+
+            when {
+                // Người viết comment → sửa + xoá
+                comment.userId == currentUserId -> {
+                    showUserCommentMenu(b.root.context, comment)
+                }
+
+                // Chủ bài post → chỉ được xoá
+                currentUserId == postAuthorId -> {
+                    showAuthorDeleteMenu(b.root.context, comment)
+                }
+            }
+
+            true
+        }
+
+
         // Lấy info user
         comment.userId?.let { userId ->
             FirebaseDatabase.getInstance().getReference("InfoUser").child(userId)
@@ -141,6 +159,104 @@ class CommentAdapter(
                 b.tvSeeMoreReplies.visibility = View.GONE
             }
         }
+    }
+
+    private fun showUserCommentMenu(context: android.content.Context, item: CommentModel) {
+        val options = arrayOf("Chỉnh sửa", "Xóa")
+
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Tùy chọn")
+        builder.setItems(options) { _, which ->
+            when (which) {
+                0 -> showEditDialog(context, item, false)
+                1 -> showDeleteDialog(context, item, false)
+            }
+        }
+        builder.show()
+    }
+
+    private fun showAuthorDeleteMenu(context: android.content.Context, item: CommentModel) {
+
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Tùy chọn")
+        builder.setItems(arrayOf("Xóa")) { _, _ ->
+            showDeleteDialog(context, item, false)
+        }
+        builder.show()
+    }
+
+
+    private fun showEditDialog(context: android.content.Context, item: CommentModel, isReply: Boolean) {
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Chỉnh sửa")
+
+        val input = android.widget.EditText(context)
+        input.setText(item.content)
+        input.setSelection(item.content.length)
+        builder.setView(input)
+
+        builder.setPositiveButton("Lưu") { dialog, _ ->
+            val newContent = input.text.toString().trim()
+            if (newContent.isNotEmpty() && newContent != item.content) {
+                if (isReply) updateReply(item, newContent)
+                else updateComment(item, newContent)
+            }
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("Hủy") { d, _ -> d.dismiss() }
+        builder.show()
+    }
+
+    private fun showDeleteDialog(context: android.content.Context, item: CommentModel, isReply: Boolean) {
+        val builder = android.app.AlertDialog.Builder(context)
+        builder.setTitle("Xóa")
+        builder.setMessage("Bạn có chắc muốn xóa?")
+
+        builder.setPositiveButton("Xóa") { dialog, _ ->
+            if (isReply) deleteReply(item)
+            else deleteComment(item)
+            dialog.dismiss()
+        }
+        builder.setNegativeButton("Hủy") { d, _ -> d.dismiss() }
+        builder.show()
+    }
+
+    private fun updateComment(comment: CommentModel, newContent: String) {
+        FirebaseDatabase.getInstance()
+            .getReference("comments")
+            .child(comment.commentableId)
+            .child(comment.commentId)
+            .child("content")
+            .setValue(newContent)
+    }
+
+    private fun deleteComment(comment: CommentModel) {
+        FirebaseDatabase.getInstance()
+            .getReference("comments")
+            .child(comment.commentableId)
+            .child(comment.commentId)
+            .removeValue()
+    }
+
+    private fun updateReply(reply: CommentModel, newContent: String) {
+        FirebaseDatabase.getInstance()
+            .getReference("comments")
+            .child(reply.commentableId)
+            .child(reply.parentCommentId!!)
+            .child("replies")
+            .child(reply.commentId)
+            .child("content")
+            .setValue(newContent)
+    }
+
+    private fun deleteReply(reply: CommentModel) {
+        FirebaseDatabase.getInstance()
+            .getReference("comments")
+            .child(reply.commentableId)
+            .child(reply.parentCommentId!!)
+            .child("replies")
+            .child(reply.commentId)
+            .removeValue()
     }
 
     override fun getItemCount(): Int = comments.size
