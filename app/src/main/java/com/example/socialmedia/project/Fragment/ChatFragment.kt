@@ -216,8 +216,6 @@ class ChatFragment : Fragment() {
                 findNavController().navigate(action)
             }
         }
-
-
     }
 
 
