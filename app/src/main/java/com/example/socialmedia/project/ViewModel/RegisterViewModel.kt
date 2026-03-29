@@ -40,6 +40,7 @@ class RegisterViewModel(
             lastName = lastName,
             phoneNumber = phone,
             gender = gender,
+            profilePictureUrl = "https://res.cloudinary.com/durfebos5/image/upload/v1762703309/nzcguzjc5rvqham14gky.jpg",
             dateOfBirth = dateOfBirth,
             fullName = "$firstName $lastName",
             themePreference = ThemePreference.AUTO

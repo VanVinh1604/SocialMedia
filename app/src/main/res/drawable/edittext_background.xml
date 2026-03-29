@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Khi đang focus (đang nhập) -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+    <!-- Khi bình thường -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+</selector>

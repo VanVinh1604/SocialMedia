@@ -6,10 +6,11 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- NavHostFragment thay thế FrameLayout -->
+
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/navHostFragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
+
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:paddingBottom="80dp"
@@ -19,7 +20,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:navGraph="@navigation/nav_graph" />
-
+<!--    <Button
+        android:id="@+id/btnDebug"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:alpha="0"
+        android:text="test reconmmend"
+        android:background="#00000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="24dp" />-->
     <!-- Bottom container -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/container"

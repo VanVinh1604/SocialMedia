@@ -45,7 +45,6 @@ class LoginFragment : Fragment() {
         )
         binding.tvAppName.paint.shader = textShader
 
-
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
@@ -61,29 +60,28 @@ class LoginFragment : Fragment() {
                         binding.btnLogin.isEnabled = false
                         binding.btnLogin.text = "Đang đăng nhập..."
                     }
-
                     is Resource.Success -> {
                         binding.btnLogin.isEnabled = true
                         binding.btnLogin.text = "Đăng nhập"
-                        Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
 
                         val user = resource.data!!
-                        Log.d("LoginSuccess", "User loaded: ${user.fullName}, Gender=${user.gender}")
 
+                        // Chỉ lưu SharedPreferences để hiển thị
                         val sharedPref = requireContext().getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
                         with(sharedPref.edit()) {
                             putBoolean("is_logged_in", true)
-                            putString("user_id", resource.data.userId)
-                            putString("email", resource.data.email)
-                            putString("full_name", resource.data.fullName)
+                            putString("user_id", user.userId)
+                            putString("email", user.email)
+                            putString("full_name", user.fullName)
                             apply()
                         }
 
+
+                        // Mở MainActivity
                         val intent = Intent(requireContext(), MainActivity::class.java)
                         startActivity(intent)
                         requireActivity().finish()
                     }
-
                     is Resource.Error -> {
                         binding.btnLogin.isEnabled = true
                         binding.btnLogin.text = "Đăng nhập"
@@ -92,6 +90,7 @@ class LoginFragment : Fragment() {
                 }
             }
         }
+
 
         var isPasswordVisible = false
 

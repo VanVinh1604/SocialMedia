@@ -26,4 +26,10 @@
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
+    <style name="roundedCorner8dp">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+
 </resources>

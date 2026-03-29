@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Khi đang nhấn -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#C17A9A"
+
+                android:endColor="#B05FB8"
+                 />
+            <corners android:radius="50dp" />
+        </shape>
+    </item>
+
+    <!-- Khi bình thường -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#E195B3"
+
+                android:endColor="#D075D1"
+                android:type="linear" />
+            <corners android:radius="50dp" />
+        </shape>
+    </item>
+
+</selector>

@@ -1,0 +1,28 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <ImageView
+        android:id="@+id/imgBlurBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:alpha="0.3"
+        android:visibility="gone" />
+
+    <com.example.socialmedia.project.Helper.FullScreenImageStory
+        android:id="@+id/imgStory"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+   /> <!-- matrix để onMeasure của custom view có tác dụng -->
+
+
+    <!-- Video custom giữ tỷ lệ và căn giữa -->
+    <com.example.socialmedia.project.Helper.CenterVideoStory
+        android:id="@+id/videoStory"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+</FrameLayout>

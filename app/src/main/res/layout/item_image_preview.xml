@@ -1,0 +1,39 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_margin="4dp"
+    android:clipToPadding="false"
+    android:clipChildren="false"
+    android:background="@android:color/black">
+
+    <!-- Ảnh / Media -->
+<ImageView
+android:id="@+id/imgPreview"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:scaleType="centerCrop" />
+
+    <!-- Overlay khi được chọn -->
+<View
+android:id="@+id/overlaySelected"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:background="#66000000"
+android:visibility="gone"/>
+
+    <!-- Icon video / camera ở giữa -->
+<FrameLayout
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:layout_gravity="center"
+android:background="@drawable/bg_icon_white"> <!-- nền tròn trắng -->
+
+<ImageView
+    android:id="@+id/iconVideo"
+    android:layout_width="32dp"
+    android:layout_height="32dp"
+    android:src="@drawable/ic_camera_mess"
+    android:contentDescription="icon"
+    android:visibility="gone"/>  <!-- mặc định ẩn, hiển thị khi video / camera -->
+</FrameLayout>
+    </FrameLayout>

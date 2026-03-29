@@ -1,0 +1,9 @@
+package com.example.socialmedia.project.ViewModel
+
+sealed class UploadResult {
+    object Idle : UploadResult()
+    data class Success(val postId: String) : UploadResult()
+    object ReelSuccess : UploadResult()
+    object DraftSaved : UploadResult()
+    data class Error(val message: String) : UploadResult()
+}

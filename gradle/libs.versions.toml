@@ -1,5 +1,5 @@
 [versions]
-agp = "8.10.0"
+agp = "8.9.1"
 kotlin = "2.0.21"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -10,6 +10,10 @@ material = "1.13.0"
 activity = "1.11.0"
 constraintlayout = "2.2.1"
 googleServices = "4.4.2"
+firebaseAuthKtx = "24.0.1"
+lifecycleViewmodelKtx = "2.9.4"
+firebaseFirestoreKtx = "26.0.2"
+zego_uikit_prebuilt_call_android = "3.9.10"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,6 +32,10 @@ androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", ve
 glide = { group = "com.github.bumptech.glide", name = "glide", version = "4.16.0" }
 glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version = "4.16.0" }
 gson = { group = "com.google.code.gson", name = "gson", version = "2.10.1" }
+firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
+lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+zego_uikit_prebuilt_call_android = { module = "com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android", version.ref = "zego_uikit_prebuilt_call_android" }
 
 
 

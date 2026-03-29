@@ -15,30 +15,36 @@ class UserManagementActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_user_management)
 
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        if (currentUser != null) {
-            // Đã đăng nhập -> chuyển thẳng vào MainActivity
-//            startActivity(Intent(this, MainActivity::class.java))
-//            finish()
-//            return // ✅ Dừng không chạy code phía dưới
+        binding = ActivityUserManagementBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+
+        // ✅ Đọc SharedPreferences để kiểm tra user đã login hay chưa
+        val sharedPref = getSharedPreferences("user_prefs", MODE_PRIVATE)
+        val isLoggedIn = sharedPref.getBoolean("is_logged_in", false)
+        val userId = sharedPref.getString("user_id", null)
+        val fullName = sharedPref.getString("full_name", null)
+
+        if (isLoggedIn && userId != null) {
+            // 🔹 Đã có session → mở MainActivity, init Zego/ZIM trong đó
+            val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("payload_user_id", userId)
+            intent.putExtra("payload_full_name", fullName)
+            startActivity(intent)
+            finish()
+        } else {
+            // 🔹 Chưa đăng nhập → hiển thị LoginFragment
+            if (savedInstanceState == null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, LoginFragment())
+                    .commit()
+            }
         }
 
         // Chưa đăng nhập -> hiển thị màn hình login
         binding = ActivityUserManagementBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Hiển thị LoginFragment
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, LoginFragment())
-                .commit()
-        }
-
-        // Load LoginFragment đầu tiên
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, LoginFragment())
-            .commit()
     }
 }

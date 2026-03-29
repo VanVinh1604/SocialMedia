@@ -1,0 +1,309 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:fitsSystemWindows="false"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Toolbar -->
+    <RelativeLayout
+        android:id="@+id/rlChatHeader"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:padding="8dp"
+        android:background="@drawable/btn_background">
+
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back"/>
+
+        <!-- Avatar Container (GIỮ NGUYÊN ID ivAvatar) -->
+        <FrameLayout
+            android:id="@+id/ivAvatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_toEndOf="@id/ivBack"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="8dp">
+
+            <!-- Avatar đơn -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivAvatarSingle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:shapeAppearanceOverlay="@style/CircleImageView"
+                android:src="@drawable/image_avata_user"
+                android:visibility="gone"/>
+
+            <!-- Avatar nhóm -->
+            <include
+                android:id="@+id/ivAvatarGroup"
+                layout="@layout/item_group_chatview"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:visibility="visible"/>
+
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvUserName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/ivAvatar"
+            android:layout_marginStart="8dp"
+            android:text="User Name"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvUserStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvUserName"
+            android:layout_toEndOf="@id/ivAvatar"
+            android:layout_marginStart="8dp"
+            android:text="Online"
+            android:textSize="12sp"
+            android:textColor="#888888"/>
+
+        <!-- ✅ Voice Call Button - XÓA src, CHỈ GIỮ layout properties -->
+        <com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
+            android:id="@+id/btnVoiceCall"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_toStartOf="@+id/btnVideoCall"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone"/>
+
+        <!-- ✅ Video Call Button - XÓA src, CHỈ GIỮ layout properties -->
+        <com.zegocloud.uikit.prebuilt.call.invite.widget.ZegoSendCallInvitationButton
+            android:id="@+id/btnVideoCall"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
+            android:visibility="gone"/>
+
+    </RelativeLayout>
+
+    <!-- RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvChat"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"/>
+
+    <!-- Recording Bar (ẩn mặc định) -->
+    <LinearLayout
+        android:id="@+id/recordingBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="#FFF3E0"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <!-- Icon đang ghi âm -->
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_mic"
+            android:tint="#FF5722"/>
+
+        <!-- Text thời gian -->
+        <TextView
+            android:id="@+id/tvRecordingTime"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="00:00"
+            android:textColor="#FF5722"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"/>
+
+        <!-- Nút hủy -->
+        <ImageView
+            android:id="@+id/ivCancelRecording"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_close"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Cancel"/>
+
+        <!-- Nút gửi -->
+        <ImageView
+            android:id="@+id/ivSendRecording"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_share"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Send"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llEditingMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3E0"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvEditingContent"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Nội dung tin nhắn đang sửa"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:ellipsize="end"
+            android:singleLine="true"/>
+
+        <ImageView
+            android:id="@+id/ivCancelEditing"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Huỷ chỉnh sửa"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+    </LinearLayout>
+
+
+    <!-- Reply Preview Bar -->
+    <LinearLayout
+        android:id="@+id/llReplyPreview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#E0F7FA"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <!-- Người gửi -->
+        <TextView
+            android:id="@+id/tvReplySender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Người dùng"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#00796B"/>
+
+        <!-- Nội dung tin nhắn được reply -->
+        <TextView
+            android:id="@+id/tvReplyContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Trích dẫn tin nhắn..."
+            android:textSize="14sp"
+            android:textColor="#004D40"
+            android:ellipsize="end"
+            android:maxLines="2"/>
+
+        <!-- Nút hủy reply -->
+        <ImageView
+            android:id="@+id/ivCancelReply"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="end"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Huỷ trả lời"
+            android:padding="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+    </LinearLayout>
+
+
+
+    <!-- Input Bar -->
+    <LinearLayout
+        android:id="@+id/inputBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="@drawable/btn_background"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivSticker"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_smile"
+            android:padding="4dp"
+            android:contentDescription="Sticker"/>
+
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1">
+
+            <EditText
+                android:id="@+id/etMessage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:hint="Message..."
+                android:background="@drawable/rounded_input_bg"
+                android:paddingStart="8dp"
+                android:paddingEnd="40dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:inputType="textMultiLine"
+                android:imeOptions="actionSend"/>
+
+            <ImageView
+                android:id="@+id/ivSend"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_share"
+                android:contentDescription="Send"
+                android:padding="4dp"/>
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/ivMic"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_mic"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="4dp"
+            android:contentDescription="Mic"/>
+
+        <ImageView
+            android:id="@+id/ivFile"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_file"
+            android:padding="4dp"
+            android:contentDescription="File"/>
+
+        <ImageView
+            android:id="@+id/ivCamera"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_camera_mess"
+            android:padding="4dp"
+            android:contentDescription="Camera"/>
+    </LinearLayout>
+
+</LinearLayout>

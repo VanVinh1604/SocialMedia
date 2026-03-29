@@ -16,6 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:layout_margin="8dp"/>
 
+    <!-- Icon viết tin nhắn mới -->
     <ImageView
         android:id="@+id/ivWrite"
         android:layout_width="40dp"
@@ -26,85 +27,101 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="8dp"/>
 
-
-    <!-- Thanh Search dưới icon Back -->
+    <!-- Thanh Search -->
     <LinearLayout
         android:id="@+id/searchContainer"
         android:layout_width="0dp"
         android:layout_height="40dp"
         android:orientation="horizontal"
         android:background="@drawable/bg_search_simple"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    app:layout_constraintTop_toBottomOf="@id/ivBack"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    android:layout_marginTop="8dp"
-    android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp">
-
-    <ImageView
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_search"
-        android:layout_gravity="center_vertical"/>
-
-    <EditText
-        android:id="@+id/etSearch"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:hint="Search"
-        android:background="@android:color/transparent"
         android:paddingStart="8dp"
-        android:singleLine="true"/>
-</LinearLayout>
+        android:paddingEnd="8dp"
+        app:layout_constraintTop_toBottomOf="@id/ivBack"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_search"
+            android:layout_gravity="center_vertical"/>
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:hint="Search"
+            android:background="@android:color/transparent"
+            android:paddingStart="8dp"
+            android:singleLine="true"/>
+    </LinearLayout>
 
     <!-- RecyclerView danh sách người dùng -->
-<androidx.recyclerview.widget.RecyclerView
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvUsers"
         android:layout_width="0dp"
-        android:layout_height="100dp"
+        android:layout_height="130dp"
         android:clipToPadding="false"
         android:paddingStart="8dp"
-            android:layout_marginTop="8dp"
+        android:layout_marginTop="8dp"
         android:paddingEnd="8dp"
         app:layout_constraintTop_toBottomOf="@id/searchContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Text Message và Spam -->
-<LinearLayout
-android:id="@+id/layoutMessageHeader"
-android:layout_width="0dp"
-android:layout_height="wrap_content"
-android:orientation="horizontal"
-app:layout_constraintTop_toBottomOf="@id/rvUsers"
-app:layout_constraintStart_toStartOf="parent"
-app:layout_constraintEnd_toEndOf="parent"
-android:padding="8dp"
-android:gravity="center_vertical">
+    <!-- Header Message -->
+    <LinearLayout
+        android:id="@+id/layoutMessageHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/rvUsers"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:layout_marginTop="4dp">
 
-<TextView
-    android:id="@+id/tvMessage"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Message"
-    android:textSize="18sp"
-    android:textStyle="bold"/>
+        <TextView
+            android:id="@+id/tvMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Message"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
 
+        <!-- Tổng số tin chưa đọc -->
+        <TextView
+            android:id="@+id/tvTotalUnread"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/circle_status_online"
+            android:text="0"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:visibility="gone"/>
 
-</LinearLayout>
+    </LinearLayout>
 
-    <!-- RecyclerView hiển thị tin nhắn người dùng -->
-<androidx.recyclerview.widget.RecyclerView
-android:id="@+id/rvMessages"
-android:layout_width="0dp"
-android:layout_height="0dp"
-app:layout_constraintTop_toBottomOf="@id/layoutMessageHeader"
-app:layout_constraintBottom_toBottomOf="parent"
-app:layout_constraintStart_toStartOf="parent"
-app:layout_constraintEnd_toEndOf="parent"
-android:clipToPadding="false"
-android:padding="8dp"/>
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- RecyclerView hiển thị tin nhắn -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMessages"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/layoutMessageHeader"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:clipToPadding="false"
+        android:padding="8dp"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

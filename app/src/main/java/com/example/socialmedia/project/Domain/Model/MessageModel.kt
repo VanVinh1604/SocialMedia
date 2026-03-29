@@ -4,16 +4,33 @@ import com.example.socialmedia.project.Domain.Enum.MessageType
 import java.util.UUID
 
 data class MessageModel(
-    val messageId: String = UUID.randomUUID().toString(),
+    var messageId: String = "",
     val conversationId: String = "",
     val senderId: String = "",
+    val senderName: String = "",
+    val senderAvatar: String? = null,
     val messageType: MessageType = MessageType.TEXT,
-    val content: String? = null,
+    val content: String = "",
+    val duration: String? = null,
     val mediaUrl: String? = null,
+
     val replyToMessageId: String? = null,
+    var replyTo: String? = null,
+
     val postId: String? = null,           // For shared posts
-    val isDeleted: Boolean = false,
+    val story: StoryModel? = null,
+    var isDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val editedAt: Long? = null,
-    val readBy: List<String> = emptyList()
+    val readBy: List<String> = emptyList(),
+
+    var isEdited: Boolean = false,       // Đánh dấu đã sửa
+    val originalContent: String? = null, // Lưu nội dung cũ
+    var editHistory: MutableList<String> = mutableListOf(), // ✅ Lịch sử sửa
+
+
+    val isStoryReply: Boolean = false,
+    val storyId: String? = null,
+    val storyThumbnail: String? = null,
+    val storyOwnerId: String? = null
 )
